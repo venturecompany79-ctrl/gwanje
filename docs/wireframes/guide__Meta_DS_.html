@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>일괄안내 (캠페인) · Meta DS</title>
+
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
+  button{font-family:var(--font-body);}
+
+  .demo-bar{width:1280px;margin:24px auto 14px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+    padding:12px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
+  .demo-bar .lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--color-stone);text-transform:uppercase;}
+  .demo-group{display:flex;align-items:center;gap:10px;}
+  .demo-group > span{font-size:13px;color:var(--color-charcoal);font-weight:700;}
+  .demo-pills{display:flex;gap:8px;}
+  .demo-pills button{white-space:nowrap;}
+  .demo-bar .hint{margin-left:auto;font-size:12px;color:var(--color-stone);}
+
+  .app{width:1280px;margin:0 auto 44px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
+    border-radius:var(--radius-xxl);overflow:hidden;display:grid;grid-template-columns:240px 1fr;min-height:900px;
+    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;}
+  .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
+
+  .nav{border-right:1px solid var(--color-hairline-soft);padding:22px 16px;display:flex;flex-direction:column;background:var(--color-canvas);}
+  .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;}
+  .brand .mark{width:34px;height:34px;border-radius:var(--radius-full);flex:none;
+    background:radial-gradient(circle at 30% 30%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+  .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--color-ink-deep);line-height:1.1;}
+  .brand small{display:block;font-size:11px;font-weight:500;color:var(--color-stone);}
+  .nav-sec{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--color-stone);text-transform:uppercase;padding:12px 12px 8px;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;margin:3px 0;border-radius:var(--radius-full);
+    color:var(--color-charcoal);text-decoration:none;font-size:14px;font-weight:600;letter-spacing:-.14px;cursor:pointer;
+    border:1px solid transparent;transition:background-color 150ms ease-out,color 150ms ease-out;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item:hover{background:var(--color-surface-soft);}
+  .nav-item.active{background:var(--color-ink-deep);color:var(--color-canvas);border-color:var(--color-ink-deep);}
+  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:#fff;font-size:11px;font-weight:700;
+    min-width:19px;height:19px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0 5px;}
+  .nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-hairline-soft);display:flex;align-items:center;gap:11px;}
+  .nav-foot .ava{width:34px;height:34px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--color-ink);flex:none;}
+  .nav-foot .who b{font-size:13px;font-weight:700;display:block;color:var(--color-ink-deep);}
+  .nav-foot .who span{font-size:11.5px;color:var(--color-stone);}
+
+  .main-col{display:flex;flex-direction:column;min-width:0;background:var(--color-surface-soft);}
+  .topbar{height:64px;background:var(--color-canvas);border-bottom:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;gap:16px;padding:0 28px;flex:none;}
+  .search{display:flex;align-items:center;gap:10px;width:340px;height:42px;padding:0 16px;
+    background:var(--color-surface-soft);border:1px solid transparent;border-radius:var(--radius-full);color:var(--color-stone);}
+  .search:focus-within{border-color:var(--color-fb-blue);background:var(--color-canvas);}
+  .search svg{width:17px;height:17px;stroke:var(--color-steel);}
+  .search input{border:0;background:transparent;outline:none;font-family:var(--font-body);font-size:14px;letter-spacing:-.14px;color:var(--color-ink);width:100%;}
+  .search input::placeholder{color:var(--color-stone);}
+  .topbar .spacer{flex:1;}
+  .ib-wrap{position:relative;}
+  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:#fff;font-size:10.5px;font-weight:700;
+    min-width:18px;height:18px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-canvas);padding:0 3px;}
+  .prof{display:flex;align-items:center;gap:10px;cursor:pointer;padding-left:4px;}
+  .prof .ava{width:36px;height:36px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--color-ink);}
+  .prof .pn b{font-size:13.5px;font-weight:700;display:block;line-height:1.2;color:var(--color-ink-deep);}
+  .prof .pn span{font-size:11.5px;color:var(--color-stone);}
+
+  .content{padding:26px 28px 44px;overflow:auto;flex:1;}
+  .page-head{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+  .page-head h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
+  .page-head .crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-steel);font-weight:600;cursor:pointer;}
+  .page-head .crumb svg{width:15px;height:15px;}
+  .page-head .crumb:hover{color:var(--color-primary-deep);}
+  .page-head .spacer{flex:1;}
+
+  .panel{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);overflow:hidden;}
+  .sec-head{display:flex;align-items:center;gap:13px;padding:18px 22px;border-bottom:1px solid var(--color-hairline-soft);}
+  .sec-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.16px;color:var(--color-ink-deep);}
+  .sec-head .cnt{font-size:13px;color:var(--color-stone);font-weight:600;}
+  .sec-head .spacer{flex:1;}
+
+  /* status badge */
+  .stbadge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--radius-full);font-size:12px;font-weight:700;letter-spacing:-.14px;}
+  .stbadge .sd{width:7px;height:7px;border-radius:50%;}
+  .st-sent{background:#e2f0e6;color:#147a49;}.st-sent .sd{background:var(--color-success);}
+  .st-sched{background:#e2eefc;color:var(--color-primary-deep);}.st-sched .sd{background:var(--color-primary);}
+  .st-draft{background:var(--color-surface-soft);color:var(--color-steel);}.st-draft .sd{background:var(--color-stone);}
+  .seg-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-full);border:1px solid var(--color-hairline);
+    background:var(--color-canvas);font-size:12px;font-weight:600;color:var(--color-charcoal);letter-spacing:-.14px;white-space:nowrap;}
+
+  /* table */
+  table.dlist{width:100%;border-collapse:collapse;}
+  table.dlist th{text-align:left;font-size:12px;font-weight:700;color:var(--color-stone);text-transform:uppercase;
+    padding:13px 22px;border-bottom:1px solid var(--color-hairline-soft);}
+  table.dlist th.r,table.dlist td.r{text-align:right;}
+  table.dlist th.c,table.dlist td.c{text-align:center;}
+  table.dlist td{padding:15px 22px;border-bottom:1px solid var(--color-hairline-soft);font-size:14px;vertical-align:middle;letter-spacing:-.14px;}
+  table.dlist tbody tr:last-child td{border-bottom:0;}
+  table.dlist tbody tr.clk{cursor:pointer;transition:background-color 150ms ease-out;}
+  table.dlist tbody tr.clk:hover{background:var(--color-surface-soft);}
+  table.dlist .ttl{font-weight:700;color:var(--color-ink-deep);}
+  table.dlist .muted{color:var(--color-stone);}
+  .rate{font-weight:700;color:var(--color-ink-deep);}
+
+  /* empty */
+  .empty{padding:88px 30px;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  .empty .eico{width:76px;height:76px;border-radius:var(--radius-xl);background:var(--color-surface-soft);display:flex;align-items:center;justify-content:center;margin-bottom:24px;}
+  .empty .eico svg{width:36px;height:36px;stroke:var(--color-stone);}
+  .empty h2{margin:0 0 10px;font-size:23px;font-weight:600;letter-spacing:-.01em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);white-space:nowrap;}
+  .empty p{margin:0 0 26px;font-size:14.5px;color:var(--color-steel);max-width:380px;line-height:1.5;letter-spacing:-.16px;}
+
+  /* step indicator */
+  .steps{display:flex;align-items:center;justify-content:center;gap:0;padding:22px;background:var(--color-canvas);
+    border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);margin-bottom:20px;}
+  .step{display:flex;align-items:center;gap:11px;cursor:pointer;}
+  .step .circ{width:30px;height:30px;border-radius:50%;border:2px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:var(--color-stone);flex:none;background:var(--color-canvas);transition:all 150ms;}
+  .step .circ svg{width:15px;height:15px;stroke:#fff;}
+  .step.active .circ{background:var(--color-ink-deep);border-color:var(--color-ink-deep);color:#fff;}
+  .step.done .circ{background:var(--color-primary);border-color:var(--color-primary);color:#fff;}
+  .step .slab{font-size:14px;font-weight:700;color:var(--color-stone);letter-spacing:-.14px;}
+  .step.active .slab,.step.done .slab{color:var(--color-ink-deep);}
+  .step-conn{width:64px;height:2px;background:var(--color-hairline);margin:0 16px;}
+  .step-conn.done{background:var(--color-primary);}
+
+  /* wizard 2-pane */
+  .wz-grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start;}
+  .panel-body{padding:22px;}
+  .andor{display:inline-flex;background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-full);padding:3px;margin:4px 0 4px 8px;}
+  .andor button{border:0;background:transparent;font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--color-steel);
+    padding:5px 12px;border-radius:var(--radius-full);cursor:pointer;}
+  .andor button.on{background:var(--color-ink-deep);color:#fff;}
+  .cond-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .cinput{height:42px;border:1px solid var(--color-hairline);border-radius:var(--radius-lg);background:var(--color-canvas);
+    font-family:var(--font-body);font-size:14px;color:var(--color-ink-deep);padding:0 12px;letter-spacing:-.14px;}
+  select.cinput{cursor:pointer;min-width:130px;}
+  input.cinput{width:120px;}
+  .cond-row .op{min-width:88px;}
+  .cond-row .x{width:38px;height:38px;border-radius:var(--radius-full);border:1px solid var(--color-hairline-soft);background:var(--color-canvas);
+    cursor:pointer;color:var(--color-stone);display:flex;align-items:center;justify-content:center;flex:none;}
+  .cond-row .x:hover{background:#fbe1e5;color:var(--color-critical);border-color:#f3c4cb;}
+  .cond-row .x svg{width:15px;height:15px;}
+
+  /* preview list */
+  .prev-head{display:flex;align-items:center;gap:9px;padding:16px 18px;border-bottom:1px solid var(--color-hairline-soft);background:var(--color-surface-soft);}
+  .prev-head .cu{font-size:18px;font-weight:700;letter-spacing:-.16px;color:var(--color-ink-deep);}
+  .prev-head .cl{font-size:13px;color:var(--color-steel);font-weight:600;}
+  .prev-list{padding:8px;max-height:380px;overflow:auto;}
+  .prev-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:var(--radius-lg);font-size:14px;font-weight:600;color:var(--color-ink-deep);letter-spacing:-.14px;}
+  .prev-item:hover{background:var(--color-surface-soft);}
+  .prev-item svg{width:16px;height:16px;stroke:var(--color-stone);}
+  .seg-zero{padding:48px 24px;text-align:center;}
+  .seg-zero .zico{width:60px;height:60px;border-radius:var(--radius-xl);background:#fdeed6;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+  .seg-zero .zico svg{width:28px;height:28px;stroke:var(--color-attention);}
+  .seg-zero h3{margin:0 0 7px;font-size:16px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.16px;}
+  .seg-zero p{margin:0;font-size:13px;color:var(--color-steel);letter-spacing:-.14px;}
+
+  /* message step */
+  .field-label{font-size:13px;font-weight:700;color:var(--color-ink);letter-spacing:-.14px;margin-bottom:8px;}
+  .selbox{display:flex;align-items:center;justify-content:space-between;gap:10px;height:44px;padding:0 14px;border-radius:var(--radius-lg);
+    border:1px solid var(--color-hairline);background:var(--color-canvas);font-size:14px;font-weight:600;color:var(--color-ink-deep);letter-spacing:-.14px;cursor:pointer;}
+  .selbox svg{width:16px;height:16px;stroke:var(--color-steel);}
+  .var-chips{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;}
+  .vchip{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;border-radius:var(--radius-full);border:1px dashed var(--color-hairline);
+    background:var(--color-surface-soft);font-size:12.5px;font-weight:700;color:var(--color-primary-deep);cursor:pointer;letter-spacing:-.14px;}
+  .vchip:hover{border-color:var(--color-primary);}
+  .msg-area{width:100%;min-height:180px;border:1px solid var(--color-hairline);border-radius:var(--radius-lg);padding:14px;
+    font-family:var(--font-body);font-size:14px;line-height:1.6;color:var(--color-ink);resize:vertical;letter-spacing:-.14px;}
+  .msg-area:focus{outline:none;border:2px solid var(--color-fb-blue);}
+  /* talk preview */
+  .phone{background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:18px;height:100%;}
+  .phone-top{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--color-steel);margin-bottom:14px;letter-spacing:-.14px;}
+  .phone-top .kk{width:22px;height:22px;border-radius:7px;background:var(--color-warning);display:flex;align-items:center;justify-content:center;color:var(--color-ink-deep);font-size:11px;font-weight:800;}
+  .bubble{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:4px 16px 16px 16px;padding:16px;font-size:13.5px;line-height:1.62;color:var(--color-ink-deep);letter-spacing:-.14px;}
+  .bubble .bt{font-weight:700;margin-bottom:8px;}
+  .bubble .vv{color:var(--color-primary-deep);font-weight:700;}
+  .bubble .btn-ghost{margin-top:12px;text-align:center;border:1px solid var(--color-hairline);border-radius:var(--radius-md);padding:9px;font-size:13px;font-weight:700;color:var(--color-ink-deep);}
+
+  /* confirm step */
+  .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px;}
+  .sum-card{border:1px solid var(--color-hairline-soft);border-radius:var(--radius-lg);padding:16px 18px;}
+  .sum-card .sk{font-size:12.5px;color:var(--color-steel);font-weight:600;letter-spacing:-.14px;}
+  .sum-card .sv{font-size:20px;font-weight:700;color:var(--color-ink-deep);margin-top:6px;letter-spacing:-.16px;}
+  .radio-row{display:flex;gap:12px;margin-top:6px;}
+  .ropt{flex:1;display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px solid var(--color-hairline-soft);border-radius:var(--radius-lg);cursor:pointer;transition:all 150ms;}
+  .ropt.on{border:2px solid var(--color-radio-selected);padding:13px 15px;}
+  .ropt .ring{width:18px;height:18px;border-radius:50%;border:2px solid var(--color-hairline);flex:none;display:flex;align-items:center;justify-content:center;}
+  .ropt.on .ring{border-color:var(--color-radio-selected);}
+  .ropt.on .ring::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--color-radio-selected);}
+  .ropt .rt{font-size:14px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.14px;}
+  .ropt .rs{font-size:12px;color:var(--color-stone);margin-top:2px;}
+  .wz-foot{display:flex;align-items:center;gap:10px;padding:18px 22px;border-top:1px solid var(--color-hairline-soft);}
+  .wz-foot .spacer{flex:1;}
+
+  /* results KPI */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  .kpi{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:18px 20px;}
+  .kpi .klab{font-size:13px;color:var(--color-steel);font-weight:600;letter-spacing:-.14px;}
+  .kpi .kval{font-size:36px;font-weight:700;color:var(--color-ink-deep);margin-top:10px;line-height:1;letter-spacing:-.02em;}
+  .kpi.hl .kval{color:var(--color-primary);}
+  .ans{font-size:13.5px;color:var(--color-ink-deep);letter-spacing:-.14px;}
+  .ans.no{color:var(--color-stone);}
+  .yn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:-.14px;}
+  .yn.ok{color:#147a49;}.yn.no{color:var(--color-stone);}
+  .yn .d{width:7px;height:7px;border-radius:50%;}.yn.ok .d{background:var(--color-success);}.yn.no .d{background:var(--color-stone);}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);opacity:0;z-index:40;
+    display:flex;align-items:center;gap:10px;background:var(--color-ink-deep);color:#fff;padding:13px 20px;border-radius:var(--radius-full);
+    font-size:14px;font-weight:700;letter-spacing:-.14px;box-shadow:0 8px 24px rgba(10,19,23,.28);transition:transform 260ms ease-out,opacity 260ms ease-out;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  .toast .tcheck{width:22px;height:22px;border-radius:50%;background:var(--color-success);display:flex;align-items:center;justify-content:center;}
+  .toast .tcheck svg{width:13px;height:13px;stroke:#fff;}
+  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ffffff"/>
+    <rect x="120" y="160" width="170" height="480" rx="20" fill="#f1f4f7"/>
+    <circle cx="470" cy="250" r="22" fill="#0a1317"/><text x="470" y="258" font-size="20" fill="#fff" text-anchor="middle" font-family="Arial">1</text>
+    <rect x="510" y="248" width="60" height="4" fill="#0064e0"/>
+    <circle cx="610" cy="250" r="22" fill="#0064e0"/>
+    <rect x="650" y="248" width="60" height="4" fill="#ced0d4"/>
+    <circle cx="750" cy="250" r="22" fill="#fff" stroke="#ced0d4" stroke-width="2"/>
+    <rect x="340" y="320" width="430" height="300" rx="16" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
+    <rect x="800" y="320" width="280" height="300" rx="16" fill="#f1f4f7"/>
+    <rect x="824" y="350" width="110" height="20" rx="10" fill="#0a1317"/>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+
+<script type="text/babel">
+const { useState } = React;
+const { Button, PillTab, IconButton } = window.MetaDesignSystem_d06bcc;
+
+const I = {
+  grid:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
+  building:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>,
+  kanban:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>,
+  send:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+  bell:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>,
+  gear:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  search:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>,
+  plus:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>,
+  back:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>,
+  arrow:   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>,
+  check:   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+  x:       <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>,
+  chevron: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+  warn:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>,
+  megaphone:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+  bolt:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>,
+  clock:   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+};
+
+const TARGETS = ['(주)테크노바','코어로보틱스','스마트팩토리(주)','누리소프트','블루오션테크'];
+
+const CAMPAIGNS = [
+  { title:'2026 벤처확인 갱신 안내', seg:'벤처확인 보유', n:'5개사', date:'2026-06-05', rate:'80%', status:'sent' },
+  { title:'R&D 세액공제 마감 리마인드', seg:'세액공제 보유', n:'3개사', date:'2026-06-02', rate:'67%', status:'sent' },
+  { title:'디딤돌 과제 공고 안내', seg:'제조·성장기', n:'4개사', date:'(예약) 06-12', rate:'–', status:'sched' },
+  { title:'정책자금 신규상품 안내', seg:'작성 중', n:'–', date:'–', rate:'–', status:'draft' },
+];
+const ST = { sent:['st-sent','발송완료'], sched:['st-sched','예약됨'], draft:['st-draft','임시저장'] };
+
+const RESPONSES = [
+  { co:'(주)테크노바', reach:true, ans:true, msg:'"확인했습니다, 진행 부탁드려요"', time:'06-05 10:12' },
+  { co:'코어로보틱스', reach:true, ans:true, msg:'"일정 가능합니다"', time:'06-05 11:40' },
+  { co:'스마트팩토리(주)', reach:true, ans:true, msg:'"자료 준비 중"', time:'06-05 14:03' },
+  { co:'누리소프트', reach:true, ans:true, msg:'"참여하겠습니다"', time:'06-06 09:25' },
+  { co:'블루오션테크', reach:true, ans:false, msg:'–', time:'–' },
+];
+
+function Nav() {
+  const items = [
+    { label:'대시보드', icon:I.grid },{ label:'기업', icon:I.building },{ label:'관리포인트 보드', icon:I.kanban },
+    { label:'일괄안내', icon:I.send, active:true },{ label:'알림', icon:I.bell, badge:3 },{ label:'설정', icon:I.gear },
+  ];
+  return (
+    <nav className="nav">
+      <div className="brand"><div className="mark">관</div><div><b>관제</b><small>Compliance Desk</small></div></div>
+      <div className="nav-sec">메뉴</div>
+      {items.map((it,i) => (
+        <div key={i} className={'nav-item' + (it.active ? ' active' : '')}>{it.icon}<span>{it.label}</span>{it.badge ? <span className="nbadge">{it.badge}</span> : null}</div>
+      ))}
+      <div className="nav-foot"><div className="ava">김</div><div className="who"><b>김컨설턴트</b><span>Growth Partners</span></div></div>
+    </nav>
+  );
+}
+function TopBar() {
+  return (
+    <header className="topbar">
+      <div className="search">{I.search}<input placeholder="기업·자격·과제 검색" /></div>
+      <div className="spacer"></div>
+      <div className="ib-wrap"><IconButton label="알림">{I.bell}</IconButton><span className="dot">3</span></div>
+      <div className="prof"><div className="ava">김</div><div className="pn"><b>김컨설턴트</b><span>경영컨설턴트</span></div></div>
+    </header>
+  );
+}
+
+/* ===== Cut A: list ===== */
+function ListCut({ empty, onNew, onOpen }) {
+  if (empty) {
+    return (
+      <>
+        <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="primary" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
+        <div className="panel"><div className="empty">
+          <div className="eico">{I.megaphone}</div>
+          <h2>첫 캠페인을 만들어보세요</h2>
+          <p>조건으로 대상 기업을 추려 알림톡으로 한 번에 안내하고, 수신·응답 현황을 모아 확인할 수 있습니다.</p>
+          <Button variant="buy" onClick={onNew}>{I.plus} 새 캠페인</Button>
+        </div></div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="primary" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
+      <div className="panel">
+        <div className="sec-head"><h2>캠페인</h2><span className="cnt">{CAMPAIGNS.length}건</span></div>
+        <table className="dlist">
+          <thead><tr><th>제목</th><th>세그먼트 요약</th><th className="c">대상 수</th><th>발송일</th><th className="c">응답률</th><th>상태</th></tr></thead>
+          <tbody>
+            {CAMPAIGNS.map((c,i) => (
+              <tr key={i} className={c.status==='sent' ? 'clk' : ''} onClick={() => c.status==='sent' && onOpen()}>
+                <td className="ttl">{c.title}</td>
+                <td><span className="seg-chip">{c.seg}</span></td>
+                <td className="c num">{c.n}</td>
+                <td className="num" style={{ color: c.date==='–' ? 'var(--color-stone)' : 'var(--color-steel)' }}>{c.date}</td>
+                <td className={'c ' + (c.rate==='–' ? 'muted' : 'rate num')}>{c.rate}</td>
+                <td><span className={'stbadge ' + ST[c.status][0]}><span className="sd"></span>{ST[c.status][1]}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/* ===== Cut B: wizard ===== */
+function StepIndicator({ step, setStep }) {
+  const labels = ['세그먼트','메시지','발송 확인'];
+  return (
+    <div className="steps">
+      {labels.map((l,i) => {
+        const n = i+1;
+        const cls = step===n ? 'active' : step>n ? 'done' : '';
+        return (
+          <React.Fragment key={n}>
+            {i>0 && <div className={'step-conn' + (step>i ? ' done' : '')}></div>}
+            <div className={'step ' + cls} onClick={() => setStep(n)}>
+              <span className="circ">{step>n ? I.check : n}</span>
+              <span className="slab">{l}</span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+function Step1({ zero }) {
+  const [join, setJoin] = useState('AND');
+  return (
+    <div className="wz-grid">
+      <div className="panel">
+        <div className="sec-head"><h2>세그먼트 조건</h2><span className="cnt">대상 기업을 조건으로 추립니다</span></div>
+        <div className="panel-body">
+          <div className="cond-row">
+            <select className="cinput"><option>보유자격</option><option>업종</option><option>컨디션</option><option>매출</option><option>임박 마감</option></select>
+            <select className="cinput op"><option>=</option><option>≠</option></select>
+            <select className="cinput"><option>벤처확인</option><option>세액공제</option><option>기업부설연구소</option></select>
+            <div className="spacer" style={{ flex:1 }}></div>
+            <button className="x">{I.x}</button>
+          </div>
+          <div className="andor">
+            <button className={join==='AND'?'on':''} onClick={() => setJoin('AND')}>AND</button>
+            <button className={join==='OR'?'on':''} onClick={() => setJoin('OR')}>OR</button>
+          </div>
+          <div className="cond-row">
+            <select className="cinput"><option>매출</option><option>보유자격</option><option>업종</option><option>컨디션</option></select>
+            <select className="cinput op"><option>&lt;</option><option>≤</option><option>&gt;</option><option>=</option></select>
+            <input className="cinput num" defaultValue="50억" />
+            <div className="spacer" style={{ flex:1 }}></div>
+            <button className="x">{I.x}</button>
+          </div>
+          <button className="vchip" style={{ marginTop:8, borderStyle:'solid', color:'var(--color-ink-deep)' }}>{I.plus} 조건 추가</button>
+        </div>
+      </div>
+
+      <div className="panel">
+        {zero ? (
+          <>
+            <div className="prev-head"><span className="cu num">0</span><span className="cl">개사 대상</span></div>
+            <div className="seg-zero">
+              <div className="zico">{I.warn}</div>
+              <h3>조건에 맞는 기업이 없습니다</h3>
+              <p>조건을 완화하거나 AND를 OR로 바꿔보세요.</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="prev-head">{I.building}<span className="cu num">5</span><span className="cl">개사 대상 · 실시간</span></div>
+            <div className="prev-list">
+              {TARGETS.map((t,i) => <div key={i} className="prev-item">{I.building}{t}</div>)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Step2() {
+  return (
+    <div className="wz-grid">
+      <div className="panel">
+        <div className="sec-head"><h2>메시지 작성</h2></div>
+        <div className="panel-body">
+          <div className="field-label">알림톡 템플릿</div>
+          <div className="selbox">[갱신 안내] 자격 만료 사전 안내 {I.chevron}</div>
+          <div className="var-chips">
+            <span style={{ fontSize:12.5, color:'var(--color-stone)', fontWeight:700, alignSelf:'center' }}>변수 삽입</span>
+            <button className="vchip">{I.plus} {'{기업명}'}</button>
+            <button className="vchip">{I.plus} {'{담당자명}'}</button>
+          </div>
+          <div className="field-label" style={{ marginTop:6 }}>본문</div>
+          <textarea className="msg-area" defaultValue={'안녕하세요 {기업명} {담당자명}님,\n보유하신 벤처기업확인의 유효기간 만료가 다가옵니다.\n갱신 신청 절차를 안내드리니 아래 버튼에서 확인 부탁드립니다.\n\n— 관제 by Growth Partners'}></textarea>
+        </div>
+      </div>
+      <div className="panel">
+        <div className="sec-head"><h2>발송 미리보기</h2></div>
+        <div className="panel-body">
+          <div className="phone">
+            <div className="phone-top"><span className="kk">톡</span>알림톡 미리보기</div>
+            <div className="bubble">
+              <div className="bt">[갱신 안내] 자격 만료 사전 안내</div>
+              안녕하세요 <span className="vv">(주)테크노바</span> <span className="vv">김도현</span>님,<br/>
+              보유하신 벤처기업확인의 유효기간 만료가 다가옵니다. 갱신 신청 절차를 안내드리니 아래 버튼에서 확인 부탁드립니다.
+              <div className="btn-ghost">갱신 안내 확인하기</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Step3() {
+  const [when, setWhen] = useState('now');
+  return (
+    <div className="panel">
+      <div className="sec-head"><h2>발송 확인</h2></div>
+      <div className="panel-body">
+        <div className="sum-grid">
+          <div className="sum-card"><div className="sk">대상</div><div className="sv num">5개사</div></div>
+          <div className="sum-card"><div className="sk">채널</div><div className="sv">알림톡</div></div>
+          <div className="sum-card"><div className="sk">템플릿</div><div className="sv" style={{ fontSize:15 }}>자격 만료 안내</div></div>
+        </div>
+        <div className="field-label" style={{ margin:'22px 0 0' }}>발송 시점</div>
+        <div className="radio-row">
+          <div className={'ropt' + (when==='now' ? ' on' : '')} onClick={() => setWhen('now')}>
+            <span className="ring"></span><div>{I.bolt}</div><div><div className="rt">즉시 발송</div><div className="rs">확인 즉시 전체 발송</div></div>
+          </div>
+          <div className={'ropt' + (when==='sched' ? ' on' : '')} onClick={() => setWhen('sched')}>
+            <span className="ring"></span><div>{I.clock}</div><div><div className="rt">예약 발송</div><div className="rs">2026-06-12 오전 9:00</div></div>
+          </div>
+        </div>
+        <div className="field-label" style={{ margin:'24px 0 10px' }}>대상 기업 최종 확인 · 5개사</div>
+        <div style={{ border:'1px solid var(--color-hairline-soft)', borderRadius:'var(--radius-lg)', overflow:'hidden' }}>
+          {TARGETS.map((t,i) => (
+            <div key={i} className="prev-item" style={{ borderRadius:0, borderBottom: i<TARGETS.length-1 ? '1px solid var(--color-hairline-soft)' : 'none' }}>{I.building}{t}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Wizard({ step, setStep, zero, onCancel, onSend }) {
+  return (
+    <>
+      <div className="page-head">
+        <div className="crumb" onClick={onCancel}>{I.back} 일괄안내</div>
+        <div className="spacer"></div>
+      </div>
+      <StepIndicator step={step} setStep={setStep} />
+      {step===1 && <Step1 zero={zero} />}
+      {step===2 && <Step2 />}
+      {step===3 && <Step3 />}
+      <div className="panel" style={{ marginTop:16, borderRadius:'var(--radius-xl)' }}>
+        <div className="wz-foot">
+          {step>1 ? <Button variant="secondary" onClick={() => setStep(step-1)} style={{ padding:'12px 22px' }}>{I.back} 이전</Button> : <span></span>}
+          <div className="spacer"></div>
+          {step<3
+            ? <Button variant="primary" disabled={step===1 && zero} onClick={() => setStep(step+1)}>{step===1 ? '다음: 메시지' : '다음: 발송 확인'} {I.arrow}</Button>
+            : <><Button variant="secondary" style={{ padding:'12px 22px' }}>예약 발송</Button><Button variant="buy" onClick={onSend}>{I.send} 발송</Button></>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ===== Cut C: results ===== */
+function ResultsCut({ onBack }) {
+  const kpis = [['발송','5',''],['도달','5',''],['응답','4',''],['응답률','80%','hl']];
+  return (
+    <>
+      <div className="page-head">
+        <div className="crumb" onClick={onBack}>{I.back} 일괄안내</div>
+        <div className="spacer"></div>
+      </div>
+      <div className="sec-head" style={{ background:'none', border:'none', padding:'0 2px 18px' }}>
+        <h2 style={{ fontSize:22, fontWeight:700, letterSpacing:'-.02em' }}>2026 벤처확인 갱신 안내</h2>
+        <span className="stbadge st-sent" style={{ marginLeft:4 }}><span className="sd"></span>발송완료</span>
+        <span className="cnt" style={{ marginLeft:6 }}>2026-06-05 발송</span>
+      </div>
+      <div className="kpi-row">
+        {kpis.map(([k,v,hl],i) => (
+          <div key={i} className={'kpi ' + hl}><div className="klab">{k}</div><div className="kval num">{v}</div></div>
+        ))}
+      </div>
+      <div className="panel">
+        <div className="sec-head"><h2>기업별 응답</h2><span className="cnt">5개사</span></div>
+        <table className="dlist">
+          <thead><tr><th>기업명</th><th className="c">도달</th><th className="c">응답</th><th>응답 내용</th><th>응답 시각</th></tr></thead>
+          <tbody>
+            {RESPONSES.map((r,i) => (
+              <tr key={i}>
+                <td className="ttl">{r.co}</td>
+                <td className="c"><span className={'yn ' + (r.reach ? 'ok' : 'no')}><span className="d"></span>{r.reach ? '도달' : '미도달'}</span></td>
+                <td className="c"><span className={'yn ' + (r.ans ? 'ok' : 'no')}><span className="d"></span>{r.ans ? '응답' : '미응답'}</span></td>
+                <td className={'ans' + (r.ans ? '' : ' no')}>{r.msg}</td>
+                <td className="num" style={{ color:'var(--color-stone)' }}>{r.time}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  const [view, setView] = useState('list');     // list | wizard | results
+  const [listEmpty, setListEmpty] = useState(false);
+  const [step, setStep] = useState(1);
+  const [zero, setZero] = useState(false);
+  const [toast, setToast] = useState(null);      // {type:'sending'|'done'}
+  const tRef = React.useRef();
+
+  const showToast = (t, ms) => { setToast(t); clearTimeout(tRef.current); if (ms) tRef.current = setTimeout(() => setToast(null), ms); };
+  const startNew = () => { setStep(1); setView('wizard'); };
+  const doSend = () => {
+    showToast('sending');
+    setTimeout(() => { setView('results'); showToast('done', 2600); }, 1300);
+  };
+
+  return (
+    <>
+      <div className="demo-bar">
+        <span className="lab">탐색</span>
+        <div className="demo-group">
+          <span>컷</span>
+          <div className="demo-pills">
+            <PillTab active={view==='list' && !listEmpty} onClick={() => { setView('list'); setListEmpty(false); }}>A 목록</PillTab>
+            <PillTab active={view==='list' && listEmpty} onClick={() => { setView('list'); setListEmpty(true); }}>A 목록·빈</PillTab>
+            <PillTab active={view==='wizard'} onClick={() => { setView('wizard'); }}>B 작성</PillTab>
+            <PillTab active={view==='results'} onClick={() => setView('results')}>C 집계</PillTab>
+          </div>
+        </div>
+        {view==='wizard' && (
+          <div className="demo-group">
+            <span>스텝</span>
+            <div className="demo-pills">
+              <PillTab active={step===1} onClick={() => setStep(1)}>①</PillTab>
+              <PillTab active={step===2} onClick={() => setStep(2)}>②</PillTab>
+              <PillTab active={step===3} onClick={() => setStep(3)}>③</PillTab>
+              <PillTab active={zero} onClick={() => { setStep(1); setZero(z => !z); }}>세그먼트 0건</PillTab>
+            </div>
+          </div>
+        )}
+        <span className="hint">목록 → 3스텝 작성 → 응답 집계 · Meta Design System</span>
+      </div>
+      <div className="app">
+        <Nav />
+        <div className="main-col">
+          <TopBar />
+          <div className="content">
+            {view==='list' && <ListCut empty={listEmpty} onNew={startNew} onOpen={() => setView('results')} />}
+            {view==='wizard' && <Wizard step={step} setStep={setStep} zero={zero} onCancel={() => setView('list')} onSend={doSend} />}
+            {view==='results' && <ResultsCut onBack={() => setView('list')} />}
+          </div>
+        </div>
+        <div className={'toast' + (toast ? ' show' : '')}>
+          {toast==='sending' ? <><span className="spin"></span>발송 중…</> : <><span className="tcheck">{I.check}</span>5개사에 발송되었습니다</>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

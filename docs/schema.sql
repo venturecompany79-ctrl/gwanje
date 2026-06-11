@@ -1,0 +1,333 @@
+-- =============================================================
+-- 「관제」 DB 스키마 (Supabase Postgres)
+-- 권위 문서: CLAUDE.md 7절 데이터 레이어와 1:1 대응
+-- 멀티테넌트 준비 완료 — RLS가 tenant 격리를 자동 처리
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- 0. Enums (DB는 영문, UI 라벨은 lib/labels.ts에서 한국어 매핑)
+-- -------------------------------------------------------------
+create type task_stage as enum ('diagnosis', 'proposal', 'application', 'result');
+create type schedule_type as enum ('expiry', 'deadline', 'meeting', 'renewal', 'etc');
+create type document_uploader as enum ('consultant', 'client');
+create type campaign_status as enum ('draft', 'scheduled', 'sending', 'sent');
+create type campaign_channel as enum ('alimtalk', 'email');
+create type notification_type as enum ('expiry', 'deadline', 'program_match');
+
+-- -------------------------------------------------------------
+-- 1. tenant / profile — 워크스페이스 / 컨설턴트
+-- -------------------------------------------------------------
+create table tenant (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  created_at timestamptz not null default now()
+);
+
+create table profile (
+  id                uuid primary key references auth.users (id) on delete cascade,
+  tenant_id         uuid not null references tenant (id) on delete cascade,
+  name              text not null,
+  title             text,                                   -- 직함
+  phone             text,
+  email             text,
+  -- 알림 규칙 (설정 > 알림 규칙)
+  notify_lead_days  int[] not null default '{7,3,1}',       -- D-7 / D-3 / D-1
+  notify_channels   text[] not null default '{email}',      -- email / alimtalk
+  notify_match      boolean not null default true,          -- 공고매칭 알림
+  daily_summary_at  time,                                   -- 일일 요약 시각 (null = off)
+  -- 알림톡 발신 정보
+  sender_name       text,
+  sender_phone      text,
+  created_at        timestamptz not null default now()
+);
+
+-- 현재 사용자의 tenant_id (RLS 정책에서 사용)
+create or replace function auth_tenant_id()
+returns uuid
+language sql stable security definer
+set search_path = public
+as $$
+  select tenant_id from profile where id = auth.uid();
+$$;
+
+-- -------------------------------------------------------------
+-- 2. category — 분류 5종 (설정에서 수정 가능)
+-- -------------------------------------------------------------
+create table category (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references tenant (id) on delete cascade,
+  name       text not null,           -- 정부지원사업 / 벤처기업확인 / 기업부설연구소 / 세액공제 / 정책자금
+  color      text,                    -- 팀이 정식 정의 전까지 null (칩은 중립 스타일)
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 3. company — 고객사
+-- -------------------------------------------------------------
+create table company (
+  id             uuid primary key default gen_random_uuid(),
+  tenant_id      uuid not null references tenant (id) on delete cascade,
+  name           text not null,
+  biz_no         text,                -- 사업자등록번호
+  industry       text,
+  founded_date   date,
+  revenue        bigint,              -- 연 매출 (원)
+  headcount      int,
+  ceo_name       text,
+  contact_name   text,
+  contact_phone  text,
+  contact_email  text,
+  condition_tags text[] not null default '{}',  -- 성장기 등 컨디션 태그
+  memo           text,
+  created_at     timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 4. credential — 자격·인증
+--    상태(valid/expiring/expired)는 저장하지 않고 만료일로 파생
+-- -------------------------------------------------------------
+create table credential (
+  id              uuid primary key default gen_random_uuid(),
+  tenant_id       uuid not null references tenant (id) on delete cascade,
+  company_id      uuid not null references company (id) on delete cascade,
+  type            text not null,      -- 벤처기업확인, 이노비즈 등 자격 종류명
+  category_id     uuid references category (id) on delete set null,
+  issued_date     date,
+  expires_date    date,
+  renew_lead_days int not null default 60,  -- 이 일수 이내면 '임박(expiring)'
+  memo            text,
+  created_at      timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 5. task — 관리포인트 (현황진단→제안→신청→결과)
+-- -------------------------------------------------------------
+create table task (
+  id                   uuid primary key default gen_random_uuid(),
+  tenant_id            uuid not null references tenant (id) on delete cascade,
+  company_id           uuid not null references company (id) on delete cascade,
+  title                text not null,
+  category_id          uuid references category (id) on delete set null,
+  stage                task_stage not null default 'diagnosis',
+  due_date             date,
+  assignee_id          uuid references profile (id) on delete set null,
+  source_credential_id uuid references credential (id) on delete set null,  -- 만료 임박 자격 → 갱신 과제 자동 전환 출처
+  memo                 text,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 6. schedule — 일정
+-- -------------------------------------------------------------
+create table schedule (
+  id              uuid primary key default gen_random_uuid(),
+  tenant_id       uuid not null references tenant (id) on delete cascade,
+  company_id      uuid references company (id) on delete cascade,
+  title           text not null,
+  date            date not null,
+  type            schedule_type not null default 'etc',
+  related_task_id uuid references task (id) on delete set null,
+  memo            text,
+  created_at      timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 7. document — 자료 (파일 본체는 Cloudinary)
+-- -------------------------------------------------------------
+create table document (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references tenant (id) on delete cascade,
+  company_id   uuid not null references company (id) on delete cascade,
+  name         text not null,
+  doc_category text,                          -- 재무 / 인증 / 계약 등
+  version      int not null default 1,
+  uploaded_by  document_uploader not null default 'consultant',
+  storage_url  text,
+  file_type    text,                          -- pdf / xlsx ...
+  size_bytes   bigint,
+  created_at   timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 8. campaign / campaign_recipient — 일괄안내 / 수신·응답
+-- -------------------------------------------------------------
+create table campaign (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references tenant (id) on delete cascade,
+  title        text not null,
+  body         text,
+  channel      campaign_channel not null default 'alimtalk',
+  segment      jsonb not null default '{}',   -- 조건 빌더 결과 ({rules:[{field,op,value}],join:'and'})
+  status       campaign_status not null default 'draft',
+  scheduled_at timestamptz,
+  sent_at      timestamptz,
+  created_at   timestamptz not null default now()
+);
+
+create table campaign_recipient (
+  id            uuid primary key default gen_random_uuid(),
+  tenant_id     uuid not null references tenant (id) on delete cascade,
+  campaign_id   uuid not null references campaign (id) on delete cascade,
+  company_id    uuid not null references company (id) on delete cascade,
+  delivered     boolean not null default false,
+  delivered_at  timestamptz,
+  responded     boolean not null default false,
+  responded_at  timestamptz,
+  response_note text,
+  created_at    timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 9. notification — 알림
+-- -------------------------------------------------------------
+create table notification (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references tenant (id) on delete cascade,
+  type       notification_type not null,
+  title      text not null,
+  body       text,
+  company_id uuid references company (id) on delete cascade,
+  ref_table  text,                    -- credential / task / schedule / campaign
+  ref_id     uuid,
+  is_urgent  boolean not null default false,
+  is_read    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 10. rule — 룰엔진 (Phase 2, 테이블만)
+-- -------------------------------------------------------------
+create table rule (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references tenant (id) on delete cascade,
+  name        text not null,
+  eligibility jsonb not null default '{}',
+  active      boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+
+-- -------------------------------------------------------------
+-- 11. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정)
+--     security_invoker: 조회자의 RLS가 그대로 적용됨
+-- -------------------------------------------------------------
+create view deadline_item
+with (security_invoker = on)
+as
+select
+  'credential'::text                  as source,
+  c.id                                as id,
+  c.tenant_id                         as tenant_id,
+  c.company_id                        as company_id,
+  co.name                             as company_name,
+  c.type || ' 만료'                   as title,
+  c.category_id                       as category_id,
+  cat.name                            as category_name,
+  c.expires_date                      as due_date,
+  (c.expires_date - current_date)     as days_left,
+  case
+    when c.expires_date < current_date then 'expired'
+    when c.expires_date - current_date <= c.renew_lead_days then 'expiring'
+    else 'valid'
+  end                                 as status
+from credential c
+join company co on co.id = c.company_id
+left join category cat on cat.id = c.category_id
+where c.expires_date is not null
+
+union all
+
+select
+  'task',
+  t.id,
+  t.tenant_id,
+  t.company_id,
+  co.name,
+  t.title,
+  t.category_id,
+  cat.name,
+  t.due_date,
+  (t.due_date - current_date),
+  t.stage::text
+from task t
+join company co on co.id = t.company_id
+left join category cat on cat.id = t.category_id
+where t.due_date is not null
+  and t.stage <> 'result'
+
+union all
+
+select
+  'schedule',
+  s.id,
+  s.tenant_id,
+  s.company_id,
+  co.name,
+  s.title,
+  null,
+  null,
+  s.date,
+  (s.date - current_date),
+  s.type::text
+from schedule s
+left join company co on co.id = s.company_id
+where s.date >= current_date - interval '30 days';
+
+-- -------------------------------------------------------------
+-- 12. RLS — 모든 테이블 tenant 격리
+-- -------------------------------------------------------------
+alter table tenant enable row level security;
+alter table profile enable row level security;
+alter table category enable row level security;
+alter table company enable row level security;
+alter table credential enable row level security;
+alter table task enable row level security;
+alter table schedule enable row level security;
+alter table document enable row level security;
+alter table campaign enable row level security;
+alter table campaign_recipient enable row level security;
+alter table notification enable row level security;
+alter table rule enable row level security;
+
+create policy "tenant: 본인 워크스페이스만" on tenant
+  for all using (id = auth_tenant_id()) with check (id = auth_tenant_id());
+
+create policy "profile: 본인만" on profile
+  for all using (id = auth.uid()) with check (id = auth.uid());
+
+create policy "category: tenant 격리" on category
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "company: tenant 격리" on company
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "credential: tenant 격리" on credential
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "task: tenant 격리" on task
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "schedule: tenant 격리" on schedule
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "document: tenant 격리" on document
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "campaign: tenant 격리" on campaign
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "campaign_recipient: tenant 격리" on campaign_recipient
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "notification: tenant 격리" on notification
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "rule: tenant 격리" on rule
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+
+-- -------------------------------------------------------------
+-- 13. 인덱스
+-- -------------------------------------------------------------
+create index idx_company_tenant on company (tenant_id);
+create index idx_credential_company on credential (company_id);
+create index idx_credential_expires on credential (tenant_id, expires_date);
+create index idx_task_company on task (company_id);
+create index idx_task_due on task (tenant_id, due_date);
+create index idx_task_stage on task (tenant_id, stage);
+create index idx_schedule_date on schedule (tenant_id, date);
+create index idx_document_company on document (company_id);
+create index idx_campaign_tenant on campaign (tenant_id);
+create index idx_recipient_campaign on campaign_recipient (campaign_id);
+create index idx_notification_unread on notification (tenant_id, is_read, created_at desc);

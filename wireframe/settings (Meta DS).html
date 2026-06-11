@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>설정 · Meta DS</title>
+
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
+  button{font-family:var(--font-body);}
+
+  .demo-bar{width:1280px;margin:24px auto 14px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+    padding:12px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
+  .demo-bar .lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--color-stone);text-transform:uppercase;}
+  .demo-bar .hint{margin-left:auto;font-size:12px;color:var(--color-stone);}
+  .demo-pills{display:flex;gap:8px;}
+  .demo-pills button{white-space:nowrap;}
+
+  .app{width:1280px;margin:0 auto 44px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
+    border-radius:var(--radius-xxl);overflow:hidden;display:grid;grid-template-columns:240px 1fr;min-height:900px;
+    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;}
+  .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
+
+  .nav{border-right:1px solid var(--color-hairline-soft);padding:22px 16px;display:flex;flex-direction:column;background:var(--color-canvas);}
+  .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;}
+  .brand .mark{width:34px;height:34px;border-radius:var(--radius-full);flex:none;
+    background:radial-gradient(circle at 30% 30%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+  .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--color-ink-deep);line-height:1.1;}
+  .brand small{display:block;font-size:11px;font-weight:500;color:var(--color-stone);}
+  .nav-sec{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--color-stone);text-transform:uppercase;padding:12px 12px 8px;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;margin:3px 0;border-radius:var(--radius-full);
+    color:var(--color-charcoal);text-decoration:none;font-size:14px;font-weight:600;letter-spacing:-.14px;cursor:pointer;
+    border:1px solid transparent;transition:background-color 150ms ease-out,color 150ms ease-out;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item:hover{background:var(--color-surface-soft);}
+  .nav-item.active{background:var(--color-ink-deep);color:var(--color-canvas);border-color:var(--color-ink-deep);}
+  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:#fff;font-size:11px;font-weight:700;
+    min-width:19px;height:19px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0 5px;}
+  .nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-hairline-soft);display:flex;align-items:center;gap:11px;}
+  .nav-foot .ava{width:34px;height:34px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--color-ink);flex:none;}
+  .nav-foot .who b{font-size:13px;font-weight:700;display:block;color:var(--color-ink-deep);}
+  .nav-foot .who span{font-size:11.5px;color:var(--color-stone);}
+
+  .main-col{display:flex;flex-direction:column;min-width:0;background:var(--color-surface-soft);}
+  .topbar{height:64px;background:var(--color-canvas);border-bottom:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;gap:16px;padding:0 28px;flex:none;}
+  .search{display:flex;align-items:center;gap:10px;width:340px;height:42px;padding:0 16px;
+    background:var(--color-surface-soft);border:1px solid transparent;border-radius:var(--radius-full);color:var(--color-stone);}
+  .search:focus-within{border-color:var(--color-fb-blue);background:var(--color-canvas);}
+  .search svg{width:17px;height:17px;stroke:var(--color-steel);}
+  .search input{border:0;background:transparent;outline:none;font-family:var(--font-body);font-size:14px;letter-spacing:-.14px;color:var(--color-ink);width:100%;}
+  .search input::placeholder{color:var(--color-stone);}
+  .topbar .spacer{flex:1;}
+  .ib-wrap{position:relative;}
+  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:#fff;font-size:10.5px;font-weight:700;
+    min-width:18px;height:18px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-canvas);padding:0 3px;}
+  .prof{display:flex;align-items:center;gap:10px;cursor:pointer;padding-left:4px;}
+  .prof .ava{width:36px;height:36px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--color-ink);}
+  .prof .pn b{font-size:13.5px;font-weight:700;display:block;line-height:1.2;color:var(--color-ink-deep);}
+  .prof .pn span{font-size:11.5px;color:var(--color-stone);}
+
+  .content{padding:26px 28px 44px;overflow:auto;flex:1;}
+  .page-h1{margin:0 0 22px;font-size:26px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
+
+  /* settings 2-pane */
+  .set-grid{display:grid;grid-template-columns:236px 1fr;gap:24px;align-items:start;}
+  .set-nav{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:8px;position:sticky;top:0;}
+  .set-nav .sn{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:var(--radius-lg);cursor:pointer;
+    font-size:14px;font-weight:600;color:var(--color-charcoal);letter-spacing:-.14px;position:relative;transition:background-color 150ms;}
+  .set-nav .sn svg{width:18px;height:18px;stroke:currentColor;}
+  .set-nav .sn:hover{background:var(--color-surface-soft);}
+  .set-nav .sn.active{background:var(--color-surface-soft);color:var(--color-ink-deep);font-weight:700;}
+  .set-nav .sn.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--color-primary);}
+  .set-nav .sn.disabled{color:var(--color-stone);cursor:not-allowed;}
+  .set-nav .sn.disabled:hover{background:transparent;}
+  .cs-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-full);
+    background:var(--color-surface-soft);color:var(--color-stone);border:1px solid var(--color-hairline-soft);letter-spacing:0;}
+
+  .panel{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);overflow:hidden;}
+  .panel-head{padding:20px 24px;border-bottom:1px solid var(--color-hairline-soft);}
+  .panel-head h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.16px;color:var(--color-ink-deep);}
+  .panel-head p{margin:6px 0 0;font-size:13.5px;color:var(--color-steel);letter-spacing:-.14px;}
+  .panel-body{padding:24px;}
+  .panel-foot{padding:16px 24px;border-top:1px solid var(--color-hairline-soft);display:flex;justify-content:flex-end;gap:10px;}
+
+  /* form */
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px;}
+  .field-grid .full{grid-column:1 / -1;}
+  .sub-h{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-stone);
+    margin:8px 0 14px;padding-top:22px;border-top:1px solid var(--color-hairline-soft);grid-column:1 / -1;}
+  .sub-h:first-child{padding-top:0;border-top:0;margin-top:0;}
+
+  /* setting rows */
+  .setrow{display:flex;align-items:center;gap:18px;padding:16px 0;border-bottom:1px solid var(--color-hairline-soft);}
+  .setrow:last-child{border-bottom:0;}
+  .setrow .sr-body{flex:1;}
+  .setrow .sr-t{font-size:14.5px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.16px;}
+  .setrow .sr-s{font-size:12.5px;color:var(--color-stone);margin-top:3px;letter-spacing:-.14px;}
+  .grp-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-stone);margin:0 0 4px;}
+  .grp-label.mt{margin-top:26px;padding-top:22px;border-top:1px solid var(--color-hairline-soft);}
+
+  /* toggle switch */
+  .switch{width:46px;height:27px;border-radius:var(--radius-full);background:var(--color-hairline);border:none;
+    position:relative;cursor:pointer;flex:none;transition:background-color 160ms ease-out;padding:0;}
+  .switch .knob{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 2px rgba(10,19,23,.3);transition:transform 160ms ease-out;}
+  .switch.on{background:var(--color-primary);}
+  .switch.on .knob{transform:translateX(19px);}
+
+  /* time select */
+  .selbox{display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 14px;border-radius:var(--radius-lg);
+    border:1px solid var(--color-hairline);background:var(--color-canvas);font-size:14px;font-weight:600;color:var(--color-ink-deep);
+    letter-spacing:-.14px;cursor:pointer;min-width:150px;justify-content:space-between;}
+  .selbox svg{width:16px;height:16px;stroke:var(--color-steel);}
+
+  /* dn chip in rules */
+  .dn-chip{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:30px;border-radius:var(--radius-full);
+    background:var(--color-surface-soft);font-size:14px;font-weight:700;color:var(--color-ink-deep);letter-spacing:.01em;}
+
+  /* category list */
+  .cat-row{display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid var(--color-hairline-soft);}
+  .cat-row:last-child{border-bottom:0;}
+  .cat-sw{width:30px;height:30px;border-radius:var(--radius-full);flex:none;background:var(--color-surface-soft);
+    border:1px solid var(--color-hairline);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .cat-sw svg{width:14px;height:14px;stroke:var(--color-stone);}
+  .cat-row .cn{font-size:14.5px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.16px;white-space:nowrap;}
+  .cat-row .cmeta{font-size:12px;color:var(--color-stone);margin-top:2px;white-space:nowrap;}
+  .cat-row .spacer{flex:1;}
+  .pill-btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:var(--radius-full);
+    border:1px solid var(--color-hairline);background:var(--color-canvas);color:var(--color-ink-deep);
+    font-size:12.5px;font-weight:700;letter-spacing:-.14px;cursor:pointer;transition:background-color 150ms,border-color 150ms;}
+  .pill-btn:hover{background:var(--color-surface-soft);border-color:var(--color-stone);}
+  .pill-btn svg{width:14px;height:14px;}
+
+  /* disabled placeholder section */
+  .ph-sec{padding:60px 30px;text-align:center;display:flex;flex-direction:column;align-items:center;}
+  .ph-sec .eico{width:70px;height:70px;border-radius:var(--radius-xl);background:var(--color-surface-soft);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+  .ph-sec .eico svg{width:32px;height:32px;stroke:var(--color-stone);}
+  .ph-sec .cs{display:inline-flex;align-items:center;height:24px;padding:0 11px;border-radius:var(--radius-full);background:var(--color-warning);
+    color:var(--color-ink-deep);font-size:11px;font-weight:700;letter-spacing:.02em;margin-bottom:14px;}
+  .ph-sec h2{margin:0 0 9px;font-size:20px;font-weight:600;letter-spacing:-.01em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);white-space:nowrap;}
+  .ph-sec p{margin:0;font-size:14px;color:var(--color-steel);max-width:380px;line-height:1.5;letter-spacing:-.16px;}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);opacity:0;z-index:40;
+    display:flex;align-items:center;gap:10px;background:var(--color-ink-deep);color:#fff;padding:13px 20px;border-radius:var(--radius-full);
+    font-size:14px;font-weight:700;letter-spacing:-.14px;box-shadow:0 8px 24px rgba(10,19,23,.28);transition:transform 260ms ease-out,opacity 260ms ease-out;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  .toast .tcheck{width:22px;height:22px;border-radius:50%;background:var(--color-success);display:flex;align-items:center;justify-content:center;}
+  .toast .tcheck svg{width:13px;height:13px;stroke:#fff;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ffffff"/>
+    <rect x="120" y="160" width="170" height="480" rx="20" fill="#f1f4f7"/>
+    <rect x="340" y="200" width="200" height="420" rx="16" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
+    <rect x="560" y="200" width="520" height="420" rx="16" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
+    <rect x="590" y="260" width="200" height="16" rx="8" fill="#0a1317"/>
+    <rect x="980" y="252" width="46" height="27" rx="13" fill="#0064e0"/><circle cx="1012" cy="265" r="10" fill="#fff"/>
+    <rect x="590" y="330" width="200" height="16" rx="8" fill="#8595a4"/>
+    <rect x="980" y="322" width="46" height="27" rx="13" fill="#ced0d4"/><circle cx="993" cy="335" r="10" fill="#fff"/>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+
+<script type="text/babel">
+const { useState } = React;
+const { Button, Input, IconButton } = window.MetaDesignSystem_d06bcc;
+
+const I = {
+  grid:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
+  building:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>,
+  kanban:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>,
+  send:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+  bell:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>,
+  gear:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  search:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>,
+  user:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>,
+  tag:     <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 2.8 12V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>,
+  card:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>,
+  team:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.5a3.2 3.2 0 0 1 0 6"/><path d="M17 14a5 5 0 0 1 4 5v1"/></svg>,
+  chevron: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+  plus:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>,
+  edit:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>,
+  check:   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+  palette: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 1 0 0 20 2.5 2.5 0 0 0 2.5-2.5c0-1.4-1.1-2.5-2.5-2.5h-1a2 2 0 0 1 0-4h3a4 4 0 0 0 4-4c0-3.9-4-7-9-7z"/></svg>,
+  clock:   <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+};
+
+function Nav() {
+  const items = [
+    { label:'대시보드', icon:I.grid },
+    { label:'기업', icon:I.building },
+    { label:'관리포인트 보드', icon:I.kanban },
+    { label:'일괄안내', icon:I.send },
+    { label:'알림', icon:I.bell, badge:3 },
+    { label:'설정', icon:I.gear, active:true },
+  ];
+  return (
+    <nav className="nav">
+      <div className="brand"><div className="mark">관</div><div><b>관제</b><small>Compliance Desk</small></div></div>
+      <div className="nav-sec">메뉴</div>
+      {items.map((it,i) => (
+        <div key={i} className={'nav-item' + (it.active ? ' active' : '')}>
+          {it.icon}<span>{it.label}</span>{it.badge ? <span className="nbadge">{it.badge}</span> : null}
+        </div>
+      ))}
+      <div className="nav-foot"><div className="ava">김</div><div className="who"><b>김컨설턴트</b><span>Growth Partners</span></div></div>
+    </nav>
+  );
+}
+
+function TopBar() {
+  return (
+    <header className="topbar">
+      <div className="search">{I.search}<input placeholder="기업·자격·과제 검색" /></div>
+      <div className="spacer"></div>
+      <div className="ib-wrap"><IconButton label="알림">{I.bell}</IconButton><span className="dot">3</span></div>
+      <div className="prof"><div className="ava">김</div><div className="pn"><b>김컨설턴트</b><span>경영컨설턴트</span></div></div>
+    </header>
+  );
+}
+
+function Switch({ on, onChange }) {
+  return <button className={'switch' + (on ? ' on' : '')} onClick={onChange} aria-pressed={on}><span className="knob"></span></button>;
+}
+
+const SECTIONS = [
+  { k:'profile', label:'프로필', icon:I.user },
+  { k:'rules', label:'알림 규칙', icon:I.bell },
+  { k:'cats', label:'분류 카테고리', icon:I.tag },
+  { k:'sub', label:'구독', icon:I.card, soon:true },
+  { k:'team', label:'팀·회원', icon:I.team, soon:true },
+];
+
+const CATS = ['정부지원사업','벤처기업확인','기업부설연구소','세액공제','정책자금'];
+
+function ProfileSection({ onSave }) {
+  return (
+    <div className="panel">
+      <div className="panel-head"><h2>프로필</h2><p>본인 정보와 알림톡 발신 정보를 관리합니다.</p></div>
+      <div className="panel-body">
+        <div className="field-grid">
+          <div className="sub-h">기본 정보</div>
+          <Input label="이름" value="김컨설턴트" />
+          <Input label="직함" value="경영컨설턴트" />
+          <Input label="연락처" value="010-2345-6789" />
+          <Input label="이메일" value="kim@growthpartners.co.kr" />
+          <div className="sub-h">알림톡 발신 정보</div>
+          <Input label="발신 프로필명" value="관제 by Growth Partners" />
+          <Input label="발신번호" value="1666-0000" />
+        </div>
+      </div>
+      <div className="panel-foot"><Button variant="buy" onClick={onSave}>저장</Button></div>
+    </div>
+  );
+}
+
+function RulesSection({ onSave }) {
+  const [pre, setPre] = useState({ d7:true, d3:true, d1:false });
+  const [ch, setCh] = useState({ email:true, talk:true });
+  const [match, setMatch] = useState(true);
+  const [daily, setDaily] = useState(true);
+  return (
+    <div className="panel">
+      <div className="panel-head"><h2>알림 규칙</h2><p>만료·마감 사전 알림 시점과 발송 채널, 요약 알림을 설정합니다.</p></div>
+      <div className="panel-body">
+        <div className="grp-label">만료·마감 사전 알림 시점</div>
+        {[['d7','D-7','만료·마감 7일 전 알림'],['d3','D-3','3일 전 — 긴급 단계 진입'],['d1','D-1','하루 전 최종 리마인드']].map(([k,dn,desc]) => (
+          <div key={k} className="setrow">
+            <span className="dn-chip num">{dn}</span>
+            <div className="sr-body"><div className="sr-t">{dn} 사전 알림</div><div className="sr-s">{desc}</div></div>
+            <Switch on={pre[k]} onChange={() => setPre(p => ({ ...p, [k]:!p[k] }))} />
+          </div>
+        ))}
+
+        <div className="grp-label mt">발송 채널</div>
+        <div className="setrow">
+          <div className="sr-body"><div className="sr-t">이메일</div><div className="sr-s">kim@growthpartners.co.kr 로 발송</div></div>
+          <Switch on={ch.email} onChange={() => setCh(c => ({ ...c, email:!c.email }))} />
+        </div>
+        <div className="setrow">
+          <div className="sr-body"><div className="sr-t">알림톡</div><div className="sr-s">카카오 알림톡으로 발송</div></div>
+          <Switch on={ch.talk} onChange={() => setCh(c => ({ ...c, talk:!c.talk }))} />
+        </div>
+
+        <div className="grp-label mt">기타</div>
+        <div className="setrow">
+          <div className="sr-body"><div className="sr-t">공고매칭 알림</div><div className="sr-s">기업 프로파일에 맞는 신규 공고를 매칭해 알립니다.</div></div>
+          <Switch on={match} onChange={() => setMatch(m => !m)} />
+        </div>
+        <div className="setrow">
+          <div className="sr-body"><div className="sr-t">일일 요약 알림</div><div className="sr-s">매일 정해진 시각에 그날의 임박 항목을 모아 발송</div></div>
+          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+            <div className="selbox">매일 오전 9:00 {I.chevron}</div>
+            <Switch on={daily} onChange={() => setDaily(d => !d)} />
+          </div>
+        </div>
+      </div>
+      <div className="panel-foot"><Button variant="buy" onClick={onSave}>저장</Button></div>
+    </div>
+  );
+}
+
+function CatsSection() {
+  return (
+    <div className="panel">
+      <div className="panel-head"><h2>분류 카테고리</h2><p>과제·자격에 사용하는 분류 카테고리입니다. 색상은 디자인 시스템 토큰을 따릅니다.</p></div>
+      <div className="panel-body">
+        {CATS.map((c,i) => (
+          <div key={i} className="cat-row">
+            <span className="cat-sw" title="색상 지정">{I.palette}</span>
+            <div><div className="cn">{c}</div><div className="cmeta">색상 지정 가능</div></div>
+            <div className="spacer"></div>
+            <button className="pill-btn">{I.edit} 이름 수정</button>
+          </div>
+        ))}
+        <div style={{ paddingTop:18 }}>
+          <Button variant="secondary" style={{ padding:'10px 20px' }}>{I.plus} 카테고리 추가</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComingSoon({ icon, title }) {
+  return (
+    <div className="panel">
+      <div className="ph-sec">
+        <div className="eico">{icon}</div>
+        <span className="cs">COMING SOON</span>
+        <h2>{title}</h2>
+        <p>멀티 회원·구독 기능은 추후 제공 예정입니다. 현재는 단일 사용자(본인) 기준으로 운영됩니다.</p>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [sec, setSec] = useState('rules');
+  const [toast, setToast] = useState(false);
+  const tRef = React.useRef(null);
+  const save = () => {
+    setToast(true);
+    clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => setToast(false), 2600);
+  };
+  return (
+    <>
+      <div className="demo-bar">
+        <span className="lab">탐색</span>
+        <span style={{ fontSize:13, color:'var(--color-charcoal)', fontWeight:700 }}>설정 화면 · 단일 사용자(본인) 기준</span>
+        <button className="pill-btn" onClick={save}>{I.check} 저장 토스트 미리보기</button>
+        <span className="hint">[저장] 클릭 시 완료 토스트 · Meta Design System</span>
+      </div>
+      <div className="app">
+        <Nav />
+        <div className="main-col">
+          <TopBar />
+          <div className="content">
+            <h1 className="page-h1">설정</h1>
+            <div className="set-grid">
+              <div className="set-nav">
+                {SECTIONS.map(s => (
+                  <div key={s.k}
+                    className={'sn' + (sec===s.k ? ' active' : '') + (s.soon ? ' disabled' : '')}
+                    onClick={() => { if (!s.soon) setSec(s.k); }}>
+                    {s.icon}<span>{s.label}</span>
+                    {s.soon ? <span className="cs-badge">Coming soon</span> : null}
+                  </div>
+                ))}
+              </div>
+              <div>
+                {sec==='profile' && <ProfileSection onSave={save} />}
+                {sec==='rules' && <RulesSection onSave={save} />}
+                {sec==='cats' && <CatsSection />}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={'toast' + (toast ? ' show' : '')}>
+          <span className="tcheck">{I.check}</span>저장되었습니다
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

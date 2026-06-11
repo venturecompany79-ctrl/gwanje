@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관제 · 서비스 랜딩페이지</title>
+
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
+  button{font-family:var(--font-body);}
+  svg{stroke:currentColor;}
+
+  .demo-bar{width:1280px;max-width:calc(100vw - 24px);margin:24px auto 14px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+    padding:12px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
+  .demo-bar .lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--color-stone);text-transform:uppercase;}
+  .demo-group{display:flex;align-items:center;gap:10px;}
+  .demo-group > span{font-size:13px;color:var(--color-charcoal);font-weight:700;}
+  .demo-pills{display:flex;gap:8px;}
+  .demo-pills button{white-space:nowrap;}
+  .demo-bar .hint{margin-left:auto;font-size:12px;color:var(--color-stone);}
+
+  .viewport{margin:0 auto 48px;transition:width 240ms ease-out;}
+  .site{width:100%;container-type:inline-size;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
+    border-radius:var(--radius-xxl);overflow:hidden;box-shadow:0 18px 50px rgba(10,19,23,.10);}
+  .site svg{width:20px;height:20px;flex:none;}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 40px;}
+
+  /* nav */
+  .lnav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--color-hairline-soft);}
+  .lnav-in{max-width:1080px;margin:0 auto;padding:0 40px;height:68px;display:flex;align-items:center;gap:18px;}
+  .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);}
+  .logo .mk{width:32px;height:32px;border-radius:var(--radius-md);background:radial-gradient(circle at 30% 28%,#0091ff,#0064e0 55%,#0457cb);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+  .nav-menu{display:flex;align-items:center;gap:26px;margin-left:18px;}
+  .nav-menu a{font-size:14px;font-weight:600;color:var(--color-charcoal);text-decoration:none;letter-spacing:-.14px;cursor:pointer;}
+  .nav-menu a:hover{color:var(--color-ink-deep);}
+  .lnav .spacer{flex:1;}
+  .nav-cta{display:flex;align-items:center;gap:10px;}
+  .hamb{display:none;width:42px;height:42px;border-radius:var(--radius-full);border:1px solid var(--color-hairline);
+    background:var(--color-canvas);cursor:pointer;align-items:center;justify-content:center;color:var(--color-ink-deep);}
+  .mobile-menu{display:none;border-top:1px solid var(--color-hairline-soft);background:var(--color-canvas);padding:14px 40px 18px;}
+  .mobile-menu a{display:block;padding:12px 0;font-size:15px;font-weight:600;color:var(--color-ink-deep);text-decoration:none;border-bottom:1px solid var(--color-hairline-soft);}
+  .mobile-menu .mcta{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+
+  /* hero */
+  .hero{padding:72px 0 64px;background:radial-gradient(900px 420px at 78% 0%, #eef4fc 0%, rgba(238,244,252,0) 70%);}
+  .hero-in{max-width:1080px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 14px;border-radius:var(--radius-full);
+    background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);font-size:12.5px;font-weight:700;color:var(--color-primary-deep);letter-spacing:-.14px;margin-bottom:20px;}
+  .eyebrow .d{width:7px;height:7px;border-radius:50%;background:var(--color-primary);}
+  .hero h1{margin:0;font-size:46px;line-height:1.16;font-weight:700;letter-spacing:-.03em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
+  .hero .sub{margin:22px 0 30px;font-size:17px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;max-width:520px;}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
+  .hero-trust{margin-top:22px;font-size:13px;color:var(--color-stone);letter-spacing:-.14px;}
+  .mock{width:100%;border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 16px 40px rgba(10,19,23,.16);border:1px solid var(--color-hairline-soft);background:var(--color-surface-soft);}
+  .mock.hero-mock{aspect-ratio:4/3;}
+
+  /* section base */
+  .section{padding:72px 0;}
+  .section.soft{background:var(--color-surface-soft);}
+  .sec-head{text-align:center;max-width:680px;margin:0 auto 44px;}
+  .sec-kicker{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary-deep);margin-bottom:12px;}
+  .sec-head h2{margin:0;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
+  .sec-head p{margin:14px 0 0;font-size:16px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;}
+
+  /* problem cards */
+  .prob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .prob{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:24px;}
+  .prob .pic{width:42px;height:42px;border-radius:var(--radius-md);background:#fbe1e5;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .prob .pic svg{stroke:var(--color-critical);width:21px;height:21px;}
+  .prob p{margin:0;font-size:14.5px;line-height:1.55;color:var(--color-charcoal);font-weight:600;letter-spacing:-.16px;}
+
+  /* feature blocks */
+  .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .feat{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:28px;display:flex;flex-direction:column;}
+  .feat .ic{width:48px;height:48px;border-radius:var(--radius-lg);background:#e2eefc;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+  .feat .ic svg{stroke:var(--color-primary);width:24px;height:24px;}
+  .feat h3{margin:0 0 9px;font-size:20px;font-weight:700;letter-spacing:-.18px;color:var(--color-ink-deep);}
+  .feat p{margin:0 0 20px;font-size:15px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;}
+  .feat .mock{margin-top:auto;aspect-ratio:16/9;}
+
+  /* steps */
+  .steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s;}
+  .stp{position:relative;padding:28px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
+  .stp .n{width:38px;height:38px;border-radius:var(--radius-full);background:var(--color-ink-deep);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-bottom:16px;}
+  .stp h3{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.16px;}
+  .stp p{margin:0;font-size:14.5px;line-height:1.55;color:var(--color-steel);letter-spacing:-.16px;}
+
+  /* social proof */
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;}
+  .metric{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:26px;text-align:center;}
+  .metric .v{font-size:38px;font-weight:700;letter-spacing:-.03em;color:var(--color-ink-deep);}
+  .metric .k{font-size:14px;color:var(--color-steel);font-weight:600;margin-top:6px;letter-spacing:-.16px;}
+  .quotes{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .quote{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:26px;}
+  .quote p{margin:0 0 16px;font-size:16px;line-height:1.6;color:var(--color-ink-deep);letter-spacing:-.16px;}
+  .quote .who{display:flex;align-items:center;gap:11px;}
+  .quote .av{width:38px;height:38px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--color-ink);font-size:14px;}
+  .quote .who b{font-size:13.5px;font-weight:700;display:block;}
+  .quote .who span{font-size:12.5px;color:var(--color-stone);}
+  .review-flag{display:inline-flex;align-items:center;gap:7px;margin:0 auto 24px;padding:6px 14px;border-radius:var(--radius-full);
+    background:#fdf3da;border:1px solid #f2d89b;color:#8a6a00;font-size:12.5px;font-weight:700;letter-spacing:-.14px;}
+
+  /* pricing */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .tier{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:28px;text-align:center;}
+  .tier.feature-on{border:2px solid var(--color-ink-deep);}
+  .tier .tn{font-size:18px;font-weight:700;letter-spacing:-.16px;}
+  .tier .tp{font-size:14px;color:var(--color-stone);margin:10px 0 18px;letter-spacing:-.14px;}
+  .tier .soon{display:inline-flex;height:24px;align-items:center;padding:0 11px;border-radius:var(--radius-full);background:var(--color-surface-soft);color:var(--color-stone);font-size:11.5px;font-weight:700;border:1px solid var(--color-hairline-soft);}
+  .price-note{text-align:center;margin-top:24px;font-size:14px;color:var(--color-steel);letter-spacing:-.16px;}
+
+  /* CTA band */
+  .cta-band{background:var(--color-ink-deep);border-radius:var(--radius-xxxl);padding:64px 40px;text-align:center;margin:0 40px;}
+  .cta-band h2{margin:0 0 14px;font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff;font-feature-settings:"ss01" 1,"ss02" 1;}
+  .cta-band p{margin:0 0 28px;font-size:16px;color:rgba(255,255,255,.72);letter-spacing:-.16px;}
+  .cta-band .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+  /* footer */
+  .footer{background:var(--color-canvas);border-top:1px solid var(--color-hairline-soft);padding:52px 0 36px;}
+  .foot-in{max-width:1080px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;gap:32px;}
+  .foot-brand .logo{margin-bottom:14px;}
+  .foot-brand p{margin:0;font-size:13.5px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;max-width:280px;}
+  .foot-col h4{margin:0 0 14px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-stone);}
+  .foot-col a{display:block;font-size:14px;color:var(--color-charcoal);text-decoration:none;margin-bottom:11px;letter-spacing:-.14px;cursor:pointer;}
+  .foot-col a:hover{color:var(--color-ink-deep);}
+  .foot-bottom{max-width:1080px;margin:36px auto 0;padding:22px 40px 0;border-top:1px solid var(--color-hairline-soft);
+    display:flex;align-items:center;gap:16px;font-size:12.5px;color:var(--color-stone);letter-spacing:-.14px;}
+  .foot-bottom .spacer{flex:1;}
+  .foot-bottom a{color:var(--color-stone);text-decoration:none;}
+  .foot-bottom a:hover{color:var(--color-charcoal);}
+
+  /* ===== container responsive ===== */
+  @container (max-width: 820px){
+    .nav-menu,.nav-cta{display:none;}
+    .hamb{display:flex;}
+    .hero-in{grid-template-columns:1fr;gap:32px;padding:0 24px;}
+    .hero{padding:48px 0 44px;}
+    .hero h1{font-size:33px;}
+    .wrap,.lnav-in,.foot-in,.foot-bottom{padding-left:24px;padding-right:24px;}
+    .section{padding:52px 0;}
+    .prob-grid{grid-template-columns:1fr 1fr;}
+    .feat-grid{grid-template-columns:1fr;}
+    .steps3{grid-template-columns:1fr;}
+    .metrics{grid-template-columns:1fr;}
+    .quotes{grid-template-columns:1fr;}
+    .price-grid{grid-template-columns:1fr;}
+    .sec-head h2,.cta-band h2{font-size:27px;}
+    .cta-band{padding:44px 24px;margin:0 24px;}
+    .foot-in{grid-template-columns:1fr 1fr;gap:24px;}
+    .foot-brand{grid-column:1 / -1;}
+    .foot-bottom{flex-direction:column;align-items:flex-start;gap:8px;}
+  }
+  @container (max-width: 480px){
+    .prob-grid{grid-template-columns:1fr;}
+    .hero h1{font-size:29px;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ffffff"/>
+    <rect x="0" y="0" width="1200" height="90" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
+    <rect x="60" y="34" width="120" height="22" rx="6" fill="#0a1317"/>
+    <rect x="980" y="28" width="160" height="34" rx="17" fill="#0a1317"/>
+    <rect x="80" y="200" width="520" height="44" rx="8" fill="#0a1317"/>
+    <rect x="80" y="264" width="520" height="44" rx="8" fill="#0a1317"/>
+    <rect x="80" y="360" width="180" height="52" rx="26" fill="#0a1317"/>
+    <rect x="280" y="360" width="140" height="52" rx="26" fill="#f1f4f7"/>
+    <rect x="680" y="200" width="440" height="320" rx="20" fill="#eef4fc" stroke="#0064e0" stroke-width="2"/>
+  </svg>
+</template>
+
+<script src="image-slot.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+
+<script type="text/babel">
+const { useState } = React;
+const { Button } = window.MetaDesignSystem_d06bcc;
+
+const I = {
+  bell:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>,
+  target:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>,
+  send:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+  building:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>,
+  chat:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.6-.7L3 21l1.4-5A8.4 8.4 0 1 1 21 11.5z"/></svg>,
+  layers:<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>,
+  alert: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>,
+  menu:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>,
+  x:     <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>,
+  star:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z"/></svg>,
+};
+
+const NAV = ['기능','작동방식','요금','문의'];
+const CtaPrimary = (p) => <Button variant="primary" style={{ padding:'12px 22px', fontSize:14, ...(p.style||{}) }}>{p.children}</Button>;
+const CtaGhost = (p) => <Button variant="secondary" style={{ padding:'10px 20px', fontSize:14, ...(p.style||{}) }}>{p.children}</Button>;
+
+function Logo() {
+  return <div className="logo"><span className="mk">관</span>관제</div>;
+}
+
+function NavBar({ open, setOpen }) {
+  return (
+    <div className="lnav">
+      <div className="lnav-in">
+        <Logo />
+        <nav className="nav-menu">{NAV.map(m => <a key={m}>{m}</a>)}</nav>
+        <div className="spacer"></div>
+        <div className="nav-cta"><CtaGhost>로그인</CtaGhost><CtaPrimary>서비스 이용하기</CtaPrimary></div>
+        <button className="hamb" onClick={() => setOpen(!open)}>{open ? I.x : I.menu}</button>
+      </div>
+      {open && (
+        <div className="mobile-menu" style={{ display:'block' }}>
+          {NAV.map(m => <a key={m}>{m}</a>)}
+          <div className="mcta"><CtaPrimary style={{ width:'100%' }}>서비스 이용하기</CtaPrimary><CtaGhost style={{ width:'100%' }}>로그인</CtaGhost></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="hero">
+      <div className="hero-in">
+        <div>
+          <span className="eyebrow"><span className="d"></span>중소기업 인증·지원·융자 통합 관제</span>
+          <h1>수십 개 기업의 인증·지원사업 마감, 한 화면에서 놓치지 않게</h1>
+          <p className="sub">컨설턴트 한 명이 10~20개 이상의 중소기업을 — 만료·마감 통합 관제부터 컨디션 맞춤 관리포인트 추천, 조건별 일괄 안내까지 한 곳에서.</p>
+          <div className="hero-cta"><CtaPrimary style={{ padding:'14px 28px', fontSize:15 }}>서비스 이용하기</CtaPrimary><CtaGhost style={{ padding:'12px 26px', fontSize:15 }}>로그인</CtaGhost></div>
+          <div className="hero-trust">신용카드 없이 시작 · 1분 설정 · 데스크톱 최적화</div>
+        </div>
+        <image-slot id="lp-hero" class="mock hero-mock" shape="rounded" radius="16" placeholder="대시보드 화면 미리보기 (이미지를 끌어다 놓으세요)"></image-slot>
+      </div>
+    </section>
+  );
+}
+
+const PROBLEMS = [
+  { ic:I.chat, t:'카톡방마다 기업별 자료를 일일이 주고받느라 흩어지는 히스토리' },
+  { ic:I.layers, t:'기업마다 다른 인증·지원사업 — 무엇을 챙겨야 하는지 매번 재확인' },
+  { ic:I.alert, t:'10개사만 넘어가도 폭증하는 만료·마감, 놓치면 곧 사고' },
+  { ic:I.send, t:'공통 공지를 방마다 복붙해 보내고 응답을 수기로 취합' },
+];
+function Problems() {
+  return (
+    <section className="section">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="sec-kicker">왜 필요한가</div>
+          <h2>관리 기업이 늘수록, 관제는 사람의 기억으로 감당되지 않습니다</h2>
+        </div>
+        <div className="prob-grid">
+          {PROBLEMS.map((p,i) => (
+            <div key={i} className="prob"><div className="pic">{p.ic}</div><p>{p.t}</p></div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const FEATURES = [
+  { ic:I.bell, id:'lp-f1', t:'만료·마감 통합 관제', d:'모든 기업의 D-day를 한 화면에 모아 임박 순으로. D-7·D-3·D-1 사전 알림으로 놓치기 전에 챙깁니다.' },
+  { ic:I.target, id:'lp-f2', t:'컨디션 기반 관리포인트 추천', d:'기업 프로파일에 맞는 인증·정부지원·융자를 자동 매칭해 다음에 할 일을 제안합니다.' },
+  { ic:I.send, id:'lp-f3', t:'조건별 일괄 안내', d:'세그먼트로 대상 기업을 추려 알림톡으로 한 번에 발송하고, 수신·응답을 자동 집계합니다.' },
+  { ic:I.building, id:'lp-f4', t:'기업별 통합 관리', d:'자격·과제·일정·자료를 기업 단위로 한 곳에 모아 어디서든 맥락을 잃지 않습니다.' },
+];
+function Features() {
+  return (
+    <section className="section soft" id="features">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="sec-kicker">핵심 기능</div>
+          <h2>흩어진 관제 업무를 하나의 운영 체계로</h2>
+          <p>기억과 메신저에 의존하던 일을, 한 화면의 시스템으로 옮깁니다.</p>
+        </div>
+        <div className="feat-grid">
+          {FEATURES.map((f,i) => (
+            <div key={i} className="feat">
+              <div className="ic">{f.ic}</div>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+              <image-slot id={f.id} class="mock" shape="rounded" radius="12" placeholder="관련 화면 미리보기"></image-slot>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const STEPS = [
+  { t:'기업 등록·컨디션 입력', d:'고객사를 등록하고 업종·매출·보유 자격 등 컨디션을 입력합니다.' },
+  { t:'관리포인트·일정 자동 정리', d:'프로파일에 맞는 관리포인트가 추천되고 만료·마감이 D-day로 정렬됩니다.' },
+  { t:'알림·일괄안내로 운영', d:'사전 알림으로 챙기고, 공통 안내는 세그먼트로 한 번에 발송합니다.' },
+];
+function HowItWorks() {
+  return (
+    <section className="section" id="how">
+      <div className="wrap">
+        <div className="sec-head"><div className="sec-kicker">작동 방식</div><h2>세 단계면 충분합니다</h2></div>
+        <div className="steps3">
+          {STEPS.map((s,i) => (
+            <div key={i} className="stp"><div className="n num">{i+1}</div><h3>{s.t}</h3><p>{s.d}</p></div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SocialProof() {
+  return (
+    <section className="section soft">
+      <div className="wrap">
+        <div className="sec-head">
+          <span className="review-flag">{I.alert} 검수 필요 — 실제 수치·후기로 교체 예정</span>
+          <h2>현장 컨설턴트의 운영 방식을 바꿉니다</h2>
+        </div>
+        <div className="metrics">
+          <div className="metric"><div className="v num">197+</div><div className="k">누적 컨설팅 사례</div></div>
+          <div className="metric"><div className="v num">14<span style={{fontSize:20}}>개사</span></div><div className="k">1인당 평균 관리 기업</div></div>
+          <div className="metric"><div className="v num">0<span style={{fontSize:20}}>건</span></div><div className="k">도입 후 마감 누락(목표)</div></div>
+        </div>
+        <div className="quotes">
+          <div className="quote">
+            <p>"기업마다 흩어져 있던 마감이 한 화면에 모이니, 아침에 5분이면 오늘 할 일이 정리됩니다."</p>
+            <div className="who"><span className="av">김</span><div><b>김○○ 컨설턴트</b><span>경영지도사 · 플레이스홀더</span></div></div>
+          </div>
+          <div className="quote">
+            <p>"카톡방을 돌며 보내던 공지를 세그먼트로 한 번에. 응답까지 자동으로 집계돼요."</p>
+            <div className="who"><span className="av">박</span><div><b>박○○ 대표</b><span>컨설팅펌 · 플레이스홀더</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const TIERS = [
+  { n:'Starter', p:'소규모로 시작', soon:true },
+  { n:'Pro', p:'성장하는 1인 컨설턴트', feature:true, soon:true },
+  { n:'Agency', p:'팀·다중 워크스페이스', soon:true },
+];
+function Pricing() {
+  return (
+    <section className="section" id="pricing">
+      <div className="wrap">
+        <div className="sec-head"><div className="sec-kicker">요금</div><h2>지금은 도입 문의로 시작하세요</h2><p>요금 티어는 준비 중입니다. 우선 사용 목적을 알려주시면 맞춤으로 안내드립니다.</p></div>
+        <div className="price-grid">
+          {TIERS.map((t,i) => (
+            <div key={i} className={'tier' + (t.feature ? ' feature-on' : '')}>
+              <div className="tn">{t.n}</div>
+              <div className="tp">{t.p}</div>
+              <div className="soon">준비 중</div>
+            </div>
+          ))}
+        </div>
+        <div className="price-note"><CtaPrimary>도입 문의하기</CtaPrimary></div>
+      </div>
+    </section>
+  );
+}
+
+function CtaBand() {
+  return (
+    <section className="section">
+      <div className="cta-band">
+        <h2>지금 바로 시작하세요</h2>
+        <p>설정은 1분이면 충분합니다. 첫 기업을 등록하면 마감이 자동으로 모입니다.</p>
+        <div className="row">
+          <Button variant="buy" style={{ padding:'14px 28px', fontSize:15 }}>서비스 이용하기</Button>
+          <Button variant="primary" style={{ padding:'14px 26px', fontSize:15, background:'rgba(255,255,255,.12)', color:'#fff' }}>로그인</Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="foot-in">
+        <div className="foot-brand">
+          <Logo />
+          <p>중소기업의 인증·정부지원·융자 마감을 한 곳에서 관제하는 컨설턴트 백오피스.</p>
+        </div>
+        <div className="foot-col"><h4>제품</h4><a>기능</a><a>작동 방식</a><a>요금</a></div>
+        <div className="foot-col"><h4>회사</h4><a>소개</a><a>블로그</a><a>문의</a></div>
+        <div className="foot-col"><h4>문의</h4><a>help@gwanje.co.kr</a><a>02-0000-0000</a><a>평일 10:00–18:00</a></div>
+      </div>
+      <div className="foot-bottom">
+        <span>© 2026 관제 · Compliance Desk</span>
+        <div className="spacer"></div>
+        <a>이용약관</a><a>개인정보처리방침</a>
+      </div>
+    </footer>
+  );
+}
+
+function App() {
+  const [device, setDevice] = useState('desktop');
+  const [menu, setMenu] = useState(false);
+  const width = device === 'mobile' ? 402 : 1200;
+  return (
+    <>
+      <div className="demo-bar">
+        <span className="lab">탐색</span>
+        <div className="demo-group">
+          <span>뷰</span>
+          <div className="demo-pills">
+            <button className={'ds-pill'} style={pillStyle(device==='desktop')} onClick={() => { setDevice('desktop'); setMenu(false); }}>데스크톱</button>
+            <button style={pillStyle(device==='mobile')} onClick={() => { setDevice('mobile'); }}>모바일</button>
+          </div>
+        </div>
+        <span className="hint">비로그인 공개 페이지 · 반응형 (컨테이너 쿼리) · Meta Design System</span>
+      </div>
+      <div className="viewport" style={{ width, maxWidth:'calc(100vw - 24px)' }}>
+        <div className="site">
+          <NavBar open={menu} setOpen={setMenu} />
+          <Hero />
+          <Problems />
+          <Features />
+          <HowItWorks />
+          <SocialProof />
+          <Pricing />
+          <CtaBand />
+          <Footer />
+        </div>
+      </div>
+    </>
+  );
+}
+function pillStyle(on) {
+  return { border:'1px solid ' + (on ? 'var(--color-ink-deep)' : 'var(--color-hairline)'), background: on ? 'var(--color-ink-deep)' : 'var(--color-canvas)',
+    color: on ? '#fff' : 'var(--color-ink)', fontSize:12.5, fontWeight:700, padding:'7px 14px', borderRadius:'var(--radius-full)', cursor:'pointer', whiteSpace:'nowrap' };
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

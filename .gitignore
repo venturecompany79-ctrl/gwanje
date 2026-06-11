@@ -1,0 +1,23 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# claude code (머신 로컬 설정)
+.claude/settings.local.json
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.vercel
+
+# env
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

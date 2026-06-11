@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인 / 회원가입 · Meta DS</title>
+
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
+<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
+  button{font-family:var(--font-body);}
+
+  .demo-bar{width:1280px;margin:24px auto 14px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+    padding:12px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
+  .demo-bar .lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--color-stone);text-transform:uppercase;}
+  .demo-group{display:flex;align-items:center;gap:10px;}
+  .demo-group > span{font-size:13px;color:var(--color-charcoal);font-weight:700;}
+  .demo-pills{display:flex;gap:8px;}
+  .demo-pills button{white-space:nowrap;}
+  .demo-bar .hint{margin-left:auto;font-size:12px;color:var(--color-stone);}
+
+  /* stage (no app chrome) */
+  .stage{width:1280px;margin:0 auto 44px;min-height:860px;background:var(--color-canvas);
+    border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xxl);overflow:hidden;
+    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px;
+    background-image:radial-gradient(1100px 380px at 50% -8%, #eef4fc 0%, rgba(238,244,252,0) 70%);}
+  .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
+
+  .brand{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px;}
+  .brand .mark{width:56px;height:56px;border-radius:var(--radius-xl);flex:none;
+    background:radial-gradient(circle at 30% 28%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:24px;box-shadow:0 6px 18px rgba(0,100,224,.28);}
+  .brand .bn{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);text-align:center;}
+  .brand .bn small{display:block;font-size:13px;font-weight:500;color:var(--color-stone);letter-spacing:0;margin-top:3px;}
+
+  .card{width:420px;max-width:100%;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
+    border-radius:var(--radius-xl);box-shadow:0 4px 20px rgba(10,19,23,.06);padding:32px;}
+  .card-h{margin-bottom:22px;}
+  .card-h h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
+  .card-h p{margin:7px 0 0;font-size:13.5px;color:var(--color-steel);letter-spacing:-.14px;line-height:1.5;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:700;letter-spacing:-.14px;color:var(--color-ink);margin-bottom:7px;}
+  .field input{width:100%;height:44px;border:1px solid var(--color-hairline);border-radius:var(--radius-lg);
+    padding:0 14px;font-family:var(--font-body);font-size:14px;color:var(--color-ink);letter-spacing:-.14px;background:var(--color-canvas);transition:border-color 150ms;}
+  .field input::placeholder{color:var(--color-stone);}
+  .field input:focus{outline:none;border:2px solid var(--color-fb-blue);}
+  .field.err input{border:2px solid var(--color-critical-strong);}
+  .field .msg{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--color-critical);font-weight:600;margin-top:7px;letter-spacing:-.14px;}
+  .field .msg svg{width:14px;height:14px;stroke:var(--color-critical);}
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin:4px 0 20px;}
+  .chk{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--color-charcoal);font-weight:600;letter-spacing:-.14px;}
+  .chk .box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--color-hairline);background:var(--color-canvas);
+    display:flex;align-items:center;justify-content:center;flex:none;transition:all 150ms;}
+  .chk .box svg{width:13px;height:13px;stroke:#fff;opacity:0;}
+  .chk.on .box{background:var(--color-primary);border-color:var(--color-primary);}
+  .chk.on .box svg{opacity:1;}
+  .chk.agree{align-items:flex-start;margin-bottom:20px;line-height:1.5;white-space:normal;}
+  .chk:not(.agree){white-space:nowrap;}
+  .chk.agree .box{margin-top:1px;}
+  .chk .lk{color:var(--color-primary-deep);font-weight:700;}
+
+  .link{color:var(--color-primary-deep);font-weight:700;cursor:pointer;text-decoration:none;letter-spacing:-.14px;}
+  .link:hover{text-decoration:underline;}
+
+  .banner{display:flex;gap:10px;align-items:flex-start;background:#fbe1e5;border:1px solid #f3c4cb;border-radius:var(--radius-lg);
+    padding:12px 14px;margin-bottom:20px;font-size:13px;color:#c01f37;font-weight:600;letter-spacing:-.14px;line-height:1.45;}
+  .banner svg{width:17px;height:17px;stroke:var(--color-critical);flex:none;margin-top:1px;}
+
+  .alt-row{text-align:center;margin-top:22px;padding-top:20px;border-top:1px solid var(--color-hairline-soft);font-size:13.5px;color:var(--color-steel);letter-spacing:-.14px;}
+  .back-row{text-align:center;margin-top:20px;font-size:13.5px;}
+  .note{margin-top:18px;font-size:12px;color:var(--color-stone);line-height:1.5;letter-spacing:-.14px;background:var(--color-surface-soft);border-radius:var(--radius-lg);padding:11px 14px;}
+  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .foot-legal{margin-top:24px;font-size:11.5px;color:var(--color-stone);text-align:center;letter-spacing:-.14px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ffffff"/>
+    <rect x="500" y="170" width="80" height="80" rx="20" fill="#0064e0"/>
+    <rect x="430" y="300" width="340" height="360" rx="20" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
+    <rect x="470" y="350" width="260" height="44" rx="8" fill="#f1f4f7"/>
+    <rect x="470" y="414" width="260" height="44" rx="8" fill="#f1f4f7"/>
+    <rect x="470" y="486" width="260" height="48" rx="24" fill="#0064e0"/>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+
+<script type="text/babel">
+const { useState } = React;
+const { Button, PillTab } = window.MetaDesignSystem_d06bcc;
+
+const I = {
+  warn:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>,
+  check: <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+  back:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>,
+  mail:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>,
+};
+
+function Field({ label, type, value, onChange, placeholder, error }) {
+  return (
+    <div className={'field' + (error ? ' err' : '')}>
+      <label>{label}</label>
+      <input type={type || 'text'} value={value} placeholder={placeholder}
+        onChange={(e) => onChange && onChange(e.target.value)} />
+      {error ? <div className="msg">{I.warn}{error}</div> : null}
+    </div>
+  );
+}
+function Check({ on, onClick, children, cls }) {
+  return (
+    <div className={'chk ' + (cls || '') + (on ? ' on' : '')} onClick={onClick}>
+      <span className="box">{I.check}</span><span>{children}</span>
+    </div>
+  );
+}
+const Submit = ({ loading, children, onClick }) => (
+  <Button variant="buy" fullWidth disabled={loading} onClick={onClick} style={{ height:48 }}>
+    {loading ? <><span className="spin"></span>처리 중…</> : children}
+  </Button>
+);
+
+function Brand() {
+  return (
+    <div className="brand">
+      <div className="mark">관</div>
+      <div className="bn">관제<small>중소기업 인증·지원·융자 관제 데스크</small></div>
+    </div>
+  );
+}
+
+function Login({ st, setView, onSubmit }) {
+  const [email, setEmail] = useState('consultant@example.com');
+  const [pw, setPw] = useState('••••••••');
+  const [keep, setKeep] = useState(true);
+  const loading = st === 'loading';
+  const emailErr = st === 'error' ? '이메일 형식이 올바르지 않습니다' : null;
+  return (
+    <div className="card">
+      <div className="card-h"><h1>로그인</h1><p>관제 워크스페이스에 오신 것을 환영합니다.</p></div>
+      {st === 'authfail' && <div className="banner">{I.warn}이메일 또는 비밀번호를 확인해 주세요.</div>}
+      <Field label="이메일" type="email" value={st === 'error' ? 'consultant@example' : email} onChange={setEmail} error={emailErr} placeholder="you@example.com" />
+      <Field label="비밀번호" type="password" value={pw} onChange={setPw} placeholder="비밀번호" />
+      <div className="row-between">
+        <Check on={keep} onClick={() => setKeep(!keep)}>로그인 상태 유지</Check>
+        <span className="link" onClick={() => setView('forgot')}>비밀번호 찾기</span>
+      </div>
+      <Submit loading={loading} onClick={onSubmit}>로그인</Submit>
+      <div className="alt-row">계정이 없으신가요? <span className="link" onClick={() => setView('signup')}>회원가입</span></div>
+    </div>
+  );
+}
+
+function Signup({ setView, onSubmit, loading }) {
+  const [f, setF] = useState({ name:'김컨설턴트', title:'경영컨설턴트 · Growth Partners', email:'consultant@example.com', pw:'', pw2:'' });
+  const [agree, setAgree] = useState(false);
+  const up = (k) => (v) => setF(s => ({ ...s, [k]:v }));
+  return (
+    <div className="card">
+      <div className="card-h"><h1>워크스페이스 만들기</h1><p>새 컨설턴트 워크스페이스를 만듭니다.</p></div>
+      <Field label="이름" value={f.name} onChange={up('name')} placeholder="이름" />
+      <Field label="직함 / 소속" value={f.title} onChange={up('title')} placeholder="예: 경영컨설턴트 · OO파트너스" />
+      <Field label="이메일" type="email" value={f.email} onChange={up('email')} placeholder="you@example.com" />
+      <Field label="비밀번호" type="password" value={f.pw} onChange={up('pw')} placeholder="8자 이상" />
+      <Field label="비밀번호 확인" type="password" value={f.pw2} onChange={up('pw2')} placeholder="비밀번호 재입력" />
+      <Check cls="agree" on={agree} onClick={() => setAgree(!agree)}><span className="lk">이용약관</span> 및 <span className="lk">개인정보 처리방침</span>에 동의합니다.</Check>
+      <Submit loading={loading} onClick={onSubmit}>가입하고 시작하기</Submit>
+      <div className="alt-row">이미 계정이 있으신가요? <span className="link" onClick={() => setView('login')}>로그인</span></div>
+      <div className="note">현재는 단일 사용자(본인) MVP 기준입니다. 회원가입은 멀티테넌트(팀·다중 워크스페이스) 확장 시 활성화됩니다.</div>
+    </div>
+  );
+}
+
+function Forgot({ setView, onSubmit, loading }) {
+  const [email, setEmail] = useState('consultant@example.com');
+  return (
+    <div className="card">
+      <div className="card-h"><h1>비밀번호 재설정</h1><p>가입한 이메일로 재설정 링크를 보내드립니다.</p></div>
+      <Field label="이메일" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
+      <Submit loading={loading} onClick={onSubmit}>{I.mail} 재설정 링크 받기</Submit>
+      <div className="back-row"><span className="link" onClick={() => setView('login')}>← 로그인으로 돌아가기</span></div>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = useState('login');     // login | signup | forgot
+  const [loginSt, setLoginSt] = useState('default'); // default | error | authfail | loading
+  const [busy, setBusy] = useState(false);
+  const tRef = React.useRef();
+
+  const loginSubmit = () => {
+    setLoginSt('loading');
+    clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => setLoginSt('authfail'), 1500);
+  };
+  const busySubmit = () => {
+    setBusy(true);
+    clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => setBusy(false), 1600);
+  };
+
+  const STATES = [['default','기본'],['error','입력 오류'],['authfail','인증 실패'],['loading','로딩']];
+  return (
+    <>
+      <div className="demo-bar">
+        <span className="lab">탐색</span>
+        <div className="demo-group">
+          <span>컷</span>
+          <div className="demo-pills">
+            <PillTab active={view==='login'} onClick={() => setView('login')}>로그인</PillTab>
+            <PillTab active={view==='signup'} onClick={() => setView('signup')}>회원가입</PillTab>
+            <PillTab active={view==='forgot'} onClick={() => setView('forgot')}>비밀번호 찾기</PillTab>
+          </div>
+        </div>
+        {view==='login' && (
+          <div className="demo-group">
+            <span>로그인 상태</span>
+            <div className="demo-pills">
+              {STATES.map(([k,l]) => <PillTab key={k} active={loginSt===k} onClick={() => setLoginSt(k)}>{l}</PillTab>)}
+            </div>
+          </div>
+        )}
+        <span className="hint">로그인 ⇄ 회원가입 ⇄ 비밀번호 찾기 · Meta Design System</span>
+      </div>
+
+      <div className="stage app">
+        <Brand />
+        {view==='login' && <Login st={loginSt} setView={(v) => { setView(v); setLoginSt('default'); }} onSubmit={loginSubmit} />}
+        {view==='signup' && <Signup setView={setView} onSubmit={busySubmit} loading={busy} />}
+        {view==='forgot' && <Forgot setView={setView} onSubmit={busySubmit} loading={busy} />}
+        <div className="foot-legal">© 2026 관제 · Compliance Desk · 이용약관 · 개인정보처리방침</div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
