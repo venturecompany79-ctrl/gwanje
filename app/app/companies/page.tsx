@@ -8,8 +8,12 @@ import { CompaniesTable } from "./_components/CompaniesTable";
 export const metadata: Metadata = { title: "기업" };
 export const dynamic = "force-dynamic";
 
-export default async function CompaniesPage() {
-  const data = await getCompaniesData();
+export default async function CompaniesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const [{ q }, data] = await Promise.all([searchParams, getCompaniesData()]);
   const count = data.companies.length;
 
   return (
@@ -45,7 +49,7 @@ export default async function CompaniesPage() {
           action={<AddCompanyButton demo={data.demo} size="md" />}
         />
       ) : (
-        <CompaniesTable companies={data.companies} />
+        <CompaniesTable companies={data.companies} initialQuery={q ?? ""} />
       )}
     </>
   );

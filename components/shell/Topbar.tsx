@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IconBell, IconSearch } from "@/components/ui/icons";
+import { UserMenu } from "@/components/shell/UserMenu";
 
 export function Topbar({
   consultantName,
@@ -12,10 +13,16 @@ export function Topbar({
 }) {
   return (
     <header className="topbar">
-      <div className="search-pill">
+      {/* 전역 검색 — 기업 목록 검색으로 전송(GET). JS 없이도 동작 (F14) */}
+      <form className="search-pill" action="/app/companies" role="search">
         <IconSearch />
-        <input placeholder="기업·자격·과제 검색" aria-label="검색" />
-      </div>
+        <input
+          type="search"
+          name="q"
+          placeholder="기업 검색"
+          aria-label="기업 검색"
+        />
+      </form>
       <div className="spacer" />
       <div className="topbar-noti">
         <Link href="/app/notifications" className="icon-btn" aria-label="알림">
@@ -23,13 +30,10 @@ export function Topbar({
         </Link>
         {unreadCount > 0 ? <span className="dot num">{unreadCount}</span> : null}
       </div>
-      <div className="topbar-prof">
-        <div className="avatar">{consultantName.slice(0, 1)}</div>
-        <div className="pn">
-          <b>{consultantName}</b>
-          <span>{consultantTitle}</span>
-        </div>
-      </div>
+      <UserMenu
+        consultantName={consultantName}
+        consultantTitle={consultantTitle}
+      />
     </header>
   );
 }
