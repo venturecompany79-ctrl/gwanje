@@ -52,7 +52,7 @@ export async function getCompaniesData(): Promise<CompaniesData> {
   const upcoming = new Map<string, number>();
   const expired = new Map<string, number>();
   for (const item of deadlines.data ?? []) {
-    if (!item.company_id) continue;
+    if (!item.company_id || item.days_left === null) continue;
     if (item.days_left >= 0) {
       upcoming.set(item.company_id, (upcoming.get(item.company_id) ?? 0) + 1);
       const current = nearest.get(item.company_id);

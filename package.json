@@ -7,7 +7,16 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "supabase:version": "npx supabase --version",
+    "supabase:login": "npx supabase login",
+    "supabase:link": "npx supabase link",
+    "supabase:push": "npx supabase db push",
+    "supabase:push:env": "node scripts/supabase-db-push.mjs",
+    "supabase:types": "npx supabase gen types typescript --linked > lib/database.types.ts",
+    "supabase:smoke": "node scripts/supabase-smoke.mjs",
+    "vercel:env:sync": "node scripts/vercel-env-sync.mjs",
+    "vercel:env:ls": "npx vercel env ls"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

@@ -213,7 +213,9 @@ export async function getSegmentCompanies(): Promise<SegmentCompaniesData> {
 
   const nearest = new Map<string, number>();
   for (const item of deadlines.data ?? []) {
-    if (!item.company_id || item.days_left < 0) continue;
+    if (!item.company_id || item.days_left === null || item.days_left < 0) {
+      continue;
+    }
     const current = nearest.get(item.company_id);
     if (current === undefined || item.days_left < current) {
       nearest.set(item.company_id, item.days_left);

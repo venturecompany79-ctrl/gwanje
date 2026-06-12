@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import {
+  isSupabaseConfigured,
+  isSupabaseDemoAllowed,
+} from "@/lib/supabase/env";
 
 // 라우팅 규칙 (CLAUDE.md 4절):
 // - 세션 있음 + `/`·`/login`·`/signup` → `/app`
@@ -9,7 +13,29 @@ import { createServerClient } from "@supabase/ssr";
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return NextResponse.next();
+  const { pathname } = request.nextUrl;
+
+  const isConfigGuarded =
+    pathname.startsWith("/app") ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/reset";
+
+  if (!isSupabaseConfigured()) {
+    if (isSupabaseDemoAllowed()) return NextResponse.next();
+
+    if (isConfigGuarded) {
+      return NextResponse.redirect(
+        new URL("/configuration-error", request.url),
+      );
+    }
+
+    return NextResponse.next();
+  }
+
+  if (!url || !anonKey) {
+    return NextResponse.redirect(new URL("/configuration-error", request.url));
+  }
 
   let response = NextResponse.next({ request });
 
@@ -34,7 +60,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isAuthEntry =
     pathname === "/" || pathname === "/login" || pathname === "/signup";
 
@@ -52,5 +77,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/signup", "/app/:path*", "/app"],
+  matcher: ["/", "/login", "/signup", "/reset", "/app/:path*", "/app"],
 };

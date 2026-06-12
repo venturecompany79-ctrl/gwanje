@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DeadlineItem, NotificationType } from "@/lib/database.types";
+import type {
+  CredentialStatus,
+  DeadlineItem,
+  NotificationType,
+  ScheduleType,
+  TaskStage,
+} from "@/lib/database.types";
 import { DEMO_DASHBOARD } from "@/lib/demo-data";
 
 export interface DashboardKpi {
@@ -47,6 +53,78 @@ function formatTimeAgo(iso: string, now: Date): string {
   const mm = String(then.getMinutes()).padStart(2, "0");
   if (diffHour < 48) return `어제 ${hh}:${mm}`;
   return `${then.getMonth() + 1}/${then.getDate()}`;
+}
+
+const DEADLINE_SOURCES = ["credential", "task", "schedule"] as const;
+const DEADLINE_STATUSES = [
+  "valid",
+  "expiring",
+  "expired",
+  "diagnosis",
+  "proposal",
+  "application",
+  "result",
+  "expiry",
+  "deadline",
+  "meeting",
+  "renewal",
+  "etc",
+] as const;
+
+function isDeadlineSource(value: string | null): value is DeadlineItem["source"] {
+  return DEADLINE_SOURCES.some((source) => source === value);
+}
+
+function isDeadlineStatus(
+  value: string | null,
+): value is CredentialStatus | TaskStage | ScheduleType {
+  return DEADLINE_STATUSES.some((status) => status === value);
+}
+
+function normalizeDeadlineItems(rows: unknown[]): DeadlineItem[] {
+  return rows.flatMap((row) => {
+    const item = row as Partial<DeadlineItem> & {
+      days_left?: number | null;
+      due_date?: string | null;
+      id?: string | null;
+      source?: string | null;
+      status?: string | null;
+      tenant_id?: string | null;
+      title?: string | null;
+    };
+
+    const source = item.source ?? null;
+    const status = item.status ?? null;
+
+    if (
+      item.days_left === null ||
+      item.days_left === undefined ||
+      !item.due_date ||
+      !item.id ||
+      !isDeadlineSource(source) ||
+      !isDeadlineStatus(status) ||
+      !item.tenant_id ||
+      !item.title
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        category_id: item.category_id ?? null,
+        category_name: item.category_name ?? null,
+        company_id: item.company_id ?? null,
+        company_name: item.company_name ?? null,
+        days_left: item.days_left,
+        due_date: item.due_date,
+        id: item.id,
+        source,
+        status,
+        tenant_id: item.tenant_id,
+        title: item.title,
+      },
+    ];
+  });
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -136,7 +214,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       expire30: expire30.count ?? 0,
       activeTasks: activeTasks.count ?? 0,
     },
-    deadlines: deadlines.data ?? [],
+    deadlines: normalizeDeadlineItems(deadlines.data ?? []),
     alerts: (notifications.data ?? []).map((n) => ({
       id: n.id,
       type: n.type,

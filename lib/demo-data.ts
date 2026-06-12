@@ -41,7 +41,7 @@ function demoDeadline(
   categoryName: string,
   daysLeft: number,
   source: DeadlineItem["source"],
-  status: string,
+  status: DeadlineItem["status"],
 ): DeadlineItem {
   return {
     source,
