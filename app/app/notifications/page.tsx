@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/shell/ComingSoon";
+import { IconAlert } from "@/components/ui/icons";
+import { getNotificationsData } from "@/lib/data/notifications";
+import { NotificationsView } from "./_components/NotificationsView";
 
 export const metadata: Metadata = { title: "알림" };
+export const dynamic = "force-dynamic";
 
-export default function NotificationsPage() {
+export default async function NotificationsPage() {
+  const data = await getNotificationsData();
+
   return (
-    <ComingSoon
-      title="알림"
-      description="만료·마감·공고매칭 알림 센터는 다음 세션에서 구현됩니다. 스펙: docs/화면설계_기획자료.md 6절."
-    />
+    <>
+      {data.demo ? (
+        <div className="demo-banner">
+          <IconAlert />
+          데모 데이터 표시 중 — Supabase 환경변수(.env.local)를 설정하면 실제
+          데이터로 전환됩니다.
+        </div>
+      ) : null}
+
+      <NotificationsView data={data} />
+    </>
   );
 }

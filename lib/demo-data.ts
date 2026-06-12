@@ -15,6 +15,11 @@ import type {
   RecipientRow,
   SegmentCompaniesData,
 } from "@/lib/data/campaigns";
+import type {
+  RawNotification,
+  RawNotificationsData,
+} from "@/lib/data/notifications";
+import type { NotificationType } from "@/lib/database.types";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -497,6 +502,57 @@ export function DEMO_CAMPAIGN_DETAIL(id: string): CampaignDetailData | null {
       scheduledAt: row.scheduledAt,
     },
     recipients: recipientsById[id] ?? [],
+  };
+}
+
+// ---- 알림 센터 데모 — 와이어프레임 시나리오 9건 (안읽음 3 = 셸 배지와 일치) ----
+
+function demoNotification(
+  n: number,
+  type: NotificationType,
+  urgent: boolean,
+  read: boolean,
+  title: string,
+  companyN: number,
+  companyName: string,
+  daysLeft: number | null,
+  createdDaysAgo: number,
+  time: string,
+): RawNotification {
+  return {
+    id: `00000000-0000-0000-0000-0000000000n${n}`,
+    type,
+    title,
+    isUrgent: urgent,
+    isRead: read,
+    companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
+    companyName,
+    daysLeft,
+    createdAt: dateTimeAfter(-createdDaysAgo, time),
+  };
+}
+
+export function DEMO_NOTIFICATIONS(): RawNotificationsData {
+  return {
+    demo: true,
+    notifications: [
+      // 오늘 — 안읽음 3 + 읽음 1
+      demoNotification(1, "expiry", true, false, "벤처기업확인 만료", 1, "(주)테크노바", 2, 0, "09:12"),
+      demoNotification(2, "deadline", true, false, "기업부설연구소 설립 신청", 4, "메디케어랩", 3, 0, "09:12"),
+      demoNotification(3, "program_match", false, false, "'창업도약패키지' 공고가 매칭됨", 6, "블루오션테크", null, 0, "08:40"),
+      demoNotification(4, "deadline", false, true, "R&D 세액공제 신청", 2, "한빛정밀", 5, 0, "08:40"),
+      // 어제
+      demoNotification(5, "expiry", false, true, "기업부설연구소 갱신", 3, "그린에너지솔루션", 7, 1, "17:30"),
+      demoNotification(6, "deadline", false, true, "디딤돌 R&D 과제 중간보고", 3, "그린에너지솔루션", 18, 1, "11:05"),
+      demoNotification(7, "program_match", false, true, "'소재부품 기술개발' 공고가 매칭됨", 2, "한빛정밀", null, 1, "10:20"),
+      // 이전
+      demoNotification(8, "deadline", false, true, "이노비즈 인증 갱신", 5, "스마트팩토리(주)", 14, 4, "15:40"),
+      demoNotification(9, "expiry", false, true, "정책자금 상환일", 4, "메디케어랩", 9, 5, "10:00"),
+    ],
+    companies: DEMO_COMPANIES().companies.map((co) => ({
+      id: co.id,
+      name: co.name,
+    })),
   };
 }
 

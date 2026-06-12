@@ -244,6 +244,26 @@ export function IconCheck(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChecks(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="m2 12 5 5L18 6" />
+      <path d="m12 16 1 1 9-11" />
+    </Svg>
+  );
+}
+
+export function IconBellOff(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M18 8a6 6 0 0 0-9.3-5" />
+      <path d="M6 8c0 7-3 9-3 9h13" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+      <path d="m2 2 20 20" />
+    </Svg>
+  );
+}
+
 export function IconBolt(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>

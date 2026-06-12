@@ -2616,3 +2616,237 @@ input.cond-input {
   margin-right: 10px;
   vertical-align: -3px;
 }
+
+/* =============================================================
+   알림 센터 (/app/notifications)
+   ============================================================= */
+.page-head--center {
+  align-items: center;
+}
+.nc-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.ucount {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: var(--radius-full);
+  background: var(--color-critical);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+}
+
+/* 인박스 패널 + 오늘/어제/이전 그룹 헤더 */
+.inbox {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+.grp-head {
+  padding: 14px 22px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-stone);
+  text-transform: uppercase;
+  background: var(--color-surface-soft);
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.grp-head .gc {
+  font-weight: 600;
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+
+/* 알림 아이템 — 읽음 60% / 긴급 좌측 3px critical 보더 */
+.notif {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--color-hairline-soft);
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+  position: relative;
+}
+.inbox > section:last-child .notif:last-child {
+  border-bottom: 0;
+}
+.notif:hover {
+  background: var(--color-surface-soft);
+}
+.notif.is-read {
+  opacity: 0.6;
+}
+.notif.is-urgent::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-critical);
+}
+/* 타입별 컬러는 대시보드 알림 위젯의 alert-ico--* 토큰을 합성해 재사용 */
+.n-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.n-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.n-body {
+  flex: 1;
+  min-width: 0;
+}
+.n-titlerow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.n-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+  letter-spacing: -0.16px;
+}
+.notif.is-read .n-title {
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+.tpill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  border: 1px solid var(--color-hairline);
+  color: var(--color-charcoal);
+  background: var(--color-canvas);
+}
+.urg-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--color-critical);
+  color: #fff;
+  letter-spacing: -0.14px;
+}
+.ddi {
+  font-weight: 800;
+}
+.ddi--red {
+  color: var(--color-critical);
+}
+.ddi--amber {
+  color: var(--app-st-soon-text);
+}
+.ddi--gray {
+  color: var(--color-steel);
+}
+.n-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--color-steel);
+  margin-top: 5px;
+  letter-spacing: -0.14px;
+}
+.n-sub svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-stone);
+}
+
+/* 우측 — 시각 + 안읽음 dot, 호버 시 액션으로 교체 */
+.n-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+}
+.n-time {
+  font-size: 12.5px;
+  color: var(--color-stone);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.n-udot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex: none;
+}
+.n-udot.is-ph {
+  background: transparent;
+}
+.n-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+.notif:hover .n-actions,
+.notif:focus-within .n-actions {
+  display: flex;
+}
+.notif:hover .n-time,
+.notif:hover .n-udot,
+.notif:focus-within .n-time,
+.notif:focus-within .n-udot {
+  display: none;
+}
+.abtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  color: var(--color-ink-deep);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  white-space: nowrap;
+}
+.abtn:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-stone);
+}
+.abtn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+}
+.abtn--go {
+  background: var(--color-ink-deep);
+  color: var(--color-canvas);
+  border-color: var(--color-ink-deep);
+}
+.abtn--go:hover {
+  background: var(--color-charcoal);
+  border-color: var(--color-charcoal);
+}
