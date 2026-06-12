@@ -54,7 +54,7 @@
 - [x] Vercel/production env 누락 시 `/configuration-error`로 차단
 - [x] `npm run vercel:env:ls`로 Preview/Production 환경변수 반영 확인
 - [x] `VERCEL=1` + env 누락 조건에서 `/app`, `/login` → `/configuration-error` 리다이렉트 확인
-- [x] Vercel Production 배포 확인: `https://gwanje-venturecompany79-2782s-projects.vercel.app`
+- [x] Vercel Production 배포 확인: `https://gwanje.vercel.app`
 - [x] Vercel SSO deployment protection 해제
 - [x] Production URL에서 `/` 200, `/app` → `/login?redirect=%2Fapp`, `/login` 200 확인
 
