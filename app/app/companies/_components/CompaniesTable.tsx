@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel } from "@/components/ui/Panel";
 import { IconSearch } from "@/components/ui/icons";
+import { formatRevenue } from "@/lib/format";
 import type { CompanyListRow } from "@/lib/data/companies";
 
 type SortKey = "urgent" | "name" | "recent";
@@ -16,12 +17,6 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "이름순" },
   { value: "recent", label: "최근 등록순" },
 ];
-
-function formatRevenue(won: number | null): string {
-  if (won === null) return "—";
-  const eok = won / 100_000_000;
-  return `${eok.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억`;
-}
 
 export function CompaniesTable({ companies }: { companies: CompanyListRow[] }) {
   const router = useRouter();

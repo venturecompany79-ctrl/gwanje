@@ -1,13 +1,43 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/shell/ComingSoon";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { IconAlert, IconBack } from "@/components/ui/icons";
+import { getCompanyDetail } from "@/lib/data/company-detail";
+import { CompanyDetailView } from "./_components/CompanyDetailView";
 
 export const metadata: Metadata = { title: "기업 상세" };
+export const dynamic = "force-dynamic";
 
-export default function CompanyDetailPage() {
+export default async function CompanyDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
+  const data = await getCompanyDetail(id);
+  if (!data) notFound();
+
   return (
-    <ComingSoon
-      title="기업 상세"
-      description="프로파일·자격·과제·일정·자료 탭 화면은 다음 세션에서 구현됩니다. 스펙: docs/화면설계_기획자료.md 3절."
-    />
+    <>
+      {data.demo ? (
+        <div className="demo-banner">
+          <IconAlert />
+          데모 데이터 표시 중 — Supabase 환경변수(.env.local)를 설정하면 실제
+          데이터로 전환됩니다.
+        </div>
+      ) : null}
+
+      <nav className="crumb" aria-label="브레드크럼">
+        <Link href="/app/companies">
+          <IconBack /> 기업 목록
+        </Link>
+        <span className="sep">/</span>
+        <span className="cur">{data.company.name}</span>
+      </nav>
+
+      <CompanyDetailView data={data} initialTab={tab ?? "overview"} />
+    </>
   );
 }

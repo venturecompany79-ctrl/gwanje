@@ -1,8 +1,14 @@
 // Supabase env 미설정 시 화면 확인용 데모 데이터 (와이어프레임 시나리오와 동일).
 // 날짜는 오늘 기준 상대값으로 생성해 D-day가 항상 자연스럽게 보인다.
-import type { DeadlineItem } from "@/lib/database.types";
+import type { DeadlineItem, TaskStage } from "@/lib/database.types";
 import type { DashboardData } from "@/lib/data/dashboard";
 import type { CompaniesData, CompanyListRow } from "@/lib/data/companies";
+import type {
+  CategoryOption,
+  CompanyDetailData,
+  CredentialRow,
+  TaskRow,
+} from "@/lib/data/company-detail";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -121,6 +127,202 @@ function demoCompany(
     nearestDaysLeft,
     upcomingCount,
     expiredCount,
+  };
+}
+
+const DEMO_CATEGORIES: CategoryOption[] = [
+  { id: "00000000-0000-0000-0000-0000000000a1", name: "정부지원사업" },
+  { id: "00000000-0000-0000-0000-0000000000a2", name: "벤처기업확인" },
+  { id: "00000000-0000-0000-0000-0000000000a3", name: "기업부설연구소" },
+  { id: "00000000-0000-0000-0000-0000000000a4", name: "세액공제" },
+  { id: "00000000-0000-0000-0000-0000000000a5", name: "정책자금" },
+];
+
+function demoCredential(
+  n: number,
+  type: string,
+  categoryIdx: number | null,
+  issuedDate: string | null,
+  expiresInDays: number | null,
+  renewLeadDays: number,
+  hasRenewalTask: boolean,
+): CredentialRow {
+  const daysLeft = expiresInDays;
+  return {
+    id: `00000000-0000-0000-0000-0000000000d${n}`,
+    type,
+    categoryId: categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].id,
+    categoryName:
+      categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].name,
+    issuedDate,
+    expiresDate: expiresInDays === null ? null : dateAfter(expiresInDays),
+    renewLeadDays,
+    daysLeft,
+    status:
+      daysLeft === null
+        ? null
+        : daysLeft < 0
+          ? "expired"
+          : daysLeft <= renewLeadDays
+            ? "expiring"
+            : "valid",
+    hasRenewalTask,
+  };
+}
+
+function demoTask(
+  n: number,
+  title: string,
+  categoryIdx: number | null,
+  stage: TaskStage,
+  dueInDays: number | null,
+  memo: string | null,
+): TaskRow {
+  return {
+    id: `00000000-0000-0000-0000-0000000000e${n}`,
+    title,
+    categoryId: categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].id,
+    categoryName:
+      categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].name,
+    stage,
+    dueDate: dueInDays === null ? null : dateAfter(dueInDays),
+    daysLeft: dueInDays,
+    assigneeName: "김컨설턴트",
+    memo,
+  };
+}
+
+// 기업 상세 데모 — (주)테크노바(c1)는 와이어프레임 시나리오 풀 세트,
+// 그 외 기업은 목록 데이터와 일치하는 자격만 (탭별 빈 상태 확인용)
+export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
+  const base = DEMO_COMPANIES().companies.find((co) => co.id === id);
+  if (!base) return null;
+
+  const isTechnova = id.endsWith("c1");
+  const company = {
+    id: base.id,
+    name: base.name,
+    bizNo: isTechnova ? "123-45-67890" : null,
+    industry: base.industry,
+    foundedDate: base.foundedDate,
+    revenue: base.revenue,
+    headcount: base.headcount,
+    ceoName: isTechnova ? "김도현" : null,
+    contactName: isTechnova ? "박지훈" : null,
+    contactPhone: isTechnova ? "010-1234-5678" : null,
+    contactEmail: isTechnova ? "jihoon@technova.co.kr" : null,
+    conditionTags: base.conditionTags,
+    memo: isTechnova
+      ? "벤처확인 갱신이 최우선. 2026년 디딤돌 R&D 신규 과제 희망."
+      : null,
+  };
+
+  if (!isTechnova) {
+    // 목록의 credentialTypes·nearestDaysLeft·expiredCount와 일치하도록 생성
+    const nearest = base.nearestDaysLeft ?? 200;
+    const credentials = base.credentialTypes.map((type, i) =>
+      demoCredential(
+        i + 1,
+        type,
+        i % DEMO_CATEGORIES.length,
+        dateAfter(-(365 * 2 + i * 90)),
+        base.expiredCount > 0 && i === 0 ? -30 : nearest + i * 90,
+        60,
+        false,
+      ),
+    );
+    return {
+      demo: true,
+      company,
+      credentials,
+      tasks: [],
+      schedules: [],
+      documents: [],
+      categories: DEMO_CATEGORIES,
+    };
+  }
+
+  return {
+    demo: true,
+    company,
+    credentials: [
+      demoCredential(1, "벤처기업확인", 1, "2023-06-13", 2, 60, true),
+      demoCredential(2, "기업부설연구소", 2, "2022-09-01", 83, 60, false),
+      demoCredential(3, "연구개발 세액공제", 3, "2025-03-01", -102, 30, false),
+      demoCredential(4, "이노비즈 인증", 0, "2024-07-20", 771, 90, false),
+    ],
+    tasks: [
+      demoTask(
+        1,
+        "벤처기업확인 갱신",
+        1,
+        "application",
+        2,
+        "벤처기업확인 유효기간 만료 임박. 갱신 신청서·재무제표 준비 완료, 제출 예정.",
+      ),
+      demoTask(2, "디딤돌 R&D 과제 신청", 0, "proposal", 18, null),
+      demoTask(3, "R&D 세액공제 경정청구", 3, "diagnosis", 40, null),
+      demoTask(4, "정책자금(운전) 신청", 4, "result", -10, "한도 5억 승인 완료."),
+    ],
+    schedules: [
+      {
+        id: "00000000-0000-0000-0000-0000000000f1",
+        title: "벤처확인 갱신 서류 제출",
+        date: dateAfter(2),
+        daysLeft: 2,
+        type: "deadline",
+        relatedTaskTitle: "벤처기업확인 갱신",
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f2",
+        title: "디딤돌 과제 사전 미팅",
+        date: dateAfter(7),
+        daysLeft: 7,
+        type: "meeting",
+        relatedTaskTitle: "디딤돌 R&D 과제 신청",
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f3",
+        title: "기업부설연구소 갱신",
+        date: dateAfter(83),
+        daysLeft: 83,
+        type: "renewal",
+        relatedTaskTitle: null,
+      },
+    ],
+    documents: [
+      {
+        id: "00000000-0000-0000-0000-0000000000g1",
+        name: "벤처확인_갱신신청서_v2.pdf",
+        docCategory: "인증",
+        version: 2,
+        uploadedBy: "consultant",
+        fileType: "pdf",
+        sizeBytes: 1_258_291,
+        createdAt: dateAfter(-1),
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000g2",
+        name: "재무제표_2025.xlsx",
+        docCategory: "재무",
+        version: 1,
+        uploadedBy: "client",
+        fileType: "xlsx",
+        sizeBytes: 482_304,
+        createdAt: dateAfter(-3),
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000g3",
+        name: "사업자등록증.pdf",
+        docCategory: "기본",
+        version: 1,
+        uploadedBy: "client",
+        fileType: "pdf",
+        sizeBytes: 210_835,
+        createdAt: dateAfter(-120),
+      },
+    ],
+    categories: DEMO_CATEGORIES,
   };
 }
 
