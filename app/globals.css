@@ -90,6 +90,7 @@
   --app-kpi-urgent-border: #f6d9b0;
   --app-dropzone-bg: #e6f0fd;
   --app-lp-hero-tint: #eef4fc; /* 랜딩 Hero 라디얼 틴트 */
+  --app-banner-critical-border: #f3c4cb; /* critical 배너 테두리 */
 }
 
 /* ---- base ---- */
@@ -399,7 +400,7 @@ h4 {
   padding: calc(var(--space-md) - 1px);
 }
 .input--error {
-  border: 1px solid var(--color-critical-strong);
+  border: 2px solid var(--color-critical-strong);
 }
 .input--error:focus {
   border: 2px solid var(--color-critical-strong);
@@ -1974,7 +1975,13 @@ table.dlist .name {
   justify-content: center;
   gap: 26px;
   padding: 40px 20px;
-  background: linear-gradient(180deg, #f7f9fb, var(--color-surface-soft));
+  background:
+    radial-gradient(
+      1100px 380px at 50% -8%,
+      var(--app-lp-hero-tint) 0%,
+      rgba(238, 244, 252, 0) 70%
+    )
+    var(--color-canvas);
 }
 .auth-brand {
   display: flex;
@@ -1988,6 +1995,7 @@ table.dlist .name {
   height: 56px;
   border-radius: var(--radius-xl);
   font-size: 24px;
+  box-shadow: 0 6px 18px rgba(0, 100, 224, 0.28);
 }
 .auth-brand b {
   font-size: 22px;
@@ -2002,15 +2010,18 @@ table.dlist .name {
   max-width: 420px;
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline-soft);
-  border-radius: var(--radius-xxl);
-  padding: 32px 28px;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 20px rgba(10, 19, 23, 0.06);
+  padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 .auth-card h1 {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01" 1, "ss02" 1;
 }
 .auth-card .auth-sub {
   font-size: 14px;
@@ -2019,14 +2030,99 @@ table.dlist .name {
 }
 .auth-error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
   background: var(--app-st-expired-bg);
+  border: 1px solid var(--app-banner-critical-border);
   color: var(--app-st-expired-text);
   border-radius: var(--radius-lg);
   padding: 11px 14px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.45;
+}
+.auth-error svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  stroke: var(--color-critical);
+  margin-top: 1px;
+}
+
+/* 커스텀 체크박스 (로그인 상태 유지 · 약관 동의) */
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-charcoal);
+  font-weight: 600;
+  letter-spacing: -0.14px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  text-align: left;
+}
+.chk .box {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-hairline);
+  background: var(--color-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.chk .box svg {
+  width: 13px;
+  height: 13px;
+  stroke: #fff;
+  opacity: 0;
+}
+.chk.is-on .box {
+  background: var(--color-fb-blue);
+  border-color: var(--color-fb-blue);
+}
+.chk.is-on .box svg {
+  opacity: 1;
+}
+.chk:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.chk--agree {
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.chk--agree .box {
+  margin-top: 1px;
+}
+
+/* 카드 내부 가로 행 (체크박스 ↔ 링크) */
+.auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 제출 버튼 로딩 스피너 (cobalt 위 흰색) */
+.spin {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-circle);
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: auth-sp 0.7s linear infinite;
+}
+@keyframes auth-sp {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .auth-foot {
   font-size: 13.5px;

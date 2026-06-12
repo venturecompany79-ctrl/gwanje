@@ -354,3 +354,12 @@ export function IconMenu(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+export function IconMail(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </Svg>
+  );
+}
