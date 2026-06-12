@@ -70,6 +70,9 @@ export function DEMO_DASHBOARD(): DashboardData {
       demoDeadline(5, "스마트팩토리(주)", "이노비즈 인증 갱신", "정부지원사업", 14, "credential", "expiring"),
       demoDeadline(6, "블루오션테크", "디딤돌 과제 중간보고", "정부지원사업", 21, "task", "diagnosis"),
     ],
+    overdue: [
+      demoDeadline(7, "메디케어랩", "벤처기업확인 만료", "벤처기업확인", -12, "credential", "expired"),
+    ],
     alerts: [
       {
         id: "demo-a1",

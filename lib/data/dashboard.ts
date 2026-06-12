@@ -7,6 +7,7 @@ import type {
   TaskStage,
 } from "@/lib/database.types";
 import { DEMO_DASHBOARD } from "@/lib/demo-data";
+import { formatKstMonthDay, formatKstTime } from "@/lib/datetime";
 
 export interface DashboardKpi {
   companyCount: number;
@@ -37,6 +38,8 @@ export interface DashboardData {
   demo: boolean;
   kpi: DashboardKpi;
   deadlines: DeadlineItem[];
+  /** 기한이 지난(자격 만료·과제 마감 초과) 항목 — 가장 시급, 별도 강조 */
+  overdue: DeadlineItem[];
   alerts: DashboardAlert[];
   files: DashboardFile[];
   unreadCount: number;
@@ -49,10 +52,9 @@ function formatTimeAgo(iso: string, now: Date): string {
   if (diffMin < 60) return `${diffMin}분`;
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `${diffHour}시간`;
-  const hh = String(then.getHours()).padStart(2, "0");
-  const mm = String(then.getMinutes()).padStart(2, "0");
-  if (diffHour < 48) return `어제 ${hh}:${mm}`;
-  return `${then.getMonth() + 1}/${then.getDate()}`;
+  // 절대 시각·날짜는 KST 기준 표기 (운영 UTC와 무관하게 일관)
+  if (diffHour < 48) return `어제 ${formatKstTime(then)}`;
+  return formatKstMonthDay(then);
 }
 
 const DEADLINE_SOURCES = ["credential", "task", "schedule"] as const;
@@ -139,6 +141,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     expire30,
     activeTasks,
     deadlines,
+    overdue,
     notifications,
     documents,
     unread,
@@ -165,6 +168,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .gte("days_left", 0)
       .order("due_date", { ascending: true })
       .limit(8),
+    // 기한 지남 — 가장 오래된 것 먼저(가장 시급). 보드의 result 단계는 뷰에서 이미 제외됨.
+    supabase
+      .from("deadline_item")
+      .select("*")
+      .lt("days_left", 0)
+      .order("due_date", { ascending: true })
+      .limit(8),
     supabase
       .from("notification")
       .select("*")
@@ -187,6 +197,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     expire30.error ??
     activeTasks.error ??
     deadlines.error ??
+    overdue.error ??
     notifications.error ??
     documents.error ??
     unread.error;
@@ -215,6 +226,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       activeTasks: activeTasks.count ?? 0,
     },
     deadlines: normalizeDeadlineItems(deadlines.data ?? []),
+    overdue: normalizeDeadlineItems(overdue.data ?? []),
     alerts: (notifications.data ?? []).map((n) => ({
       id: n.id,
       type: n.type,

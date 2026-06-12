@@ -2,10 +2,17 @@ import Link from "next/link";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel, PanelHead } from "@/components/ui/Panel";
-import { IconCalendar, IconKanban, IconList } from "@/components/ui/icons";
+import { IconAlert, IconCalendar, IconKanban, IconList } from "@/components/ui/icons";
 import type { DeadlineItem } from "@/lib/database.types";
 
-export function DeadlinePanel({ deadlines }: { deadlines: DeadlineItem[] }) {
+export function DeadlinePanel({
+  deadlines,
+  overdue = [],
+}: {
+  deadlines: DeadlineItem[];
+  /** 기한 지남 항목 — 가장 시급, 상단에 별도 강조 */
+  overdue?: DeadlineItem[];
+}) {
   return (
     <Panel>
       <PanelHead title="마감 임박" count={`${deadlines.length}건`}>
@@ -22,6 +29,39 @@ export function DeadlinePanel({ deadlines }: { deadlines: DeadlineItem[] }) {
           </button>
         </div>
       </PanelHead>
+
+      {overdue.length > 0 ? (
+        <div className="overdue-strip" role="alert">
+          <div className="overdue-strip-head">
+            <IconAlert /> 기한 지남 {overdue.length}건 — 즉시 확인이 필요합니다
+          </div>
+          <table className="dlist">
+            <tbody>
+              {overdue.map((row) => (
+                <tr key={`${row.source}-${row.id}`} className="row-expired">
+                  <td className="co">
+                    {row.company_id ? (
+                      <Link href={`/app/companies/${row.company_id}`}>
+                        {row.company_name}
+                      </Link>
+                    ) : (
+                      row.company_name
+                    )}
+                  </td>
+                  <td className="item">{row.title}</td>
+                  <td className="date num">{row.due_date}</td>
+                  <td className="r">
+                    <span className="dday dday--critical num">
+                      D+{Math.abs(row.days_left)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {deadlines.length === 0 ? (
         <div className="empty-w" style={{ padding: "48px 16px" }}>
           <IconCalendar />
