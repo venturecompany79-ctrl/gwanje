@@ -7,8 +7,8 @@ import type {
   CategoryOption,
   CompanyDetailData,
   CredentialRow,
-  TaskRow,
 } from "@/lib/data/company-detail";
+import type { BoardData, BoardTask } from "@/lib/data/board";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -172,12 +172,14 @@ function demoCredential(
 
 function demoTask(
   n: number,
+  companyN: number,
+  companyName: string,
   title: string,
   categoryIdx: number | null,
   stage: TaskStage,
   dueInDays: number | null,
   memo: string | null,
-): TaskRow {
+): BoardTask {
   return {
     id: `00000000-0000-0000-0000-0000000000e${n}`,
     title,
@@ -189,6 +191,40 @@ function demoTask(
     daysLeft: dueInDays,
     assigneeName: "김컨설턴트",
     memo,
+    companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
+    companyName,
+  };
+}
+
+// 전 기업 공용 과제 풀 — 보드 칸반과 기업 상세 관리포인트 탭이 같은 데이터를 본다.
+// c7(누리푸드)은 빈 상태 확인용으로 과제 없음.
+function DEMO_TASKS(): BoardTask[] {
+  return [
+    demoTask(
+      1, 1, "(주)테크노바", "벤처기업확인 갱신", 1, "application", 2,
+      "벤처기업확인 유효기간 만료 임박. 갱신 신청서·재무제표 준비 완료, 제출 예정.",
+    ),
+    demoTask(2, 1, "(주)테크노바", "디딤돌 R&D 과제 신청", 0, "proposal", 18, null),
+    demoTask(3, 1, "(주)테크노바", "R&D 세액공제 경정청구", 3, "diagnosis", 40, null),
+    demoTask(4, 1, "(주)테크노바", "정책자금(운전) 신청", 4, "result", -10, "한도 5억 승인 완료."),
+    demoTask(5, 2, "한빛정밀", "R&D 세액공제 신청", 3, "application", 5, null),
+    demoTask(6, 3, "그린에너지솔루션", "기업부설연구소 갱신", 2, "application", 7, null),
+    demoTask(7, 4, "메디케어랩", "정책자금(운전) 신청검토", 4, "diagnosis", 12, null),
+    demoTask(8, 5, "스마트팩토리(주)", "이노비즈 인증 갱신", 0, "proposal", 14, null),
+    demoTask(9, 6, "블루오션테크", "창업도약패키지 지원", 0, "proposal", 21, null),
+    demoTask(10, 8, "대성물류", "AEO 인증 갱신", 0, "result", -25, "갱신 심사 통과."),
+  ];
+}
+
+export function DEMO_BOARD(): BoardData {
+  return {
+    demo: true,
+    tasks: DEMO_TASKS(),
+    companies: DEMO_COMPANIES().companies.map((co) => ({
+      id: co.id,
+      name: co.name,
+    })),
+    categories: DEMO_CATEGORIES,
   };
 }
 
@@ -217,6 +253,8 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       : null,
   };
 
+  const companyTasks = DEMO_TASKS().filter((t) => t.companyId === id);
+
   if (!isTechnova) {
     // 목록의 credentialTypes·nearestDaysLeft·expiredCount와 일치하도록 생성
     const nearest = base.nearestDaysLeft ?? 200;
@@ -235,7 +273,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       demo: true,
       company,
       credentials,
-      tasks: [],
+      tasks: companyTasks,
       schedules: [],
       documents: [],
       categories: DEMO_CATEGORIES,
@@ -251,19 +289,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       demoCredential(3, "연구개발 세액공제", 3, "2025-03-01", -102, 30, false),
       demoCredential(4, "이노비즈 인증", 0, "2024-07-20", 771, 90, false),
     ],
-    tasks: [
-      demoTask(
-        1,
-        "벤처기업확인 갱신",
-        1,
-        "application",
-        2,
-        "벤처기업확인 유효기간 만료 임박. 갱신 신청서·재무제표 준비 완료, 제출 예정.",
-      ),
-      demoTask(2, "디딤돌 R&D 과제 신청", 0, "proposal", 18, null),
-      demoTask(3, "R&D 세액공제 경정청구", 3, "diagnosis", 40, null),
-      demoTask(4, "정책자금(운전) 신청", 4, "result", -10, "한도 5억 승인 완료."),
-    ],
+    tasks: companyTasks,
     schedules: [
       {
         id: "00000000-0000-0000-0000-0000000000f1",

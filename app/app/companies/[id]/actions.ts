@@ -1,44 +1,15 @@
 "use server";
 
+// 기업 상세 전용 서버 액션 — 자격·기업 정보.
+// 과제(관리포인트) 액션은 보드와 공용이라 lib/actions/tasks.ts에 있다.
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { TaskStage } from "@/lib/database.types";
-
-export interface ActionResult {
-  ok: boolean;
-  error: string | null;
-}
-
-const DEMO_ERROR =
-  "데모 모드에서는 저장되지 않습니다. Supabase 연결(.env.local) 후 이용해 주세요.";
-
-const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
-
-function optionalText(formData: FormData, key: string): string | null {
-  const value = String(formData.get(key) ?? "").trim();
-  return value === "" ? null : value;
-}
-
-type Supabase = NonNullable<Awaited<ReturnType<typeof createClient>>>;
-
-// RLS insert 정책은 tenant_id 일치를 요구 — 본인 프로필에서 조회해 채운다
-async function getTenantContext(
-  supabase: Supabase,
-): Promise<{ tenantId: string; userId: string } | { error: string }> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
-    return { error: "세션이 만료되었습니다. 다시 로그인해 주세요." };
-  }
-  const { data: profile, error } = await supabase
-    .from("profile")
-    .select("tenant_id")
-    .eq("id", auth.user.id)
-    .single();
-  if (error || !profile) {
-    return { error: "프로필 정보를 찾을 수 없습니다. seed.sql 적용 여부를 확인해 주세요." };
-  }
-  return { tenantId: profile.tenant_id, userId: auth.user.id };
-}
+import {
+  DEMO_ERROR,
+  getTenantContext,
+  optionalText,
+  type ActionResult,
+} from "@/lib/actions/shared";
 
 function revalidateCompany(companyId: string) {
   revalidatePath(`/app/companies/${companyId}`);
@@ -124,70 +95,6 @@ export async function createRenewalTask(
     source_credential_id: credentialId,
   });
   if (error) return { ok: false, error: `생성에 실패했습니다: ${error.message}` };
-
-  revalidateCompany(companyId);
-  revalidatePath("/app/board");
-  return { ok: true, error: null };
-}
-
-export async function addTask(
-  companyId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  if (!supabase) return { ok: false, error: DEMO_ERROR };
-
-  const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
-
-  const stage = String(formData.get("stage") ?? "diagnosis") as TaskStage;
-  if (!TASK_STAGES.includes(stage)) {
-    return { ok: false, error: "단계 값이 올바르지 않습니다." };
-  }
-
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) return { ok: false, error: ctx.error };
-
-  const { error } = await supabase.from("task").insert({
-    tenant_id: ctx.tenantId,
-    company_id: companyId,
-    title,
-    category_id: optionalText(formData, "category_id"),
-    stage,
-    due_date: optionalText(formData, "due_date"),
-    assignee_id: ctx.userId,
-    memo: optionalText(formData, "memo"),
-  });
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
-
-  revalidateCompany(companyId);
-  revalidatePath("/app/board");
-  return { ok: true, error: null };
-}
-
-/** 과제 슬라이드오버 [변경 저장] — 단계 + 메모 */
-export async function updateTask(
-  companyId: string,
-  taskId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  if (!supabase) return { ok: false, error: DEMO_ERROR };
-
-  const stage = String(formData.get("stage") ?? "") as TaskStage;
-  if (!TASK_STAGES.includes(stage)) {
-    return { ok: false, error: "단계 값이 올바르지 않습니다." };
-  }
-
-  const { error } = await supabase
-    .from("task")
-    .update({
-      stage,
-      memo: optionalText(formData, "memo"),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", taskId);
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
 
   revalidateCompany(companyId);
   revalidatePath("/app/board");

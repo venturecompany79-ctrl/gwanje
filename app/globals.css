@@ -88,6 +88,7 @@
   --app-ic-urgent-icon: var(--color-critical);
   --app-row-soon-bg: #fffaf2;
   --app-kpi-urgent-border: #f6d9b0;
+  --app-dropzone-bg: #e6f0fd;
 }
 
 /* ---- base ---- */
@@ -1763,6 +1764,174 @@ table.dlist .name {
   margin: 0;
   font-size: 13.5px;
   letter-spacing: -0.14px;
+}
+
+/* 슬라이드오버 헤더 eyebrow — 보드처럼 기업명이 섞인 화면용 */
+.so-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-steel);
+  letter-spacing: -0.14px;
+  margin-bottom: 6px;
+}
+.so-eyebrow svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-stone);
+  flex: none;
+}
+
+/* =============================================================
+   관리포인트 보드 (/app/board) — 4열 칸반
+   ============================================================= */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.kcol {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+.kcol.is-over {
+  background: var(--app-dropzone-bg);
+  border: 1px dashed var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.kcol-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px 12px;
+}
+.kcol-head .kdot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.kdot--diagnosis {
+  background: var(--color-stone);
+}
+.kdot--proposal {
+  background: var(--color-attention);
+}
+.kdot--application {
+  background: var(--color-primary);
+}
+.kdot--result {
+  background: var(--color-success);
+}
+.kcol-head h3 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  color: var(--color-ink-deep);
+}
+.kcol-head .cnt {
+  margin-left: auto;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  color: var(--color-steel);
+}
+.kcol-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.kcard {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  padding: 13px 14px;
+  cursor: grab;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-body);
+  transition: box-shadow 150ms ease-out, border-color 150ms ease-out;
+}
+.kcard:hover {
+  border-color: var(--color-stone);
+  box-shadow: 0 2px 8px rgba(10, 19, 23, 0.07);
+}
+.kcard:active {
+  cursor: grabbing;
+}
+.kcard.is-dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+.kc-co {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-steel);
+  letter-spacing: -0.14px;
+  margin-bottom: 7px;
+}
+.kc-co svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-stone);
+  flex: none;
+}
+.kc-task {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+  letter-spacing: -0.16px;
+  line-height: 1.35;
+  margin-bottom: 11px;
+}
+.kc-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.kc-foot .dday {
+  min-width: 0;
+  padding: 4px 11px;
+  font-size: 13px;
+}
+.kc-foot .cat-chip {
+  padding: 3px 10px;
+  font-size: 11.5px;
+}
+.kc-owner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 11px;
+  border-top: 1px solid var(--color-hairline-soft);
+  font-size: 12px;
+  color: var(--color-steel);
+  font-weight: 600;
+}
+.kc-owner .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
 }
 
 /* 저장 토스트 */
