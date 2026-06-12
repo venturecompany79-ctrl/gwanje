@@ -20,6 +20,7 @@ import type {
   RawNotificationsData,
 } from "@/lib/data/notifications";
 import type { NotificationType } from "@/lib/database.types";
+import type { SettingsData } from "@/lib/data/settings";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -570,5 +571,30 @@ export function DEMO_COMPANIES(): CompaniesData {
       demoCompany(7, "누리푸드", "식품 제조", "2021-02-18", 900_000_000, 9, ["초기"], [], null, 0, 0, 14),
       demoCompany(8, "대성물류", "물류·운송", "2008-04-22", 34_000_000_000, 120, ["성숙기"], ["ISO 9001", "ISO 14001", "AEO 인증"], 45, 1, 0, 400),
     ],
+  };
+}
+
+// 설정 — 셸(getShellData) 데모 프로필과 동일 인물 기준
+export function DEMO_SETTINGS(): SettingsData {
+  return {
+    demo: true,
+    profile: {
+      name: "김컨설턴트",
+      title: "경영컨설턴트",
+      phone: "010-2345-6789",
+      email: "kim@growthpartners.co.kr",
+      senderName: "관제 by Growth Partners",
+      senderPhone: "1666-0000",
+      notifyLeadDays: [7, 3],
+      notifyChannels: ["email", "alimtalk"],
+      notifyMatch: true,
+      dailySummaryAt: "09:00",
+    },
+    categories: DEMO_CATEGORIES.map((c, i) => ({
+      id: c.id,
+      name: c.name,
+      color: null,
+      sortOrder: i + 1,
+    })),
   };
 }

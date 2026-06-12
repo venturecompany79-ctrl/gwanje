@@ -2850,3 +2850,301 @@ input.cond-input {
   background: var(--color-charcoal);
   border-color: var(--color-charcoal);
 }
+
+/* =============================================================
+   설정 (/app/settings) — 섹션 네비 · 설정 행 · 토글 · 카테고리
+   ============================================================= */
+.set-grid {
+  display: grid;
+  grid-template-columns: 236px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+/* sticky 기준: 상단바 64px + 콘텐츠 패딩 28px */
+.set-nav {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-xl);
+  padding: 8px;
+  position: sticky;
+  top: 92px;
+}
+.set-nav .sn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-charcoal);
+  letter-spacing: -0.14px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 150ms ease-out;
+}
+.set-nav .sn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  flex: none;
+}
+.set-nav .sn:hover {
+  background: var(--color-surface-soft);
+}
+.set-nav .sn.is-active {
+  background: var(--color-surface-soft);
+  color: var(--color-ink-deep);
+  font-weight: 700;
+}
+.set-nav .sn.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-primary);
+}
+.set-nav .sn:disabled {
+  color: var(--color-stone);
+  cursor: not-allowed;
+}
+.set-nav .sn:disabled:hover {
+  background: transparent;
+}
+.cs-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-stone);
+  border: 1px solid var(--color-hairline-soft);
+}
+
+/* 패널 헤더(제목+설명)·바디·푸터 — 설정 패널 전용 */
+.sp-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.sp-head h2 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.16px;
+  color: var(--color-ink-deep);
+}
+.sp-head p {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--color-steel);
+  letter-spacing: -0.14px;
+}
+.sp-body {
+  padding: 24px;
+}
+.sp-foot {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-hairline-soft);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 프로필 폼 2열 그리드 */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 20px;
+}
+.field-grid .sub-h {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+  padding-top: 22px;
+  border-top: 1px solid var(--color-hairline-soft);
+}
+.field-grid .sub-h:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* 알림 규칙 행 */
+.grp-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+  margin-bottom: 4px;
+}
+.grp-label.mt {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-hairline-soft);
+}
+.setrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.setrow:last-child {
+  border-bottom: 0;
+}
+.setrow .sr-body {
+  flex: 1;
+}
+.setrow .sr-t {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+  letter-spacing: -0.16px;
+}
+.setrow .sr-s {
+  font-size: 12.5px;
+  color: var(--color-stone);
+  margin-top: 3px;
+  letter-spacing: -0.14px;
+}
+.dn-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+}
+.daily-ctl {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 토글 스위치 */
+.switch {
+  width: 46px;
+  height: 27px;
+  border-radius: var(--radius-full);
+  background: var(--color-hairline);
+  border: 0;
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  padding: 0;
+  transition: background-color 160ms ease-out;
+}
+.switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 21px;
+  height: 21px;
+  border-radius: var(--radius-circle);
+  background: var(--color-canvas);
+  box-shadow: 0 1px 2px rgba(10, 19, 23, 0.3);
+  transition: transform 160ms ease-out;
+}
+.switch.is-on {
+  background: var(--color-primary);
+}
+.switch.is-on .knob {
+  transform: translateX(19px);
+}
+
+/* 일일 요약 시각 셀렉트 (입력 radius 8px) */
+.selbox {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 42px;
+  padding: 0 38px 0 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235d6c7b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 14px center / 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.14px;
+  color: var(--color-ink-deep);
+  min-width: 150px;
+  cursor: pointer;
+}
+.selbox:focus {
+  outline: none;
+  border-color: var(--color-fb-blue);
+}
+.selbox:disabled {
+  color: var(--color-stone);
+  background-color: var(--color-surface-soft);
+  cursor: not-allowed;
+}
+
+/* 분류 카테고리 목록 */
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.cat-row:last-of-type {
+  border-bottom: 0;
+}
+.cat-sw {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  flex: none;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-stone);
+}
+.cat-sw svg {
+  width: 14px;
+  height: 14px;
+}
+.cat-row .cn {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+  letter-spacing: -0.16px;
+}
+.cat-row .cmeta {
+  font-size: 12px;
+  color: var(--color-stone);
+  margin-top: 2px;
+}
+.cat-edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.cat-edit .input {
+  height: 40px;
+  max-width: 300px;
+}
+.cat-add {
+  padding-top: 18px;
+}
