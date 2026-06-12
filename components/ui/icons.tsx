@@ -236,6 +236,22 @@ export function IconLink(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconCheck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M20 6 9 17l-5-5" />
+    </Svg>
+  );
+}
+
+export function IconBolt(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+    </Svg>
+  );
+}
+
 export function IconSparkle(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>

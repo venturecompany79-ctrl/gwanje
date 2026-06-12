@@ -9,6 +9,12 @@ import type {
   CredentialRow,
 } from "@/lib/data/company-detail";
 import type { BoardData, BoardTask } from "@/lib/data/board";
+import type {
+  CampaignDetailData,
+  CampaignsData,
+  RecipientRow,
+  SegmentCompaniesData,
+} from "@/lib/data/campaigns";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -16,6 +22,10 @@ function dateAfter(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function dateTimeAfter(days: number, time: string): string {
+  return `${dateAfter(days)}T${time}:00`;
 }
 
 function demoDeadline(
@@ -349,6 +359,144 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       },
     ],
     categories: DEMO_CATEGORIES,
+  };
+}
+
+// ---- 일괄안내(캠페인) 데모 — 세그먼트·집계는 기존 8개사 풀 재사용 ----
+
+export function DEMO_SEGMENT_COMPANIES(): SegmentCompaniesData {
+  return {
+    demo: true,
+    companies: DEMO_COMPANIES().companies.map((co) => ({
+      id: co.id,
+      name: co.name,
+      industry: co.industry,
+      revenue: co.revenue,
+      conditionTags: co.conditionTags,
+      credentialTypes: co.credentialTypes,
+      nearestDaysLeft: co.nearestDaysLeft,
+      // 기업 상세 데모와 동일 — 담당자명은 테크노바만 보유
+      contactName: co.id.endsWith("c1") ? "박지훈" : null,
+    })),
+  };
+}
+
+function demoRecipient(
+  n: number,
+  companyN: number,
+  companyName: string,
+  delivered: boolean,
+  responseNote: string | null,
+  respondedAt: string | null,
+): RecipientRow {
+  return {
+    id: `00000000-0000-0000-0000-0000000000r${n}`,
+    companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
+    companyName,
+    delivered,
+    responded: responseNote !== null,
+    responseNote,
+    respondedAt,
+  };
+}
+
+// 캠페인 4종: 발송완료 2 + 예약 1 + 임시저장 1 (목록 상태 배지 3종 확인용)
+const CAMPAIGN_IDS = {
+  renewal: "00000000-0000-0000-0000-0000000000b1",
+  taxCredit: "00000000-0000-0000-0000-0000000000b2",
+  didimdol: "00000000-0000-0000-0000-0000000000b3",
+  fund: "00000000-0000-0000-0000-0000000000b4",
+};
+
+export function DEMO_CAMPAIGNS(): CampaignsData {
+  return {
+    demo: true,
+    campaigns: [
+      {
+        id: CAMPAIGN_IDS.renewal,
+        title: "만료 임박 자격 갱신 안내",
+        status: "sent",
+        segmentSummary: "마감 30일 이내",
+        recipientCount: 6,
+        sentAt: dateTimeAfter(-7, "10:00"),
+        scheduledAt: null,
+        responseRate: 67,
+      },
+      {
+        id: CAMPAIGN_IDS.taxCredit,
+        title: "R&D 세액공제 마감 리마인드",
+        status: "sent",
+        segmentSummary: "벤처기업확인 보유",
+        recipientCount: 2,
+        sentAt: dateTimeAfter(-10, "14:00"),
+        scheduledAt: null,
+        responseRate: 50,
+      },
+      {
+        id: CAMPAIGN_IDS.didimdol,
+        title: "디딤돌 과제 공고 안내",
+        status: "scheduled",
+        segmentSummary: "컨디션=성장기",
+        recipientCount: 3,
+        sentAt: null,
+        scheduledAt: dateTimeAfter(3, "09:00"),
+        responseRate: null,
+      },
+      {
+        id: CAMPAIGN_IDS.fund,
+        title: "정책자금 신규상품 안내",
+        status: "draft",
+        segmentSummary: null,
+        recipientCount: null,
+        sentAt: null,
+        scheduledAt: null,
+        responseRate: null,
+      },
+    ],
+  };
+}
+
+export function DEMO_CAMPAIGN_DETAIL(id: string): CampaignDetailData | null {
+  const row = DEMO_CAMPAIGNS().campaigns.find((c) => c.id === id);
+  if (!row) return null;
+
+  const recipientsById: Record<string, RecipientRow[]> = {
+    [CAMPAIGN_IDS.renewal]: [
+      demoRecipient(1, 1, "(주)테크노바", true, "확인했습니다, 진행 부탁드려요", dateTimeAfter(-7, "10:12")),
+      demoRecipient(2, 2, "한빛정밀", true, "일정 가능합니다", dateTimeAfter(-7, "11:40")),
+      demoRecipient(3, 3, "그린에너지솔루션", true, "자료 준비 중", dateTimeAfter(-7, "14:03")),
+      demoRecipient(4, 6, "블루오션테크", true, "참여하겠습니다", dateTimeAfter(-6, "09:25")),
+      demoRecipient(5, 4, "메디케어랩", true, null, null),
+      demoRecipient(6, 5, "스마트팩토리(주)", false, null, null),
+    ],
+    [CAMPAIGN_IDS.taxCredit]: [
+      demoRecipient(7, 1, "(주)테크노바", true, "서류 송부했습니다", dateTimeAfter(-10, "15:20")),
+      demoRecipient(8, 4, "메디케어랩", true, null, null),
+    ],
+    [CAMPAIGN_IDS.didimdol]: [
+      demoRecipient(9, 1, "(주)테크노바", false, null, null),
+      demoRecipient(10, 3, "그린에너지솔루션", false, null, null),
+      demoRecipient(11, 6, "블루오션테크", false, null, null),
+    ],
+    [CAMPAIGN_IDS.fund]: [],
+  };
+
+  return {
+    demo: true,
+    campaign: {
+      id: row.id,
+      title: row.title,
+      body:
+        row.status === "draft"
+          ? null
+          : "안녕하세요 {기업명} {담당자명}님,\n보유하신 자격·인증의 유효기간 만료가 다가옵니다.\n갱신 신청 절차를 안내드리니 아래 버튼에서 확인 부탁드립니다.\n\n— 관제 by Growth Partners",
+      channel: "alimtalk",
+      status: row.status,
+      segmentSummary: row.segmentSummary,
+      sentAt: row.sentAt,
+      scheduledAt: row.scheduledAt,
+    },
+    recipients: recipientsById[id] ?? [],
   };
 }
 
