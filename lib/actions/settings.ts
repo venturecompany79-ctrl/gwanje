@@ -59,6 +59,7 @@ export async function updateProfile(input: ProfileInput): Promise<ActionResult> 
     })
     .eq("id", user.userId);
   if (error) {
+    console.error("[updateProfile]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
@@ -109,6 +110,7 @@ export async function updateNotifyRules(
     })
     .eq("id", user.userId);
   if (error) {
+    console.error("[updateNotifyRules]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
@@ -131,6 +133,7 @@ export async function renameCategory(
     .update({ name: trimmed })
     .eq("id", id);
   if (error) {
+    console.error("[renameCategory]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
@@ -162,6 +165,7 @@ export async function addCategory(name: string): Promise<ActionResult> {
     sort_order: (last?.sort_order ?? 0) + 1,
   });
   if (error) {
+    console.error("[addCategory]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 

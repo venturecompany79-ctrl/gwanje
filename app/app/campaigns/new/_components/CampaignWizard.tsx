@@ -22,6 +22,7 @@ import {
   IconBuilding,
   IconCheck,
   IconClock,
+  IconInfo,
   IconPlus,
   IconSend,
   IconX,
@@ -527,6 +528,11 @@ export function CampaignWizard({
                 </span>
               </label>
             </div>
+            <p className="form-hint" style={{ marginTop: 10 }}>
+              <IconInfo /> 알림톡 게이트웨이 연동 전까지는 발송 기록만
+              저장됩니다. 실제 메시지 발송과 도달/응답 집계는 발송 채널 연동
+              후 활성화됩니다.
+            </p>
 
             <div className="so-label" style={{ margin: "24px 0 10px" }}>
               대상 기업 최종 확인 · {targets.length}개사

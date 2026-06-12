@@ -8,6 +8,8 @@ import {
   DEMO_ERROR,
   getTenantContext,
   optionalText,
+  parseEokToWon,
+  parseNonNegativeInt,
   type ActionResult,
 } from "@/lib/actions/shared";
 
@@ -46,7 +48,10 @@ export async function addCredential(
     renew_lead_days: renewLeadDays,
     memo: optionalText(formData, "memo"),
   });
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  if (error) {
+    console.error("[addCredential]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
 
   revalidateCompany(companyId);
   return { ok: true, error: null };
@@ -78,6 +83,7 @@ export async function createRenewalTask(
     .eq("source_credential_id", credentialId)
     .limit(1);
   if (existingError) {
+    console.error("[createRenewalTask:check]", existingError.code, existingError.message);
     return { ok: false, error: `확인에 실패했습니다: ${existingError.message}` };
   }
   if (existing && existing.length > 0) {
@@ -94,7 +100,14 @@ export async function createRenewalTask(
     assignee_id: ctx.userId,
     source_credential_id: credentialId,
   });
-  if (error) return { ok: false, error: `생성에 실패했습니다: ${error.message}` };
+  if (error) {
+    // task_source_credential_unique 위반(동시요청 경합)도 여기로 — 친절한 메시지로 변환
+    if (error.code === "23505") {
+      return { ok: false, error: "이미 이 자격의 갱신 과제가 있습니다." };
+    }
+    console.error("[createRenewalTask:insert]", error.code, error.message);
+    return { ok: false, error: `생성에 실패했습니다: ${error.message}` };
+  }
 
   revalidateCompany(companyId);
   revalidatePath("/app/board");
@@ -111,19 +124,11 @@ export async function updateCompany(
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "기업명을 입력해 주세요." };
 
-  const revenueEok = optionalText(formData, "revenue");
-  const revenue =
-    revenueEok === null ? null : Math.round(Number(revenueEok) * 100_000_000);
-  if (revenue !== null && !Number.isFinite(revenue)) {
-    return { ok: false, error: "연 매출은 숫자(억 원)로 입력해 주세요." };
-  }
+  const revenue = parseEokToWon(formData, "revenue");
+  if (!revenue.ok) return { ok: false, error: revenue.error };
 
-  const headcountText = optionalText(formData, "headcount");
-  const headcount =
-    headcountText === null ? null : Number.parseInt(headcountText, 10);
-  if (headcount !== null && !Number.isFinite(headcount)) {
-    return { ok: false, error: "인원은 숫자로 입력해 주세요." };
-  }
+  const headcount = parseNonNegativeInt(formData, "headcount", "인원");
+  if (!headcount.ok) return { ok: false, error: headcount.error };
 
   const conditionTags = (optionalText(formData, "condition_tags") ?? "")
     .split(",")
@@ -137,8 +142,8 @@ export async function updateCompany(
       biz_no: optionalText(formData, "biz_no"),
       industry: optionalText(formData, "industry"),
       founded_date: optionalText(formData, "founded_date"),
-      revenue,
-      headcount,
+      revenue: revenue.value,
+      headcount: headcount.value,
       ceo_name: optionalText(formData, "ceo_name"),
       contact_name: optionalText(formData, "contact_name"),
       contact_phone: optionalText(formData, "contact_phone"),
@@ -147,7 +152,10 @@ export async function updateCompany(
       memo: optionalText(formData, "memo"),
     })
     .eq("id", companyId);
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  if (error) {
+    console.error("[updateCompany]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
 
   revalidateCompany(companyId);
   return { ok: true, error: null };
