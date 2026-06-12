@@ -14,7 +14,12 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/app";
+  // open redirect 방지 — 내부 절대경로(`/app...`)만 허용, 외부 URL·스킴·`//host`는 폴백
+  const rawRedirect = searchParams.get("redirect") ?? "/app";
+  const redirectTo =
+    rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
+      ? rawRedirect
+      : "/app";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
