@@ -8,6 +8,7 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import { IconCalendar, IconFile } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
+import { formatKstDate } from "@/lib/datetime";
 import type { DocumentRow, ScheduleRow } from "@/lib/data/company-detail";
 
 export function ScheduleTab({ schedules }: { schedules: ScheduleRow[] }) {
@@ -113,7 +114,7 @@ export function FilesTab({ documents }: { documents: DocumentRow[] }) {
                 <td className="r num">v{d.version}</td>
                 <td>{DOCUMENT_UPLOADER_LABEL[d.uploadedBy]}</td>
                 <td className="r num">{formatBytes(d.sizeBytes)}</td>
-                <td className="date num">{d.createdAt.slice(0, 10)}</td>
+                <td className="date num">{formatKstDate(d.createdAt)}</td>
               </tr>
             ))}
           </tbody>
