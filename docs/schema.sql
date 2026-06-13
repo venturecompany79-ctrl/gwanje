@@ -211,6 +211,7 @@ create table rule (
 -- -------------------------------------------------------------
 -- 11. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정)
 --     security_invoker: 조회자의 RLS가 그대로 적용됨
+--     days_left는 KST 기준 ((now() at time zone 'Asia/Seoul')::date) — 앱(lib/datetime.ts)과 일치
 -- -------------------------------------------------------------
 create view deadline_item
 with (security_invoker = on)
@@ -225,10 +226,10 @@ select
   c.category_id                       as category_id,
   cat.name                            as category_name,
   c.expires_date                      as due_date,
-  (c.expires_date - current_date)     as days_left,
+  (c.expires_date - (now() at time zone 'Asia/Seoul')::date)     as days_left,
   case
-    when c.expires_date < current_date then 'expired'
-    when c.expires_date - current_date <= c.renew_lead_days then 'expiring'
+    when c.expires_date < (now() at time zone 'Asia/Seoul')::date then 'expired'
+    when c.expires_date - (now() at time zone 'Asia/Seoul')::date <= c.renew_lead_days then 'expiring'
     else 'valid'
   end                                 as status
 from credential c
@@ -248,7 +249,7 @@ select
   t.category_id,
   cat.name,
   t.due_date,
-  (t.due_date - current_date),
+  (t.due_date - (now() at time zone 'Asia/Seoul')::date),
   t.stage::text
 from task t
 join company co on co.id = t.company_id
@@ -268,11 +269,11 @@ select
   null,
   null,
   s.date,
-  (s.date - current_date),
+  (s.date - (now() at time zone 'Asia/Seoul')::date),
   s.type::text
 from schedule s
 left join company co on co.id = s.company_id
-where s.date >= current_date - interval '30 days';
+where s.date >= (now() at time zone 'Asia/Seoul')::date - interval '30 days';
 
 -- -------------------------------------------------------------
 -- 12. RLS — 모든 테이블 tenant 격리
@@ -293,8 +294,13 @@ alter table rule enable row level security;
 create policy "tenant: 본인 워크스페이스만" on tenant
   for all using (id = auth_tenant_id()) with check (id = auth_tenant_id());
 
-create policy "profile: 본인만" on profile
-  for all using (id = auth.uid()) with check (id = auth.uid());
+-- profile: 본인 행만. tenant_id 자가 변경/임의 INSERT 차단(F8) —
+-- INSERT/DELETE 정책 없음(인증 사용자 거부, 생성은 seed의 postgres 권한으로만),
+-- UPDATE는 안전 컬럼(아래 grant)으로만 한정해 id·tenant_id를 잠근다.
+create policy "profile: 조회 본인만" on profile
+  for select using (id = auth.uid());
+create policy "profile: 수정 본인만" on profile
+  for update using (id = auth.uid()) with check (id = auth.uid());
 
 create policy "category: tenant 격리" on category
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
@@ -328,6 +334,14 @@ grant select on deadline_item to authenticated;
 alter default privileges in schema public
   grant select, insert, update, delete on tables to authenticated;
 
+-- profile 권한 축소(F8) — insert/delete/임의 update 회수 후 안전 컬럼만 update 허용
+revoke insert, update, delete on profile from authenticated;
+grant update (
+  name, title, phone, email,
+  notify_lead_days, notify_channels, notify_match, daily_summary_at,
+  sender_name, sender_phone
+) on profile to authenticated;
+
 -- -------------------------------------------------------------
 -- 14. 인덱스
 -- -------------------------------------------------------------
@@ -342,3 +356,65 @@ create index idx_document_company on document (company_id);
 create index idx_campaign_tenant on campaign (tenant_id);
 create index idx_recipient_campaign on campaign_recipient (campaign_id);
 create index idx_notification_unread on notification (tenant_id, is_read, created_at desc);
+
+-- 자격 1건당 갱신 과제 1건 보장(F9) — 동시요청 중복 방어
+create unique index if not exists task_source_credential_unique
+  on task (source_credential_id)
+  where source_credential_id is not null;
+
+-- -------------------------------------------------------------
+-- 15. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
+--     매일 1회 멱등 생성. 함수는 항상 생성되고, pg_cron 스케줄 등록은 가드 블록으로
+--     감싸 확장이 없어도 마이그레이션이 실패하지 않는다(경고만).
+--     상세는 supabase/migrations/20260613000004_due_notifications_cron.sql 참고.
+-- -------------------------------------------------------------
+create or replace function generate_due_notifications()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  insert into notification (tenant_id, type, title, body, company_id, ref_table, ref_id, is_urgent)
+  select
+    d.tenant_id,
+    case when d.source = 'credential' then 'expiry'::notification_type
+         else 'deadline'::notification_type end,
+    coalesce(d.company_name || ' · ', '') || d.title || ' D-' || d.days_left::text,
+    '사전 알림 — 만료·마감이 다가옵니다.',
+    d.company_id,
+    d.source,
+    d.id,
+    d.days_left <= 3
+  from deadline_item d
+  join profile p on p.tenant_id = d.tenant_id
+  where d.days_left = any (p.notify_lead_days)
+    and not exists (
+      select 1 from notification n
+      where n.ref_table = d.source and n.ref_id = d.id
+        and (n.created_at at time zone 'Asia/Seoul')::date
+            = (now() at time zone 'Asia/Seoul')::date
+    );
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke all on function generate_due_notifications() from public, anon, authenticated;
+
+-- pg_cron 스케줄 등록 — 확장이 없어도 마이그레이션을 실패시키지 않도록 가드(매일 15:05 UTC = 00:05 KST)
+do $cron$
+begin
+  create extension if not exists pg_cron;
+  perform cron.schedule(
+    'generate-due-notifications',
+    '5 15 * * *',
+    $job$select generate_due_notifications();$job$
+  );
+exception
+  when others then
+    raise notice 'pg_cron 스케줄 등록 건너뜀 — Dashboard에서 활성화 후 수동 등록 필요: %', sqlerrm;
+end
+$cron$;

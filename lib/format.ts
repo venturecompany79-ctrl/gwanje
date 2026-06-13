@@ -1,4 +1,6 @@
 // 공용 표시 포맷터 — 화면 간 중복 방지
+// 날짜·시각 포맷은 KST 고정 헬퍼(lib/datetime)에 위임한다 (운영 UTC 어긋남 방지).
+import { formatKstShortDateTime } from "@/lib/datetime";
 
 export function formatRevenue(won: number | null): string {
   if (won === null) return "—";
@@ -6,13 +8,9 @@ export function formatRevenue(won: number | null): string {
   return `${eok.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억`;
 }
 
-/** ISO 타임스탬프 → "MM-DD HH:mm" (캠페인 응답 시각 등 컴팩트 표기) */
+/** ISO 타임스탬프 → KST "MM-DD HH:mm" (캠페인 응답 시각 등 컴팩트 표기) */
 export function formatShortDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return formatKstShortDateTime(iso);
 }
 
 export function formatBytes(bytes: number | null): string {

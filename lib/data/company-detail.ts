@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
+import { daysFromToday } from "@/lib/datetime";
 import type {
   CredentialStatus,
   DocumentUploader,
   ScheduleType,
   TaskStage,
 } from "@/lib/database.types";
+
+// daysFromToday는 KST 기준 공용 헬퍼(lib/datetime). 보드 등에서 재사용하므로 재노출.
+export { daysFromToday };
 
 export interface CompanyProfile {
   id: string;
@@ -85,14 +89,6 @@ export interface CompanyDetailData {
   schedules: ScheduleRow[];
   documents: DocumentRow[];
   categories: CategoryOption[];
-}
-
-/** YYYY-MM-DD → 오늘 기준 남은 일수 (음수 = 지남) */
-export function daysFromToday(dateStr: string): number {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const now = new Date();
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.round((Date.UTC(y, m - 1, d) - today) / 86_400_000);
 }
 
 /** deadline_item 뷰와 동일한 자격 상태 파생 규칙 */

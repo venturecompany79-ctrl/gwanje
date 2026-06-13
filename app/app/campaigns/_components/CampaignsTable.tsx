@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatKstDate } from "@/lib/datetime";
 import type { CampaignListRow } from "@/lib/data/campaigns";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
 
 function dateCell(c: CampaignListRow): string {
-  if (c.sentAt) return c.sentAt.slice(0, 10);
-  if (c.scheduledAt) return `(예약) ${c.scheduledAt.slice(5, 10)}`;
+  if (c.sentAt) return formatKstDate(c.sentAt);
+  if (c.scheduledAt) return `(예약) ${formatKstDate(c.scheduledAt).slice(5)}`;
   return "–";
 }
 

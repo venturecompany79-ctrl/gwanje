@@ -6,6 +6,7 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import { IconAlert, IconBack, IconSend } from "@/components/ui/icons";
 import { getCampaignDetail } from "@/lib/data/campaigns";
 import { formatShortDateTime } from "@/lib/format";
+import { formatKstDate } from "@/lib/datetime";
 import { CampaignStatusBadge } from "../_components/CampaignStatusBadge";
 import { SentToast } from "./_components/SentToast";
 
@@ -33,7 +34,7 @@ export default async function CampaignDetailPage({
 
   const headMeta =
     campaign.status === "sent" && campaign.sentAt
-      ? `${campaign.sentAt.slice(0, 10)} 발송`
+      ? `${formatKstDate(campaign.sentAt)} 발송`
       : campaign.scheduledAt
         ? `${formatShortDateTime(campaign.scheduledAt)} 발송 예정`
         : "발송 전";

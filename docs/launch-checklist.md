@@ -12,12 +12,15 @@
 
 ## 1. 즉시 진행
 
-현재 진행 항목: **2-1. 비밀번호 재설정 완료 플로우**
+코드 리뷰(2026-06-13) 보완 반영됨: 타임존 KST 고정, open redirect 차단, 서버 액션 로깅,
+숫자 입력 검증, 캠페인 보상 삭제·과거 예약 거부, 비밀번호 재설정 완료 라우트(`/reset/confirm`),
+대시보드 기한 지남 강조, 전역 검색·로그아웃·CSV 내보내기, profile RLS 강화, 갱신 과제 유니크 인덱스,
+일일 알림 생성 잡(pg_cron).
 
-현재 대기 입력:
+운영 측 수동 설정 완료(2026-06-13): 호스티드 signup 비활성화, 신규 마이그레이션 적용 + pg_cron 활성화,
+Auth Redirect URL 등록, 알림 잡 1회 실행 확인.
 
-- Supabase reset email redirect URL
-- 새 비밀번호 입력/저장 화면 정책
+현재 진행 항목: **3. 핵심 업무 플로우 QA (실 Supabase 데이터 모드)**
 
 ### 1-1. Supabase 운영 프로젝트 연결
 
@@ -26,6 +29,10 @@
 - [x] 초기 시드 추가: `supabase/seed.sql`
 - [x] 운영 연결 검증 스크립트 추가: `npm run supabase:smoke`
 - [x] 단일 사용자 MVP 정책에 맞게 로컬 Supabase Auth signup 비활성화
+- [x] **운영(호스티드) Supabase Auth에서 신규 가입 비활성화** (Dashboard → Authentication → Sign In / Providers) — anon 키로 직접 `signUp` 호출 차단 (F7)
+- [x] **마이그레이션 SQL 실 실행 검증 완료**: `npm run verify:migrations` (PGlite=실 Postgres). 초기 스키마+신규 4개+시드 적용, deadline_item(KST)·알림 함수 멱등·갱신과제 유니크·profile 컬럼 잠금·**RLS 멀티테넌트 격리** 모두 통과
+- [x] **코드 리뷰 보완 마이그레이션 적용**: `npm run supabase:push:env` (`20260613000001`~`0004`) + Dashboard → Database → Extensions에서 pg_cron 활성화
+- [x] **알림 생성 잡 확인**: `select generate_due_notifications();` 수동 1회 실행 → 알림 생성, `cron.job`에 `generate-due-notifications` 등록 확인
 - [x] Supabase Data API용 `authenticated` role 권한을 스키마에 명시
 - [x] `.env.local`에 Supabase URL/anon key와 스모크 테스트 계정 입력
 - [x] Supabase URL/anon key 연결 확인
@@ -64,13 +71,14 @@
 
 ### 2-1. 비밀번호 재설정 완료 플로우
 
-- [ ] Supabase reset email redirect URL 설정
-- [ ] 새 비밀번호 입력 페이지 또는 콜백 처리 라우트 추가
-- [ ] 재설정 링크 진입 → 새 비밀번호 저장 → 로그인 이동 플로우 구현
-- [ ] 만료/오류 링크 상태 처리
-- [ ] 재설정 성공/실패 토스트 또는 안내 문구 확인
+- [x] Supabase reset email redirect URL 설정 (Auth Site URL/Redirect URLs에 운영 도메인 `/reset/confirm` 등록)
+- [x] 새 비밀번호 입력 페이지 또는 콜백 처리 라우트 추가 (`app/reset/confirm`)
+- [x] 재설정 링크 진입 → 새 비밀번호 저장 → 로그인 이동 플로우 구현
+- [x] 만료/오류 링크 상태 처리 (유효하지 않은 링크 안내 + 재요청 링크)
+- [x] 재설정 성공/실패 토스트 또는 안내 문구 확인
 
 완료 기준: 운영 이메일로 받은 재설정 링크를 통해 실제 비밀번호를 변경할 수 있다.
+(코드 구현 완료 — 운영 도메인 Redirect URL 등록 후 실제 메일로 E2E 확인만 남음)
 
 ### 2-2. 로그인 세션 정책
 

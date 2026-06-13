@@ -50,7 +50,10 @@ export async function addTask(
     assignee_id: ctx.userId,
     memo: optionalText(formData, "memo"),
   });
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  if (error) {
+    console.error("[addTask]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
 
   revalidateTaskScreens(companyId);
   return { ok: true, error: null };
@@ -78,7 +81,10 @@ export async function updateTask(
       updated_at: new Date().toISOString(),
     })
     .eq("id", taskId);
-  if (error) return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  if (error) {
+    console.error("[updateTask]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
 
   revalidateTaskScreens(companyId);
   return { ok: true, error: null };
@@ -101,7 +107,10 @@ export async function updateTaskStage(
     .from("task")
     .update({ stage, updated_at: new Date().toISOString() })
     .eq("id", taskId);
-  if (error) return { ok: false, error: `변경에 실패했습니다: ${error.message}` };
+  if (error) {
+    console.error("[updateTaskStage]", error.code, error.message);
+    return { ok: false, error: `변경에 실패했습니다: ${error.message}` };
+  }
 
   revalidateTaskScreens(companyId);
   return { ok: true, error: null };

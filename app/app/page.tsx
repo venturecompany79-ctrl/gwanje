@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Button, LinkButton } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import {
-  IconAlert,
-  IconBuilding,
-  IconDownload,
-  IconPlus,
-} from "@/components/ui/icons";
+import { IconAlert, IconBuilding, IconPlus } from "@/components/ui/icons";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { DashboardWidgets } from "./_components/DashboardWidgets";
 import { DeadlinePanel } from "./_components/DeadlinePanel";
+import { ExportButton } from "./_components/ExportButton";
 import { KpiRow } from "./_components/KpiRow";
 
 export const metadata: Metadata = { title: "통합 대시보드" };
@@ -27,6 +23,7 @@ function todayLabel(): string {
 export default async function DashboardPage() {
   const data = await getDashboardData();
   const isEmpty = data.kpi.companyCount === 0;
+  const mostOverdue = data.overdue[0];
   const mostUrgent = data.deadlines[0];
 
   return (
@@ -46,6 +43,14 @@ export default async function DashboardPage() {
             {todayLabel()} ·{" "}
             {isEmpty ? (
               "관리할 기업을 등록해 시작하세요"
+            ) : mostOverdue ? (
+              <>
+                기한이 지난{" "}
+                <b className="num">
+                  D+{Math.abs(mostOverdue.days_left)} {mostOverdue.company_name}
+                </b>{" "}
+                건이 있습니다 — 즉시 확인이 필요합니다
+              </>
             ) : mostUrgent ? (
               <>
                 오늘 가장 급한 일은{" "}
@@ -61,9 +66,7 @@ export default async function DashboardPage() {
         </div>
         <div className="spacer" />
         <div className="head-actions">
-          <Button variant="ghost" size="sm">
-            <IconDownload /> 내보내기
-          </Button>
+          <ExportButton />
           <LinkButton variant="cta" size="sm" href="/app/companies">
             <IconPlus /> 기업 추가
           </LinkButton>
@@ -88,7 +91,7 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="dash-grid">
-          <DeadlinePanel deadlines={data.deadlines} />
+          <DeadlinePanel deadlines={data.deadlines} overdue={data.overdue} />
           <DashboardWidgets alerts={data.alerts} files={data.files} />
         </div>
       )}

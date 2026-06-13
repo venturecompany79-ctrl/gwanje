@@ -14,6 +14,7 @@ export async function markNotificationRead(id: string): Promise<ActionResult> {
     .update({ is_read: true })
     .eq("id", id);
   if (error) {
+    console.error("[markNotificationRead]", error.code, error.message);
     return { ok: false, error: `읽음 처리에 실패했습니다: ${error.message}` };
   }
 
@@ -31,6 +32,7 @@ export async function markAllNotificationsRead(): Promise<ActionResult> {
     .update({ is_read: true })
     .eq("is_read", false);
   if (error) {
+    console.error("[markAllNotificationsRead]", error.code, error.message);
     return { ok: false, error: `읽음 처리에 실패했습니다: ${error.message}` };
   }
 

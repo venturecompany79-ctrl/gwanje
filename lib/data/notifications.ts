@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_NOTIFICATIONS } from "@/lib/demo-data";
+import { formatKstDotDate, formatKstTime, kstDayDiff } from "@/lib/datetime";
 import type { NotificationType } from "@/lib/database.types";
 import type { CompanyOption } from "@/lib/data/board";
 
@@ -40,24 +41,14 @@ export interface NotificationsData {
   companies: CompanyOption[];
 }
 
-function startOfDay(d: Date): number {
-  const s = new Date(d);
-  s.setHours(0, 0, 0, 0);
-  return s.getTime();
-}
-
 function decorate(raw: RawNotification, now: Date): NotificationItem {
   const created = new Date(raw.createdAt);
-  const dayDiff = Math.round(
-    (startOfDay(now) - startOfDay(created)) / 86_400_000,
-  );
+  // 오늘/어제/이전 그룹·시각 라벨 모두 KST 달력 기준 (운영 UTC와 무관)
+  const dayDiff = kstDayDiff(now, created);
   const group: NotificationGroup =
     dayDiff <= 0 ? "today" : dayDiff === 1 ? "yesterday" : "earlier";
-  const pad = (n: number) => String(n).padStart(2, "0");
   const timeLabel =
-    group === "earlier"
-      ? `${pad(created.getMonth() + 1)}.${pad(created.getDate())}`
-      : `${pad(created.getHours())}:${pad(created.getMinutes())}`;
+    group === "earlier" ? formatKstDotDate(created) : formatKstTime(created);
   return { ...raw, group, timeLabel };
 }
 

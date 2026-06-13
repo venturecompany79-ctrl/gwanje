@@ -51,11 +51,19 @@ export async function createCampaign(
       id: null,
     };
   }
-  if (
-    input.scheduledAt !== null &&
-    Number.isNaN(Date.parse(input.scheduledAt))
-  ) {
-    return { ok: false, error: "예약 일시가 올바르지 않습니다.", id: null };
+  if (input.scheduledAt !== null) {
+    const scheduledMs = Date.parse(input.scheduledAt);
+    if (Number.isNaN(scheduledMs)) {
+      return { ok: false, error: "예약 일시가 올바르지 않습니다.", id: null };
+    }
+    // 과거 일시 예약 거부 — 게이트웨이 연동 전 "예약했는데 안 감" 기대 불일치 방지(F5)
+    if (scheduledMs <= Date.now()) {
+      return {
+        ok: false,
+        error: "예약 일시는 현재 시각 이후로 지정해 주세요.",
+        id: null,
+      };
+    }
   }
 
   const ctx = await getTenantContext(supabase);
@@ -79,6 +87,7 @@ export async function createCampaign(
     .select("id")
     .single();
   if (error || !campaign) {
+    console.error("[createCampaign:campaign]", error?.code, error?.message);
     return {
       ok: false,
       error: `저장에 실패했습니다: ${error?.message ?? "알 수 없는 오류"}`,
@@ -99,6 +108,16 @@ export async function createCampaign(
       })),
     );
   if (recipientError) {
+    // 트랜잭션이 아니므로 수신자 저장 실패 시 방금 만든 캠페인을 보상 삭제 —
+    // "발송완료인데 수신자 0명" 고아 캠페인·재시도 중복 방지(F11)
+    console.error("[createCampaign:recipient]", recipientError.code, recipientError.message);
+    const { error: rollbackError } = await supabase
+      .from("campaign")
+      .delete()
+      .eq("id", campaign.id);
+    if (rollbackError) {
+      console.error("[createCampaign:rollback]", rollbackError.code, rollbackError.message);
+    }
     return {
       ok: false,
       error: `대상 저장에 실패했습니다: ${recipientError.message}`,

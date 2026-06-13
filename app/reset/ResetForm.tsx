@@ -14,6 +14,7 @@ export function ResetForm() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState<string | undefined>();
+  const [authError, setAuthError] = useState<string | null>(null);
   const supabase = createClient();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -24,10 +25,19 @@ export function ResetForm() {
       return;
     }
     setFieldError(undefined);
+    setAuthError(null);
     setLoading(true);
-    await supabase.auth.resetPasswordForEmail(email);
-    setSent(true);
+    // 재설정 링크는 /reset/confirm으로 복귀 — 그곳에서 새 비밀번호를 저장한다
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset/confirm`,
+    });
     setLoading(false);
+    if (error) {
+      // 메일 존재 여부는 노출하지 않되, rate-limit 등 발송 자체 실패는 안내
+      setAuthError("요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    setSent(true);
   }
 
   return (
@@ -42,6 +52,13 @@ export function ResetForm() {
       {!supabase ? (
         <div className="auth-notice">
           Supabase 연결 후 사용할 수 있습니다 (.env.local 설정 필요).
+        </div>
+      ) : null}
+
+      {authError ? (
+        <div className="auth-error" role="alert">
+          <IconMail />
+          {authError}
         </div>
       ) : null}
 

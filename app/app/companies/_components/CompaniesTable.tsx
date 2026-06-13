@@ -18,9 +18,16 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "recent", label: "최근 등록순" },
 ];
 
-export function CompaniesTable({ companies }: { companies: CompanyListRow[] }) {
+export function CompaniesTable({
+  companies,
+  initialQuery = "",
+}: {
+  companies: CompanyListRow[];
+  /** 상단바 전역 검색(/app/companies?q=)에서 넘어온 초기 검색어 */
+  initialQuery?: string;
+}) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [tag, setTag] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("urgent");
 
