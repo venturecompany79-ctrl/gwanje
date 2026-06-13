@@ -15,6 +15,7 @@
     "supabase:push:env": "node scripts/supabase-db-push.mjs",
     "supabase:types": "npx supabase gen types typescript --linked > lib/database.types.ts",
     "supabase:smoke": "node scripts/supabase-smoke.mjs",
+    "verify:migrations": "node scripts/verify-migrations.mjs",
     "vercel:env:sync": "node scripts/vercel-env-sync.mjs",
     "vercel:env:ls": "npx vercel env ls"
   },
@@ -26,6 +27,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.2",
     "@eslint/eslintrc": "^3.2.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",

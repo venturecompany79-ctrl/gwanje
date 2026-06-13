@@ -3,15 +3,11 @@
 -- 기존엔 notification을 생성하는 코드가 없어 알림센터·안읽음 배지·일일 요약이
 -- 시드 소진 후 영구히 비어 있었다. deadline_item(D-day) × profile.notify_lead_days를
 -- 매칭해 매일 1회 notification을 멱등 생성한다.
---
--- 주의: pg_cron 확장이 필요하다. db push가 확장 생성에서 실패하면
---   Supabase Dashboard → Database → Extensions에서 pg_cron을 켠 뒤 재실행.
 -- =============================================================
 
-create extension if not exists pg_cron;
-
--- security definer(postgres 소유) → security_invoker 뷰 deadline_item을
--- 전체 tenant 범위로 조회/삽입(RLS 우회). 외부에 execute 권한은 주지 않는다.
+-- 1) 알림 생성 함수 — pg_cron 유무와 무관하게 항상 생성된다.
+--    security definer(postgres 소유) → security_invoker 뷰 deadline_item을
+--    전체 tenant 범위로 조회/삽입(RLS 우회). 외부 execute 권한은 주지 않는다.
 create or replace function generate_due_notifications()
 returns integer
 language plpgsql
@@ -53,10 +49,21 @@ $$;
 
 revoke all on function generate_due_notifications() from public, anon, authenticated;
 
--- 매일 00:05 KST = 15:05 UTC (pg_cron 스케줄은 서버 타임존 UTC 기준).
--- cron.schedule은 동일 jobname이면 갱신(upsert)한다.
-select cron.schedule(
-  'generate-due-notifications',
-  '5 15 * * *',
-  $$select generate_due_notifications();$$
-);
+-- 2) pg_cron 스케줄 등록 — 확장이 없거나 권한이 없어도 마이그레이션을 실패시키지 않고
+--    경고만 남긴다. 위 함수는 이미 생성됐으므로, pg_cron 미사용 시
+--    Vercel Cron 등 외부 스케줄러로 generate_due_notifications()를 호출해도 된다.
+--    매일 00:05 KST = 15:05 UTC (pg_cron 스케줄은 서버 타임존 UTC 기준).
+do $cron$
+begin
+  create extension if not exists pg_cron;
+  perform cron.schedule(
+    'generate-due-notifications',
+    '5 15 * * *',
+    $job$select generate_due_notifications();$job$
+  );
+  raise notice 'pg_cron 알림 잡 등록됨 (매일 15:05 UTC = 00:05 KST)';
+exception
+  when others then
+    raise notice 'pg_cron 스케줄 등록 건너뜀 — Dashboard에서 pg_cron 활성화 후 수동 등록 필요: %', sqlerrm;
+end
+$cron$;

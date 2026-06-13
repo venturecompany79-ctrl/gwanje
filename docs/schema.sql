@@ -364,11 +364,10 @@ create unique index if not exists task_source_credential_unique
 
 -- -------------------------------------------------------------
 -- 15. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
---     매일 1회 멱등 생성. pg_cron 확장 필요(Supabase Dashboard에서 활성화 가능).
+--     매일 1회 멱등 생성. 함수는 항상 생성되고, pg_cron 스케줄 등록은 가드 블록으로
+--     감싸 확장이 없어도 마이그레이션이 실패하지 않는다(경고만).
 --     상세는 supabase/migrations/20260613000004_due_notifications_cron.sql 참고.
 -- -------------------------------------------------------------
-create extension if not exists pg_cron;
-
 create or replace function generate_due_notifications()
 returns integer
 language plpgsql
@@ -405,9 +404,17 @@ $$;
 
 revoke all on function generate_due_notifications() from public, anon, authenticated;
 
--- 매일 00:05 KST = 15:05 UTC
-select cron.schedule(
-  'generate-due-notifications',
-  '5 15 * * *',
-  $$select generate_due_notifications();$$
-);
+-- pg_cron 스케줄 등록 — 확장이 없어도 마이그레이션을 실패시키지 않도록 가드(매일 15:05 UTC = 00:05 KST)
+do $cron$
+begin
+  create extension if not exists pg_cron;
+  perform cron.schedule(
+    'generate-due-notifications',
+    '5 15 * * *',
+    $job$select generate_due_notifications();$job$
+  );
+exception
+  when others then
+    raise notice 'pg_cron 스케줄 등록 건너뜀 — Dashboard에서 활성화 후 수동 등록 필요: %', sqlerrm;
+end
+$cron$;

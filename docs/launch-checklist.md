@@ -31,8 +31,9 @@
 - [x] 운영 연결 검증 스크립트 추가: `npm run supabase:smoke`
 - [x] 단일 사용자 MVP 정책에 맞게 로컬 Supabase Auth signup 비활성화
 - [ ] **운영(호스티드) Supabase Auth에서 신규 가입 비활성화** (Dashboard → Authentication → Sign In / Providers) — anon 키로 직접 `signUp` 호출 차단 (F7)
-- [ ] **코드 리뷰 보완 마이그레이션 적용**: `npm run supabase:push:env` (`20260613000001`~`0004`). pg_cron 확장이 없으면 Dashboard → Database → Extensions에서 활성화 후 재실행
-- [ ] **알림 생성 잡 확인**: `select generate_due_notifications();` 수동 1회 실행 → 알림 생성, `cron.job`에 `generate-due-notifications` 등록 확인
+- [x] **마이그레이션 SQL 실 실행 검증 완료**: `npm run verify:migrations` (PGlite=실 Postgres). 초기 스키마+신규 4개+시드 적용, deadline_item(KST)·알림 함수 멱등·갱신과제 유니크·profile 컬럼 잠금·**RLS 멀티테넌트 격리** 모두 통과
+- [ ] **코드 리뷰 보완 마이그레이션 적용**: `npm run supabase:push:env` (`20260613000001`~`0004`). 0004는 pg_cron이 없어도 가드 블록으로 성공하고 함수는 생성됨 — 스케줄까지 쓰려면 Dashboard → Database → Extensions에서 pg_cron 활성화 후 `cron.schedule` 등록(또는 Vercel Cron으로 함수 호출)
+- [ ] **알림 생성 잡 확인**: `select generate_due_notifications();` 수동 1회 실행 → 알림 생성, (pg_cron 사용 시) `cron.job`에 `generate-due-notifications` 등록 확인
 - [x] Supabase Data API용 `authenticated` role 권한을 스키마에 명시
 - [x] `.env.local`에 Supabase URL/anon key와 스모크 테스트 계정 입력
 - [x] Supabase URL/anon key 연결 확인
