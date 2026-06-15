@@ -126,7 +126,9 @@ export function CompanyDetailView({
         />
       ) : null}
       {tab === "schedule" ? <ScheduleTab schedules={data.schedules} /> : null}
-      {tab === "files" ? <FilesTab documents={data.documents} /> : null}
+      {tab === "files" ? (
+        <FilesTab companyId={company.id} documents={data.documents} />
+      ) : null}
 
       <Toast message={toast} />
     </>

@@ -70,6 +70,7 @@ export interface DocumentRow {
   docCategory: string | null;
   version: number;
   uploadedBy: DocumentUploader;
+  storageUrl?: string | null;
   fileType: string | null;
   sizeBytes: number | null;
   createdAt: string;
@@ -251,6 +252,7 @@ export async function getCompanyDetail(
       docCategory: d.doc_category,
       version: d.version,
       uploadedBy: d.uploaded_by,
+      storageUrl: d.storage_url,
       fileType: d.file_type,
       sizeBytes: d.size_bytes,
       createdAt: d.created_at,

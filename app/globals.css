@@ -419,6 +419,17 @@ h4 {
   font-size: 13px;
   color: var(--color-critical-strong);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ---- panel (앱 카드: 일반 피처 16px) ---- */
 .panel {
@@ -1018,6 +1029,40 @@ table.dlist .date {
 .file-body {
   flex: 1;
   min-width: 0;
+}
+.file-upload-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.inline-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-critical-strong);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+}
+.inline-error svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  flex: none;
+}
+.download-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.download-cell .field-error {
+  flex: 1 0 100%;
+  text-align: right;
+  font-size: 12px;
 }
 .file-name {
   font-size: 13.5px;

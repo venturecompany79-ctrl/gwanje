@@ -1,8 +1,8 @@
 // 마이그레이션 실 실행 검증 — PGlite(WASM Postgres)로 Docker 없이 SQL을 실제 실행한다.
 // Supabase 고유 객체(auth 스키마·역할·auth.uid())와 pg_cron은 스텁으로 대체.
-// 검증 범위: 초기 스키마 + 신규 마이그레이션 4개 + 시드 적용, deadline_item(KST) 뷰,
+// 검증 범위: 초기 스키마 + 신규 마이그레이션 + 시드 적용, deadline_item(KST) 뷰,
 //           generate_due_notifications() 멱등 동작, task 갱신과제 유니크, profile 컬럼 권한,
-//           RLS 멀티테넌트 격리(핵심 보안 속성).
+//           자료 Storage 정책, RLS 멀티테넌트 격리(핵심 보안 속성).
 // 실행: npm run verify:migrations   (@electric-sql/pglite는 devDependency)
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
@@ -64,6 +64,25 @@ await step(
      select nullif(current_setting('test.uid', true), '')::uuid
    $$;`,
 );
+await step(
+  "stub: storage 스키마/테이블",
+  `create schema storage;
+   create table storage.buckets (
+     id text primary key,
+     name text not null,
+     public boolean not null default false,
+     file_size_limit bigint,
+     allowed_mime_types text[]
+   );
+   create table storage.objects (
+     id uuid primary key default gen_random_uuid(),
+     bucket_id text not null references storage.buckets (id),
+     name text not null,
+     owner uuid,
+     created_at timestamptz not null default now()
+   );
+   alter table storage.objects enable row level security;`,
+);
 // ── 2. 초기 스키마 + 신규 마이그레이션 ───────────────────────────────────
 // 0004는 가드(do/exception) 블록 덕분에 pg_cron이 없어도 실패하지 않아야 한다 —
 // PGlite에는 pg_cron이 없으므로, 이 실행이 곧 "확장 미설치 환경 복원력" 검증이다.
@@ -72,6 +91,7 @@ await step("migration: 20260613000001_deadline_item_kst", read("migrations/20260
 await step("migration: 20260613000002_profile_rls_hardening", read("migrations/20260613000002_profile_rls_hardening.sql"));
 await step("migration: 20260613000003_task_renewal_unique", read("migrations/20260613000003_task_renewal_unique.sql"));
 await step("migration: 20260613000004_due_notifications_cron (pg_cron 미설치 환경 — 가드로 성공해야 함)", read("migrations/20260613000004_due_notifications_cron.sql"));
+await step("migration: 20260615000000_company_document_storage", read("migrations/20260615000000_company_document_storage.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);

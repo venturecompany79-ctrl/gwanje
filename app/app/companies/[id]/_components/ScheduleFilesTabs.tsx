@@ -1,15 +1,24 @@
 "use client";
 
+import { useRef, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Panel, PanelHead } from "@/components/ui/Panel";
-import { IconCalendar, IconFile } from "@/components/ui/icons";
+import { IconAlert, IconCalendar, IconDownload, IconFile, IconPlus } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
 import type { DocumentRow, ScheduleRow } from "@/lib/data/company-detail";
+import { createClient } from "@/lib/supabase/client";
+import {
+  createDocumentDownloadUrl,
+  prepareDocumentUpload,
+  registerUploadedDocument,
+} from "../actions";
 
 export function ScheduleTab({ schedules }: { schedules: ScheduleRow[] }) {
   return (
@@ -67,19 +76,153 @@ export function ScheduleTab({ schedules }: { schedules: ScheduleRow[] }) {
   );
 }
 
-export function FilesTab({ documents }: { documents: DocumentRow[] }) {
+function UploadDocumentButton({ companyId }: { companyId: string }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setPending(true);
+    setError(null);
+
+    const supabase = createClient();
+    if (!supabase) {
+      setError("데모 모드에서는 파일을 업로드할 수 없습니다.");
+      setPending(false);
+      return;
+    }
+
+    const prepared = await prepareDocumentUpload(companyId, {
+      name: file.name,
+      size: file.size,
+    });
+    if (!prepared.ok || !prepared.bucket || !prepared.path) {
+      setError(prepared.error);
+      setPending(false);
+      return;
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from(prepared.bucket)
+      .upload(prepared.path, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+    if (uploadError) {
+      setError(`파일 업로드에 실패했습니다: ${uploadError.message}`);
+      setPending(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("name", file.name);
+    formData.set("path", prepared.path);
+    formData.set("size_bytes", String(file.size));
+    formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
+
+    const result = await registerUploadedDocument(companyId, formData);
+    if (!result.ok) {
+      await supabase.storage.from(prepared.bucket).remove([prepared.path]);
+      setError(result.error);
+      setPending(false);
+      return;
+    }
+
+    setPending(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="file-upload-action">
+      <input
+        ref={inputRef}
+        className="sr-only"
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.hwp,.hwpx"
+        onChange={handleFileChange}
+        aria-label="자료 파일 선택"
+      />
+      <Button
+        type="button"
+        variant="cta"
+        size="sm"
+        onClick={() => inputRef.current?.click()}
+        disabled={pending}
+      >
+        <IconPlus /> {pending ? "업로드 중..." : "파일 업로드"}
+      </Button>
+      {error ? (
+        <div className="inline-error">
+          <IconAlert /> {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DocumentDownloadButton({ document }: { document: DocumentRow }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDownload() {
+    setPending(true);
+    setError(null);
+    const result = await createDocumentDownloadUrl(document.id);
+    setPending(false);
+
+    if (!result.ok || !result.url) {
+      setError(result.error);
+      return;
+    }
+
+    window.open(result.url, "_blank", "noopener,noreferrer");
+  }
+
+  if (!document.storageUrl) return <span className="cell-muted">—</span>;
+
+  return (
+    <span className="download-cell">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={handleDownload}
+        disabled={pending}
+      >
+        <IconDownload /> {pending ? "준비 중" : "열기"}
+      </Button>
+      {error ? <span className="field-error">{error}</span> : null}
+    </span>
+  );
+}
+
+export function FilesTab({
+  companyId,
+  documents,
+}: {
+  companyId: string;
+  documents: DocumentRow[];
+}) {
   return (
     <Panel>
       <PanelHead
         title="자료"
         count={documents.length > 0 ? `${documents.length}건` : undefined}
-      />
+      >
+        <UploadDocumentButton companyId={companyId} />
+      </PanelHead>
       {documents.length === 0 ? (
         <EmptyState
           bare
           icon={<IconFile />}
           title="등록된 자료가 없습니다"
-          description="재무제표, 인증서 같은 기업 자료가 이곳에 모입니다. 파일 업로드는 Cloudinary 연동과 함께 제공됩니다."
+          description="재무제표, 인증서 같은 기업 자료가 이곳에 모입니다. 업로드한 파일은 Supabase Storage에 저장됩니다."
+          action={<UploadDocumentButton companyId={companyId} />}
         />
       ) : (
         <table className="dlist">
@@ -91,6 +234,7 @@ export function FilesTab({ documents }: { documents: DocumentRow[] }) {
               <th>업로더</th>
               <th className="r">크기</th>
               <th>등록일</th>
+              <th className="r">파일</th>
             </tr>
           </thead>
           <tbody>
@@ -115,6 +259,9 @@ export function FilesTab({ documents }: { documents: DocumentRow[] }) {
                 <td>{DOCUMENT_UPLOADER_LABEL[d.uploadedBy]}</td>
                 <td className="r num">{formatBytes(d.sizeBytes)}</td>
                 <td className="date num">{formatKstDate(d.createdAt)}</td>
+                <td className="r">
+                  <DocumentDownloadButton document={d} />
+                </td>
               </tr>
             ))}
           </tbody>

@@ -2,6 +2,7 @@
 
 // 기업 상세 전용 서버 액션 — 자격·기업 정보.
 // 과제(관리포인트) 액션은 보드와 공용이라 lib/actions/tasks.ts에 있다.
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -12,11 +13,171 @@ import {
   parseNonNegativeInt,
   type ActionResult,
 } from "@/lib/actions/shared";
+import {
+  COMPANY_DOCUMENTS_BUCKET,
+  COMPANY_DOCUMENTS_MAX_BYTES,
+  getFileExtension,
+  parseCompanyDocumentStorageUrl,
+  storageUrlFromPath,
+} from "@/lib/storage";
 
 function revalidateCompany(companyId: string) {
   revalidatePath(`/app/companies/${companyId}`);
   revalidatePath("/app/companies");
   revalidatePath("/app");
+}
+
+function sanitizeFileName(name: string): string {
+  return name
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+}
+
+async function assertCompanyAccess(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  companyId: string,
+  tenantId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from("company")
+    .select("id")
+    .eq("id", companyId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[assertCompanyAccess]", error.code, error.message);
+    return { ok: false, error: `기업 확인에 실패했습니다: ${error.message}` };
+  }
+  if (!data) return { ok: false, error: "기업을 찾을 수 없습니다." };
+  return { ok: true };
+}
+
+export async function prepareDocumentUpload(
+  companyId: string,
+  file: { name: string; size: number },
+): Promise<ActionResult & { bucket?: string; path?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return access;
+
+  const size = Number(file.size);
+  if (!Number.isFinite(size) || size <= 0) {
+    return { ok: false, error: "업로드할 파일을 선택해 주세요." };
+  }
+  if (size > COMPANY_DOCUMENTS_MAX_BYTES) {
+    return { ok: false, error: "파일은 50MB 이하만 업로드할 수 있습니다." };
+  }
+
+  const safeName = sanitizeFileName(file.name);
+  if (!safeName) return { ok: false, error: "파일명이 올바르지 않습니다." };
+
+  const path = `${ctx.tenantId}/${companyId}/${randomUUID()}-${safeName}`;
+  return { ok: true, error: null, bucket: COMPANY_DOCUMENTS_BUCKET, path };
+}
+
+export async function registerUploadedDocument(
+  companyId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return access;
+
+  const name = String(formData.get("name") ?? "").trim();
+  const path = String(formData.get("path") ?? "").trim();
+  const sizeText = String(formData.get("size_bytes") ?? "").trim();
+  const sizeBytes = sizeText === "" ? null : Number(sizeText);
+  if (!name) return { ok: false, error: "자료명을 입력해 주세요." };
+  if (!path.startsWith(`${ctx.tenantId}/${companyId}/`)) {
+    return { ok: false, error: "업로드 경로가 올바르지 않습니다." };
+  }
+  if (sizeBytes !== null && (!Number.isFinite(sizeBytes) || sizeBytes < 0)) {
+    return { ok: false, error: "파일 크기 정보가 올바르지 않습니다." };
+  }
+
+  const { data: latest, error: latestError } = await supabase
+    .from("document")
+    .select("version")
+    .eq("company_id", companyId)
+    .eq("name", name)
+    .order("version", { ascending: false })
+    .limit(1);
+  if (latestError) {
+    console.error("[registerUploadedDocument:latest]", latestError.code, latestError.message);
+    return { ok: false, error: `버전 확인에 실패했습니다: ${latestError.message}` };
+  }
+
+  const version = (latest?.[0]?.version ?? 0) + 1;
+  const fileType =
+    optionalText(formData, "file_type") ?? getFileExtension(name) ?? "file";
+
+  const { error } = await supabase.from("document").insert({
+    tenant_id: ctx.tenantId,
+    company_id: companyId,
+    name,
+    doc_category: optionalText(formData, "doc_category"),
+    version,
+    uploaded_by: "consultant",
+    storage_url: storageUrlFromPath(path),
+    file_type: fileType,
+    size_bytes: sizeBytes,
+  });
+  if (error) {
+    console.error("[registerUploadedDocument]", error.code, error.message);
+    return { ok: false, error: `자료 저장에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+export async function createDocumentDownloadUrl(
+  documentId: string,
+): Promise<ActionResult & { url?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const { data: document, error } = await supabase
+    .from("document")
+    .select("storage_url")
+    .eq("id", documentId)
+    .eq("tenant_id", ctx.tenantId)
+    .maybeSingle();
+  if (error) {
+    console.error("[createDocumentDownloadUrl:document]", error.code, error.message);
+    return { ok: false, error: `자료 확인에 실패했습니다: ${error.message}` };
+  }
+  if (!document) return { ok: false, error: "자료를 찾을 수 없습니다." };
+
+  const storage = parseCompanyDocumentStorageUrl(document.storage_url);
+  if (!storage) return { ok: false, error: "다운로드할 파일 경로가 없습니다." };
+
+  const { data, error: signedError } = await supabase.storage
+    .from(storage.bucket)
+    .createSignedUrl(storage.path, 60 * 5);
+  if (signedError) {
+    console.error("[createDocumentDownloadUrl:signed]", signedError.message);
+    return { ok: false, error: `다운로드 링크 생성에 실패했습니다: ${signedError.message}` };
+  }
+
+  return { ok: true, error: null, url: data.signedUrl };
 }
 
 export async function addCredential(
