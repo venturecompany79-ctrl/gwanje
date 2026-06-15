@@ -27,15 +27,6 @@ function revalidateCompany(companyId: string) {
   revalidatePath("/app");
 }
 
-function sanitizeFileName(name: string): string {
-  return name
-    .normalize("NFKC")
-    .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 140);
-}
-
 async function assertCompanyAccess(
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
   companyId: string,
@@ -77,10 +68,10 @@ export async function prepareDocumentUpload(
     return { ok: false, error: "파일은 50MB 이하만 업로드할 수 있습니다." };
   }
 
-  const safeName = sanitizeFileName(file.name);
-  if (!safeName) return { ok: false, error: "파일명이 올바르지 않습니다." };
+  const extension = getFileExtension(file.name);
+  const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
 
-  const path = `${ctx.tenantId}/${companyId}/${randomUUID()}-${safeName}`;
+  const path = `${ctx.tenantId}/${companyId}/${objectName}`;
   return { ok: true, error: null, bucket: COMPANY_DOCUMENTS_BUCKET, path };
 }
 

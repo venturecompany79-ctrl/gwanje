@@ -92,6 +92,7 @@ await step("migration: 20260613000002_profile_rls_hardening", read("migrations/2
 await step("migration: 20260613000003_task_renewal_unique", read("migrations/20260613000003_task_renewal_unique.sql"));
 await step("migration: 20260613000004_due_notifications_cron (pg_cron 미설치 환경 — 가드로 성공해야 함)", read("migrations/20260613000004_due_notifications_cron.sql"));
 await step("migration: 20260615000000_company_document_storage", read("migrations/20260615000000_company_document_storage.sql"));
+await step("migration: 20260615000001_company_document_mime_types", read("migrations/20260615000001_company_document_mime_types.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
