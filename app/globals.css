@@ -1221,6 +1221,218 @@ table.dlist .date {
 }
 
 /* =============================================================
+   기업 정보입력 (/app/companies/new)
+   ============================================================= */
+.intake-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+.intake-main,
+.intake-side {
+  min-width: 0;
+}
+.intake-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.intake-section,
+.intake-plan {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+}
+.intake-section-head,
+.intake-plan-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-bottom: 18px;
+}
+.intake-section-icon,
+.intake-plan-head > svg {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.intake-section-icon svg,
+.intake-plan-head > svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+}
+.intake-section h2,
+.intake-plan h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.16px;
+  color: var(--color-ink-deep);
+}
+.intake-section p,
+.intake-plan p {
+  margin: 5px 0 0;
+  color: var(--color-steel);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.intake-section .form-grid2 + .form-grid2,
+.intake-section .form-grid2 + .field,
+.intake-section .field + .form-grid2,
+.intake-section .field + .field {
+  margin-top: 14px;
+}
+.license-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  border: 1px dashed var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.license-drop > svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--color-primary);
+  flex: none;
+}
+.license-drop b {
+  display: block;
+  font-size: 14px;
+  color: var(--color-ink-deep);
+  margin-bottom: 4px;
+}
+.license-drop span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--color-steel);
+  line-height: 1.5;
+}
+.license-drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.intake-subsection {
+  border-top: 1px solid var(--color-hairline-soft);
+  padding-top: 18px;
+  margin-top: 18px;
+}
+.intake-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-ink-deep);
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.intake-subtitle svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-primary);
+}
+.intake-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.intake-choices--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.intake-choice {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+.intake-choice input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary);
+  flex: none;
+}
+.intake-choice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.intake-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 0 4px;
+  background: linear-gradient(
+    to bottom,
+    rgba(241, 244, 247, 0),
+    var(--color-surface-soft) 34%
+  );
+}
+.intake-side {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.intake-plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.intake-plan-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--color-charcoal);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.intake-plan-list svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--color-success);
+  flex: none;
+  margin-top: 2px;
+}
+.intake-steps {
+  margin: 0;
+  padding-left: 19px;
+  color: var(--color-charcoal);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.intake-steps li + li {
+  margin-top: 9px;
+}
+
+/* =============================================================
    슬라이드오버 (앱 확장 컴포넌트 — 기업 추가 / 과제 상세 공용)
    ============================================================= */
 @keyframes slideover-fade {
@@ -3877,6 +4089,29 @@ input.cond-input {
 
 /* 반응형 */
 @media (max-width: 820px) {
+  .intake-layout {
+    grid-template-columns: 1fr;
+  }
+  .intake-side,
+  .intake-actions {
+    position: static;
+  }
+  .intake-choices,
+  .intake-choices--compact,
+  .form-grid2 {
+    grid-template-columns: 1fr;
+  }
+  .intake-section,
+  .intake-plan {
+    padding: 18px;
+  }
+  .intake-actions {
+    justify-content: stretch;
+    background: transparent;
+  }
+  .intake-actions .btn {
+    flex: 1;
+  }
   .lp-nav-menu,
   .lp-nav-cta {
     display: none;
