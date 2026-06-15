@@ -135,7 +135,7 @@ export function CompaniesTable({
             ) : null}
           </div>
         ) : (
-          <table className="dlist ctable">
+          <table className="dlist ctable dlist--cards">
             <thead>
               <tr>
                 <th>기업명</th>
@@ -153,7 +153,7 @@ export function CompaniesTable({
                   key={co.id}
                   onClick={() => router.push(`/app/companies/${co.id}`)}
                 >
-                  <td className="co">
+                  <td className="co" data-label="기업명">
                     <Link
                       href={`/app/companies/${co.id}`}
                       onClick={(e) => e.stopPropagation()}
@@ -161,15 +161,15 @@ export function CompaniesTable({
                       {co.name}
                     </Link>
                   </td>
-                  <td className="item">{co.industry ?? "—"}</td>
-                  <td className="date num">
+                  <td className="item" data-label="업종">{co.industry ?? "—"}</td>
+                  <td className="date num" data-label="설립">
                     {co.foundedDate ? co.foundedDate.slice(0, 4) : "—"}
                   </td>
-                  <td className="r num">{formatRevenue(co.revenue)}</td>
-                  <td className="r num">
+                  <td className="r num" data-label="매출">{formatRevenue(co.revenue)}</td>
+                  <td className="r num" data-label="인원">
                     {co.headcount !== null ? `${co.headcount}명` : "—"}
                   </td>
-                  <td>
+                  <td data-label="보유 자격">
                     {co.credentialTypes.length === 0 ? (
                       <span className="cell-muted">—</span>
                     ) : (
@@ -187,7 +187,7 @@ export function CompaniesTable({
                       </span>
                     )}
                   </td>
-                  <td className="r">
+                  <td className="r" data-label="임박 항목">
                     <span className="due-cell">
                       {co.expiredCount > 0 ? (
                         <span className="badge badge--soft-expired">

@@ -16,7 +16,7 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignListRow[] }) 
   const router = useRouter();
 
   return (
-    <table className="dlist">
+    <table className="dlist dlist--cards">
       <thead>
         <tr>
           <th>제목</th>
@@ -41,7 +41,7 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignListRow[] }) 
                   : undefined
               }
             >
-              <td className="co">
+              <td className="co" data-label="제목">
                 {clickable ? (
                   <Link
                     href={`/app/campaigns/${c.id}`}
@@ -53,23 +53,23 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignListRow[] }) 
                   c.title
                 )}
               </td>
-              <td>
+              <td data-label="세그먼트">
                 <span className="seg-chip">
                   {c.segmentSummary ?? "작성 중"}
                 </span>
               </td>
-              <td className="c num">
+              <td className="c num" data-label="대상 수">
                 {c.recipientCount !== null ? `${c.recipientCount}개사` : "–"}
               </td>
-              <td className="date num">{dateCell(c)}</td>
-              <td className="c">
+              <td className="date num" data-label="발송일">{dateCell(c)}</td>
+              <td className="c" data-label="응답률">
                 {c.responseRate !== null ? (
                   <span className="rate num">{c.responseRate}%</span>
                 ) : (
                   <span className="cell-muted">–</span>
                 )}
               </td>
-              <td>
+              <td data-label="상태">
                 <CampaignStatusBadge status={c.status} />
               </td>
             </tr>

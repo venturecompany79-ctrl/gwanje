@@ -28,7 +28,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // 폰트 변수는 html에 — :root에서 --font-body로 합성되기 때문 (globals.css)
-    <html lang="ko" className={`${inter.variable} ${notoSansKR.variable}`}>
+    <html
+      lang="ko"
+      className={`${inter.variable} ${notoSansKR.variable}`}
+      suppressHydrationWarning
+    >
       <body>{children}</body>
     </html>
   );
