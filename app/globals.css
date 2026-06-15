@@ -799,6 +799,22 @@ h4 {
 .kpi--urgent .kpi-value {
   color: var(--app-st-soon-text);
 }
+/* 클릭 가능한 KPI 카드 (Link로 렌더) */
+a.kpi--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+a.kpi--link:hover {
+  border-color: var(--color-stone);
+  box-shadow: rgba(20, 22, 26, 0.08) 0 1px 4px;
+}
+a.kpi--link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 .dash-grid {
   display: grid;
@@ -842,6 +858,13 @@ table.dlist tbody tr {
 }
 table.dlist tbody tr:hover {
   background: var(--color-surface-soft);
+}
+table.dlist tbody tr.row-link {
+  cursor: pointer;
+}
+table.dlist tbody tr.row-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 table.dlist .co {
   font-weight: 700;
@@ -889,9 +912,17 @@ table.dlist .date {
   padding: 12px 10px;
   border-radius: var(--radius-lg);
   transition: background-color 150ms ease-out;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 .alert-item:hover {
   background: var(--color-surface-soft);
+}
+.alert-item:focus-visible,
+.file-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 .alert-ico {
   width: 32px;
@@ -962,6 +993,9 @@ table.dlist .date {
   padding: 12px 10px;
   border-radius: var(--radius-lg);
   transition: background-color 150ms ease-out;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 .file-item:hover {
   background: var(--color-surface-soft);

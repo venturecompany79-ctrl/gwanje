@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   IconAlert,
@@ -14,6 +15,7 @@ function KpiCard({
   sub,
   icon,
   urgent = false,
+  href,
 }: {
   label: string;
   value: number;
@@ -21,9 +23,11 @@ function KpiCard({
   sub: string;
   icon: ReactNode;
   urgent?: boolean;
+  href?: string;
 }) {
-  return (
-    <div className={`kpi${urgent ? " kpi--urgent" : ""}`}>
+  const className = `kpi${urgent ? " kpi--urgent" : ""}${href ? " kpi--link" : ""}`;
+  const inner = (
+    <>
       <div className="kpi-top">
         <div className="kpi-label">{label}</div>
         <div className="kpi-icon">{icon}</div>
@@ -33,8 +37,17 @@ function KpiCard({
         <em>{unit}</em>
       </div>
       <div className="kpi-sub">{sub}</div>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
@@ -47,6 +60,7 @@ export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
         unit="개사"
         sub={hasData ? "전체 워크스페이스" : "—"}
         icon={<IconBuilding />}
+        href="/app/companies"
       />
       <KpiCard
         label="7일 내 마감"
@@ -69,6 +83,7 @@ export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
         unit="건"
         sub={hasData ? `${kpi.companyCount}개사 전체` : "—"}
         icon={<IconKanban />}
+        href="/app/board"
       />
     </div>
   );

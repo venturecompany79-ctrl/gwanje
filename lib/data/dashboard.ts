@@ -23,14 +23,50 @@ export interface DashboardAlert {
   title: string;
   sub: string | null;
   timeAgo: string;
+  companyId: string | null;
+  refTable: string | null;
+  refId: string | null;
 }
 
 export interface DashboardFile {
   id: string;
   fileType: string;
   name: string;
+  companyId: string;
   companyName: string;
   when: string;
+}
+
+/** deadline_item / notification 의 source·ref_table → 기업상세 탭 키 매핑 (credential은 탭키가 cert) */
+const SOURCE_TAB: Record<string, string> = {
+  credential: "cert",
+  task: "tasks",
+  schedule: "schedule",
+};
+
+/** 마감 항목 → 이동 경로. company_id 없으면 null(비링크) */
+export function deadlineHref(item: {
+  company_id: string | null;
+  source: string;
+}): string | null {
+  if (!item.company_id) return null;
+  const tab = SOURCE_TAB[item.source];
+  return tab
+    ? `/app/companies/${item.company_id}?tab=${tab}`
+    : `/app/companies/${item.company_id}`;
+}
+
+/** 알림 → 참조 대상 경로. 참조 불가 시 알림 센터로 폴백 */
+export function notificationHref(alert: {
+  refTable: string | null;
+  companyId: string | null;
+}): string {
+  if (alert.refTable === "campaign") return "/app/campaigns";
+  if (alert.companyId && alert.refTable && SOURCE_TAB[alert.refTable]) {
+    return `/app/companies/${alert.companyId}?tab=${SOURCE_TAB[alert.refTable]}`;
+  }
+  if (alert.companyId) return `/app/companies/${alert.companyId}`;
+  return "/app/notifications";
 }
 
 export interface DashboardData {
@@ -234,11 +270,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       title: n.title,
       sub: n.body,
       timeAgo: formatTimeAgo(n.created_at, now),
+      companyId: n.company_id,
+      refTable: n.ref_table,
+      refId: n.ref_id,
     })),
     files: docRows.map((d) => ({
       id: d.id,
       fileType: d.file_type ?? "파일",
       name: d.name,
+      companyId: d.company_id,
       companyName: companyNames.get(d.company_id) ?? "—",
       when: formatTimeAgo(d.created_at, now),
     })),

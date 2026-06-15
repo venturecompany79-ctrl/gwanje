@@ -7,7 +7,11 @@ import {
   IconFile,
   IconTarget,
 } from "@/components/ui/icons";
-import type { DashboardAlert, DashboardFile } from "@/lib/data/dashboard";
+import {
+  notificationHref,
+  type DashboardAlert,
+  type DashboardFile,
+} from "@/lib/data/dashboard";
 import type { NotificationType } from "@/lib/database.types";
 
 function alertIcon(type: NotificationType, urgent: boolean) {
@@ -63,14 +67,14 @@ export function DashboardWidgets({
         ) : (
           <div className="wpanel-body">
             {alerts.map((a) => (
-              <div key={a.id} className="alert-item">
+              <Link key={a.id} href={notificationHref(a)} className="alert-item">
                 {alertIcon(a.type, a.urgent)}
                 <div className="alert-body">
                   <div className="alert-title">{a.title}</div>
                   {a.sub ? <div className="alert-sub">{a.sub}</div> : null}
                 </div>
                 <div className="alert-time">{a.timeAgo}</div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -90,14 +94,18 @@ export function DashboardWidgets({
         ) : (
           <div className="wpanel-body">
             {files.map((f) => (
-              <div key={f.id} className="file-item">
+              <Link
+                key={f.id}
+                href={`/app/companies/${f.companyId}?tab=files`}
+                className="file-item"
+              >
                 <div className="file-type">{f.fileType}</div>
                 <div className="file-body">
                   <div className="file-name">{f.name}</div>
                   <div className="file-co">{f.companyName}</div>
                 </div>
                 <div className="file-when num">{f.when}</div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
