@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import {
-  useEffect,
   useMemo,
   useState,
   useTransition,
@@ -33,8 +32,6 @@ import { TodoBoard } from "./TodoBoard";
 
 type DueFilter = "all" | "7" | "30" | "overdue";
 type BoardTab = "todos" | "tasks";
-
-const BOARD_TAB_STORAGE_KEY = "management-board-active-tab";
 
 const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
   { value: "all", label: "마감기간 전체" },
@@ -103,7 +100,7 @@ export function BoardView({
   const { toast, showToast } = useToast();
   const [, startTransition] = useTransition();
 
-  const [activeTab, setActiveTab] = useState<BoardTab>("tasks");
+  const [activeTab, setActiveTab] = useState<BoardTab>("todos");
   const [todoAddRequest, setTodoAddRequest] = useState(0);
   const [query, setQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -117,14 +114,8 @@ export function BoardView({
   // 드래그 직후 서버 반영 전까지의 낙관적 단계 오버라이드
   const [stageOverride, setStageOverride] = useState<Record<string, TaskStage>>({});
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(BOARD_TAB_STORAGE_KEY);
-    if (saved === "todos" || saved === "tasks") setActiveTab(saved);
-  }, []);
-
   function chooseTab(tab: BoardTab) {
     setActiveTab(tab);
-    window.localStorage.setItem(BOARD_TAB_STORAGE_KEY, tab);
   }
 
   const effectiveStage = (t: BoardTask): TaskStage =>
@@ -191,7 +182,7 @@ export function BoardView({
           <h1>관리포인트 보드</h1>
           <div className="sub">
             {activeTab === "todos"
-              ? `오늘 ${todayTodoCount}건 · 최근 30일 ${todoData.notes.length}건`
+              ? `오늘 ${todayTodoCount}건`
               : data.tasks.length === 0
                 ? "첫 과제를 등록해 시작하세요"
                 : `전체 ${data.tasks.length}건`}

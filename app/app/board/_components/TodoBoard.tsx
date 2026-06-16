@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
   useTransition,
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -41,6 +41,12 @@ type TagMenuTarget =
   | { kind: "note"; id: string }
   | { kind: "draft"; id: string };
 
+const TODO_TAG_TONE: Record<TodoTag, string> = {
+  업무: "work",
+  미팅: "meeting",
+  기록: "record",
+};
+
 function makeDraftId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -50,6 +56,18 @@ function makeDraftId(): string {
 
 function isTarget(menu: TagMenuTarget | null, target: TagMenuTarget): boolean {
   return menu?.kind === target.kind && menu.id === target.id;
+}
+
+function targetKey(target: TagMenuTarget): string {
+  return `${target.kind}:${target.id}`;
+}
+
+function tagToneClass(tag: TodoTag | null): string {
+  return tag ? ` todo-tag--${TODO_TAG_TONE[tag]}` : "";
+}
+
+function tagOptionToneClass(tag: TodoTag): string {
+  return ` todo-tag-option--${TODO_TAG_TONE[tag]}`;
 }
 
 function TagCommandMenu({
@@ -65,7 +83,7 @@ function TagCommandMenu({
         <button
           key={tag}
           type="button"
-          className={`todo-tag-option${activeIndex === index ? " is-active" : ""}`}
+          className={`todo-tag-option${tagOptionToneClass(tag)}${activeIndex === index ? " is-active" : ""}`}
           role="option"
           aria-selected={activeIndex === index}
           onMouseDown={(e) => {
@@ -92,7 +110,6 @@ export function TodoBoard({
   const router = useRouter();
   const [notes, setNotes] = useState<TodoNoteRow[]>(data.notes);
   const [drafts, setDrafts] = useState<TodoDraft[]>([]);
-  const [openPastDates, setOpenPastDates] = useState<Set<string>>(new Set());
   const [dirtyNoteIds, setDirtyNoteIds] = useState<Set<string>>(new Set());
   const [tagMenu, setTagMenu] = useState<TagMenuTarget | null>(null);
   const [tagMenuIndex, setTagMenuIndex] = useState(0);
@@ -100,6 +117,7 @@ export function TodoBoard({
   const [pending, startTransition] = useTransition();
   const draftRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const handledAddRequestRef = useRef(addRequest);
+  const composingTargetsRef = useRef<Set<string>>(new Set());
 
   const addDraft = useCallback((afterId?: string) => {
     const next: TodoDraft = { id: makeDraftId(), content: "", tag: null };
@@ -136,24 +154,6 @@ export function TodoBoard({
     [data.today, notes],
   );
 
-  const pastGroups = useMemo(() => {
-    const groups = new Map<string, TodoNoteRow[]>();
-    notes
-      .filter((note) => note.noteDate < data.today)
-      .forEach((note) => {
-        const group = groups.get(note.noteDate) ?? [];
-        group.push(note);
-        groups.set(note.noteDate, group);
-      });
-
-    return Array.from(groups.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([date, groupNotes]) => [
-        date,
-        groupNotes.sort((a, b) => a.sortOrder - b.sortOrder),
-      ] as const);
-  }, [data.today, notes]);
-
   function removeDraft(id: string) {
     setDrafts((prev) => prev.filter((draft) => draft.id !== id));
     setTagMenu((menu) =>
@@ -176,7 +176,7 @@ export function TodoBoard({
   }
 
   function handleTagMenuKeys(
-    e: KeyboardEvent<HTMLInputElement>,
+    e: ReactKeyboardEvent<HTMLInputElement>,
     target: TagMenuTarget,
     onSelect: (tag: TodoTag) => void,
   ): boolean {
@@ -204,6 +204,27 @@ export function TodoBoard({
       return true;
     }
     return false;
+  }
+
+  function isComposingInput(
+    e: ReactKeyboardEvent<HTMLInputElement>,
+    target: TagMenuTarget,
+  ): boolean {
+    return (
+      composingTargetsRef.current.has(targetKey(target)) ||
+      e.nativeEvent.isComposing ||
+      e.nativeEvent.keyCode === 229
+    );
+  }
+
+  function handleCompositionStart(target: TagMenuTarget) {
+    composingTargetsRef.current.add(targetKey(target));
+  }
+
+  function handleCompositionEnd(target: TagMenuTarget) {
+    window.setTimeout(() => {
+      composingTargetsRef.current.delete(targetKey(target));
+    }, 0);
   }
 
   function openTagMenu(target: TagMenuTarget) {
@@ -338,7 +359,7 @@ export function TodoBoard({
           <div className="todo-edit-row">
             <button
               type="button"
-              className={`todo-tag${note.tag ? "" : " is-empty"}`}
+              className={`todo-tag${note.tag ? "" : " is-empty"}${tagToneClass(note.tag)}`}
               onClick={() => openTagMenu(target)}
             >
               {note.tag ? `[${note.tag}]` : "태그"}
@@ -353,11 +374,14 @@ export function TodoBoard({
               onBlur={(e) =>
                 saveNoteContent({ ...note, content: e.currentTarget.value })
               }
+              onCompositionStart={() => handleCompositionStart(target)}
+              onCompositionEnd={() => handleCompositionEnd(target)}
               onKeyDown={(e) => {
                 const handled = handleTagMenuKeys(e, target, (tag) =>
                   updateNoteTag(note, tag),
                 );
                 if (handled) return;
+                if (isComposingInput(e, target)) return;
                 if (e.key === "/" && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   openTagMenu(target);
@@ -399,7 +423,7 @@ export function TodoBoard({
           <div className="todo-edit-row">
             <button
               type="button"
-              className={`todo-tag${draft.tag ? "" : " is-empty"}`}
+              className={`todo-tag${draft.tag ? "" : " is-empty"}${tagToneClass(draft.tag)}`}
               onClick={() => openTagMenu(target)}
             >
               {draft.tag ? `[${draft.tag}]` : "태그"}
@@ -413,12 +437,15 @@ export function TodoBoard({
               onChange={(e) =>
                 updateDraft(draft.id, { content: e.target.value })
               }
+              onCompositionStart={() => handleCompositionStart(target)}
+              onCompositionEnd={() => handleCompositionEnd(target)}
               onKeyDown={(e) => {
                 const handled = handleTagMenuKeys(e, target, (tag) => {
                   updateDraft(draft.id, { tag });
                   setTagMenu(null);
                 });
                 if (handled) return;
+                if (isComposingInput(e, target)) return;
                 if (e.key === "/" && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   openTagMenu(target);
@@ -426,7 +453,9 @@ export function TodoBoard({
                 }
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  if (!draft.content.trim()) {
+                  const content = e.currentTarget.value;
+                  updateDraft(draft.id, { content });
+                  if (!content.trim()) {
                     removeDraft(draft.id);
                     return;
                   }
@@ -494,47 +523,6 @@ export function TodoBoard({
             </div>
           ) : null}
         </div>
-      </section>
-
-      <section className="todo-past">
-        <div className="todo-past-head">
-          <h2>지난 날짜</h2>
-          <span className="num">{pastGroups.length}</span>
-        </div>
-        {pastGroups.length === 0 ? (
-          <div className="todo-past-empty">최근 30일 내 지난 노트가 없습니다.</div>
-        ) : (
-          <div className="todo-past-list">
-            {pastGroups.map(([date, groupNotes]) => {
-              const open = openPastDates.has(date);
-              return (
-                <section key={date} className="todo-past-card">
-                  <button
-                    type="button"
-                    className="todo-past-toggle"
-                    aria-expanded={open}
-                    onClick={() => {
-                      setOpenPastDates((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(date)) next.delete(date);
-                        else next.add(date);
-                        return next;
-                      });
-                    }}
-                  >
-                    <span>{formatDotDateString(date)}</span>
-                    <b className="num">{groupNotes.length}</b>
-                  </button>
-                  {open ? (
-                    <div className="todo-list todo-list--past">
-                      {groupNotes.map(renderNote)}
-                    </div>
-                  ) : null}
-                </section>
-              );
-            })}
-          </div>
-        )}
       </section>
     </div>
   );
