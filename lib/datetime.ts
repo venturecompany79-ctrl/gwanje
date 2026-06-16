@@ -78,6 +78,19 @@ export function formatKstDotDate(d: Date): string {
   return `${pad(t.month)}.${pad(t.day)}`;
 }
 
+/** 현재 KST "YYYY-MM-DD" */
+export function todayKstDate(): string {
+  const t = kstParts(new Date());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${t.year}-${pad(t.month)}-${pad(t.day)}`;
+}
+
+/** "YYYY-MM-DD" → "YYYY.MM.DD" */
+export function formatDotDateString(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-");
+  return `${year}.${month}.${day}`;
+}
+
 /** ISO 타임스탬프 → KST "YYYY-MM-DD" (timestamptz를 KST 날짜로 표시) */
 export function formatKstDate(iso: string | null): string {
   if (!iso) return "—";

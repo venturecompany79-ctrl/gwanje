@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition, type DragEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type DragEvent,
+} from "react";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,6 +15,7 @@ import { Toast, useToast } from "@/components/ui/Toast";
 import {
   IconBuilding,
   IconKanban,
+  IconList,
   IconPlus,
   IconSearch,
 } from "@/components/ui/icons";
@@ -21,8 +28,13 @@ import { updateTaskStage } from "@/lib/actions/tasks";
 import { TASK_STAGE_LABEL, TASK_STAGE_ORDER } from "@/lib/labels";
 import type { TaskStage } from "@/lib/database.types";
 import type { BoardData, BoardTask } from "@/lib/data/board";
+import type { TodoBoardData } from "@/lib/todos";
+import { TodoBoard } from "./TodoBoard";
 
 type DueFilter = "all" | "7" | "30" | "overdue";
+type BoardTab = "todos" | "tasks";
+
+const BOARD_TAB_STORAGE_KEY = "management-board-active-tab";
 
 const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
   { value: "all", label: "마감기간 전체" },
@@ -80,11 +92,19 @@ function BoardCard({
   );
 }
 
-export function BoardView({ data }: { data: BoardData }) {
+export function BoardView({
+  data,
+  todoData,
+}: {
+  data: BoardData;
+  todoData: TodoBoardData;
+}) {
   const router = useRouter();
   const { toast, showToast } = useToast();
   const [, startTransition] = useTransition();
 
+  const [activeTab, setActiveTab] = useState<BoardTab>("tasks");
+  const [todoAddRequest, setTodoAddRequest] = useState(0);
   const [query, setQuery] = useState("");
   const [companyFilter, setCompanyFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -96,6 +116,16 @@ export function BoardView({ data }: { data: BoardData }) {
   const [overStage, setOverStage] = useState<TaskStage | null>(null);
   // 드래그 직후 서버 반영 전까지의 낙관적 단계 오버라이드
   const [stageOverride, setStageOverride] = useState<Record<string, TaskStage>>({});
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(BOARD_TAB_STORAGE_KEY);
+    if (saved === "todos" || saved === "tasks") setActiveTab(saved);
+  }, []);
+
+  function chooseTab(tab: BoardTab) {
+    setActiveTab(tab);
+    window.localStorage.setItem(BOARD_TAB_STORAGE_KEY, tab);
+  }
 
   const effectiveStage = (t: BoardTask): TaskStage =>
     stageOverride[t.id] ?? t.stage;
@@ -124,6 +154,9 @@ export function BoardView({ data }: { data: BoardData }) {
     dueFilter !== "all";
 
   const selected = data.tasks.find((t) => t.id === selectedId) ?? null;
+  const todayTodoCount = todoData.notes.filter(
+    (note) => note.noteDate === todoData.today,
+  ).length;
 
   function handleDrop(stage: TaskStage) {
     const task = data.tasks.find((t) => t.id === draggingId) ?? null;
@@ -157,20 +190,59 @@ export function BoardView({ data }: { data: BoardData }) {
         <div>
           <h1>관리포인트 보드</h1>
           <div className="sub">
-            {data.tasks.length === 0
-              ? "첫 과제를 등록해 시작하세요"
-              : `전체 ${data.tasks.length}건`}
+            {activeTab === "todos"
+              ? `오늘 ${todayTodoCount}건 · 최근 30일 ${todoData.notes.length}건`
+              : data.tasks.length === 0
+                ? "첫 과제를 등록해 시작하세요"
+                : `전체 ${data.tasks.length}건`}
           </div>
         </div>
         <div className="spacer" />
         <div className="head-actions">
-          <Button variant="cta" size="sm" onClick={() => setAdding(true)}>
-            <IconPlus /> 과제 추가
-          </Button>
+          {activeTab === "todos" ? (
+            <Button
+              variant="cta"
+              size="sm"
+              onClick={() => setTodoAddRequest((value) => value + 1)}
+            >
+              <IconPlus /> 노트 추가
+            </Button>
+          ) : (
+            <Button variant="cta" size="sm" onClick={() => setAdding(true)}>
+              <IconPlus /> 과제 추가
+            </Button>
+          )}
         </div>
       </div>
 
-      {data.tasks.length === 0 ? (
+      <div className="board-tab-row" role="tablist" aria-label="보드 종류">
+        <button
+          type="button"
+          className={`pill-tab${activeTab === "todos" ? " is-active" : ""}`}
+          role="tab"
+          aria-selected={activeTab === "todos"}
+          onClick={() => chooseTab("todos")}
+        >
+          <IconList /> To-dos 보드
+        </button>
+        <button
+          type="button"
+          className={`pill-tab${activeTab === "tasks" ? " is-active" : ""}`}
+          role="tab"
+          aria-selected={activeTab === "tasks"}
+          onClick={() => chooseTab("tasks")}
+        >
+          <IconKanban /> Task 보드
+        </button>
+      </div>
+
+      {activeTab === "todos" ? (
+        <TodoBoard
+          data={todoData}
+          addRequest={todoAddRequest}
+          showToast={showToast}
+        />
+      ) : data.tasks.length === 0 ? (
         <EmptyState
           icon={<IconKanban />}
           title="첫 과제를 추가하세요"

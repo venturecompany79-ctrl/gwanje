@@ -2,13 +2,19 @@
 
 // 과제 상세/추가 슬라이드오버 — 기업 상세 관리포인트 탭 / 보드 공용 (스펙 3·4절 동일 구조)
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import {
+  useState,
+  useTransition,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { InputField } from "@/components/ui/Input";
 import {
   IconAlert,
   IconBuilding,
+  IconFile,
   IconInfo,
   IconPlus,
   IconX,
@@ -18,6 +24,24 @@ import { addTask, updateTask } from "@/lib/actions/tasks";
 import type { TaskStage } from "@/lib/database.types";
 import type { CategoryOption, TaskRow } from "@/lib/data/company-detail";
 import { TaskDday } from "./Stepper";
+
+function formatFileSize(size: number): string {
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`;
+  if (size >= 1024) return `${Math.ceil(size / 1024)}KB`;
+  return `${size}B`;
+}
+
+function makeSelectedFileId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+interface SelectedTaskFile {
+  id: string;
+  file: File;
+}
 
 /** 과제 상세 — 단계 변경 라디오 / 메모 / 산출물 링크 / [변경 저장] */
 export function TaskSlideOver({
@@ -174,11 +198,29 @@ export function AddTaskSlideOver({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedTaskFile[]>([]);
   const [pending, startTransition] = useTransition();
+
+  function handleFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.currentTarget.files ?? []);
+    if (files.length > 0) {
+      setSelectedFiles((prev) => [
+        ...prev,
+        ...files.map((file) => ({ id: makeSelectedFileId(), file })),
+      ]);
+    }
+    e.currentTarget.value = "";
+  }
+
+  function removeFile(id: string) {
+    setSelectedFiles((prev) => prev.filter((item) => item.id !== id));
+  }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    formData.delete("task_files");
+    selectedFiles.forEach(({ file }) => formData.append("task_files", file));
     const targetCompanyId =
       companyId ?? String(formData.get("company_id") ?? "");
     startTransition(async () => {
@@ -275,6 +317,46 @@ export function AddTaskSlideOver({
                 className="memo-input"
                 placeholder="진행 상황, 준비 서류 등"
               />
+            </div>
+            <div className="field">
+              <label htmlFor="task-files">파일</label>
+              <label className="task-file-upload" htmlFor="task-files">
+                <input
+                  id="task-files"
+                  name="task_files"
+                  type="file"
+                  multiple
+                  onChange={handleFiles}
+                />
+                <span className="task-file-upload__icon">
+                  <IconPlus />
+                </span>
+                <span>파일 추가하기</span>
+              </label>
+              {selectedFiles.length > 0 ? (
+                <div className="task-file-list" aria-label="첨부 파일 목록">
+                  {selectedFiles.map(({ id, file }) => (
+                    <div
+                      key={id}
+                      className="task-file-item"
+                    >
+                      <IconFile />
+                      <span className="task-file-name">{file.name}</span>
+                      <span className="task-file-size">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        className="task-file-remove"
+                        onClick={() => removeFile(id)}
+                        aria-label={`${file.name} 삭제`}
+                      >
+                        <IconX />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="slideover-foot">

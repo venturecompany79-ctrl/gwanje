@@ -93,6 +93,7 @@ await step("migration: 20260613000003_task_renewal_unique", read("migrations/202
 await step("migration: 20260613000004_due_notifications_cron (pg_cron 미설치 환경 — 가드로 성공해야 함)", read("migrations/20260613000004_due_notifications_cron.sql"));
 await step("migration: 20260615000000_company_document_storage", read("migrations/20260615000000_company_document_storage.sql"));
 await step("migration: 20260615000001_company_document_mime_types", read("migrations/20260615000001_company_document_mime_types.sql"));
+await step("migration: 20260616000000_board_todos_task_files", read("migrations/20260616000000_board_todos_task_files.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
@@ -113,6 +114,27 @@ const run1 = await q("generate_due_notifications() 1차", `select generate_due_n
 const run2 = await q("generate_due_notifications() 2차(멱등)", `select generate_due_notifications() as inserted`);
 assert((run1[0]?.inserted ?? 0) >= 0, "1차 실행 성공");
 assert((run2[0]?.inserted ?? -1) === 0, "2차 실행은 0건(멱등) — 같은 날 중복 생성 안 함");
+
+// ── 5-1. To-dos 30일 초과 정리 ─────────────────────────────────────────
+await step(
+  "todo_note: 30일 초과/최근 노트 삽입",
+  `with p as (select id as user_id, tenant_id from profile limit 1)
+   insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
+   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date - 31, '삭제 대상', '업무', 0 from p
+   union all
+   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date, '유지 대상', '기록', 1 from p;`,
+);
+const cleanup = await q("cleanup_old_todo_notes()", `select cleanup_old_todo_notes() as deleted`);
+assert((cleanup[0]?.deleted ?? 0) >= 1, "30일 초과 todo_note 삭제 함수 실행");
+const todoRemaining = await q(
+  "todo_note 정리 후 잔여",
+  `select content from todo_note order by content`,
+);
+assert(
+  todoRemaining.some((r) => r.content === "유지 대상") &&
+    !todoRemaining.some((r) => r.content === "삭제 대상"),
+  "최근 To-do만 남고 30일 초과 그룹은 삭제됨",
+);
 
 // ── 6. task 갱신과제 유니크 인덱스 ───────────────────────────────────────
 await q(
