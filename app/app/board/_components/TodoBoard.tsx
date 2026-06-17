@@ -23,8 +23,9 @@ import {
   deleteTodoNote,
   updateTodoNote,
 } from "@/lib/actions/todos";
-import { formatDotDateString } from "@/lib/datetime";
+import { formatDotDateString, shiftDateString } from "@/lib/datetime";
 import {
+  TODO_BOARD_DAY_COUNT,
   TODO_TAGS,
   type TodoBoardData,
   type TodoNoteRow,
@@ -35,6 +36,13 @@ interface TodoDraft {
   id: string;
   content: string;
   tag: TodoTag | null;
+}
+
+interface TodoDateGroup {
+  date: string;
+  label: string;
+  notes: TodoNoteRow[];
+  isToday: boolean;
 }
 
 type TagMenuTarget =
@@ -68,6 +76,12 @@ function tagToneClass(tag: TodoTag | null): string {
 
 function tagOptionToneClass(tag: TodoTag): string {
   return ` todo-tag-option--${TODO_TAG_TONE[tag]}`;
+}
+
+function groupLabel(offset: number): string {
+  if (offset === 0) return "오늘";
+  if (offset === 1) return "어제";
+  return `${offset}일 전`;
 }
 
 function TagCommandMenu({
@@ -146,13 +160,28 @@ export function TodoBoard({
     setFocusDraftId(null);
   }, [focusDraftId, drafts.length]);
 
-  const todayNotes = useMemo(
-    () =>
-      notes
-        .filter((note) => note.noteDate === data.today)
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    [data.today, notes],
-  );
+  const dateGroups = useMemo<TodoDateGroup[]>(() => {
+    const byDate = new Map<string, TodoNoteRow[]>();
+    notes.forEach((note) => {
+      const list = byDate.get(note.noteDate) ?? [];
+      list.push(note);
+      byDate.set(note.noteDate, list);
+    });
+
+    return Array.from({ length: TODO_BOARD_DAY_COUNT }, (_, offset) => {
+      const date = shiftDateString(data.today, -offset);
+      return {
+        date,
+        label: groupLabel(offset),
+        isToday: offset === 0,
+        notes: (byDate.get(date) ?? []).sort(
+          (a, b) =>
+            a.sortOrder - b.sortOrder ||
+            a.createdAt.localeCompare(b.createdAt),
+        ),
+      };
+    });
+  }, [data.today, notes]);
 
   function removeDraft(id: string) {
     setDrafts((prev) => prev.filter((draft) => draft.id !== id));
@@ -490,40 +519,61 @@ export function TodoBoard({
 
   return (
     <div className="todo-board">
-      <section className="todo-group todo-group--today">
-        <div className="todo-group-head">
-          <div>
-            <div className="todo-date">
-              <IconCalendar />
-              {formatDotDateString(data.today)}
-              <span>오늘</span>
+      {dateGroups.map((group) => {
+        const itemCount =
+          group.notes.length + (group.isToday ? drafts.length : 0);
+        return (
+          <section
+            key={group.date}
+            className={`todo-group${
+              group.isToday ? " todo-group--today" : " todo-group--past"
+            }${itemCount === 0 ? " is-empty" : ""}`}
+          >
+            <div className="todo-group-head">
+              <div>
+                <div className="todo-date">
+                  <IconCalendar />
+                  {formatDotDateString(group.date)}
+                  <span>{group.label}</span>
+                </div>
+                <p>
+                  {itemCount > 0
+                    ? `${itemCount}개의 체크노트`
+                    : group.isToday
+                      ? "오늘 남긴 노트가 없습니다"
+                      : "기록 없음"}
+                </p>
+              </div>
+              {group.isToday && drafts.length > 0 ? (
+                <Button
+                  variant="cta"
+                  size="sm"
+                  type="button"
+                  onClick={saveDrafts}
+                  disabled={pending}
+                >
+                  {pending ? "저장 중…" : "저장"}
+                </Button>
+              ) : null}
             </div>
-            <p>{todayNotes.length + drafts.length}개의 체크노트</p>
-          </div>
-          {drafts.length > 0 ? (
-            <Button
-              variant="cta"
-              size="sm"
-              type="button"
-              onClick={saveDrafts}
-              disabled={pending}
-            >
-              {pending ? "저장 중…" : "저장"}
-            </Button>
-          ) : null}
-        </div>
 
-        <div className="todo-list">
-          {todayNotes.map(renderNote)}
-          {drafts.map(renderDraft)}
-          {todayNotes.length === 0 && drafts.length === 0 ? (
-            <div className="todo-empty">
-              <IconList />
-              오늘 남긴 노트가 없습니다.
+            <div
+              className={`todo-list${group.isToday ? "" : " todo-list--past"}`}
+            >
+              {group.notes.map(renderNote)}
+              {group.isToday ? drafts.map(renderDraft) : null}
+              {itemCount === 0 ? (
+                <div className="todo-empty">
+                  <IconList />
+                  {group.isToday
+                    ? "오늘 남긴 노트가 없습니다."
+                    : "이 날짜의 기록이 없습니다."}
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
-      </section>
+          </section>
+        );
+      })}
     </div>
   );
 }

@@ -85,6 +85,13 @@ export function todayKstDate(): string {
   return `${t.year}-${pad(t.month)}-${pad(t.day)}`;
 }
 
+/** "YYYY-MM-DD" 날짜 문자열을 UTC 달력 기준으로 days만큼 이동 */
+export function shiftDateString(dateStr: string, days: number): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day + days));
+  return d.toISOString().slice(0, 10);
+}
+
 /** "YYYY-MM-DD" → "YYYY.MM.DD" */
 export function formatDotDateString(dateStr: string): string {
   const [year, month, day] = dateStr.split("-");

@@ -1,17 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { todayKstDate } from "@/lib/datetime";
+import { shiftDateString, todayKstDate } from "@/lib/datetime";
 import {
+  TODO_BOARD_DAY_COUNT,
   isTodoTag,
   type TodoBoardData,
   type TodoNoteRow,
   type TodoTag,
 } from "@/lib/todos";
-
-function shiftDate(dateStr: string, days: number): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const d = new Date(Date.UTC(year, month - 1, day + days));
-  return d.toISOString().slice(0, 10);
-}
 
 function demoNote(
   id: string,
@@ -35,8 +30,8 @@ function demoNote(
 }
 
 function DEMO_TODOS(today: string): TodoBoardData {
-  const yesterday = shiftDate(today, -1);
-  const twoDaysAgo = shiftDate(today, -2);
+  const yesterday = shiftDateString(today, -1);
+  const twoDaysAgo = shiftDateString(today, -2);
   return {
     demo: true,
     today,
@@ -56,11 +51,12 @@ export async function getTodoBoardData(): Promise<TodoBoardData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_TODOS(today);
 
-  const cutoff = shiftDate(today, -30);
+  const cutoff = shiftDateString(today, -(TODO_BOARD_DAY_COUNT - 1));
   const { data, error } = await supabase
     .from("todo_note")
     .select("*")
     .gte("note_date", cutoff)
+    .lte("note_date", today)
     .order("note_date", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });

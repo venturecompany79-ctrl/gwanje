@@ -1,4 +1,5 @@
 export const TODO_TAGS = ["업무", "미팅", "기록"] as const;
+export const TODO_BOARD_DAY_COUNT = 30;
 
 export type TodoTag = (typeof TODO_TAGS)[number];
 

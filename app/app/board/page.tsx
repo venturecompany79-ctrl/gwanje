@@ -2,20 +2,29 @@ import type { Metadata } from "next";
 import { IconAlert } from "@/components/ui/icons";
 import { getBoardData } from "@/lib/data/board";
 import { getTodoBoardData } from "@/lib/data/todos";
-import { BoardView } from "./_components/BoardView";
+import { BoardView, type BoardTab } from "./_components/BoardView";
 
 export const metadata: Metadata = { title: "관리포인트 보드" };
 export const dynamic = "force-dynamic";
 
-export default async function BoardPage() {
-  const [data, todoData] = await Promise.all([
-    getBoardData(),
-    getTodoBoardData(),
-  ]);
+function resolveTab(tab?: string): BoardTab {
+  return tab === "tasks" ? "tasks" : "todos";
+}
+
+export default async function BoardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const activeTab = resolveTab(tab);
+  const data = activeTab === "tasks" ? await getBoardData() : null;
+  const todoData = activeTab === "todos" ? await getTodoBoardData() : null;
+  const demo = (data?.demo ?? false) || (todoData?.demo ?? false);
 
   return (
     <>
-      {data.demo || todoData.demo ? (
+      {demo ? (
         <div className="demo-banner">
           <IconAlert />
           데모 데이터 표시 중 — Supabase 환경변수(.env.local)를 설정하면 실제
@@ -23,7 +32,7 @@ export default async function BoardPage() {
         </div>
       ) : null}
 
-      <BoardView data={data} todoData={todoData} />
+      <BoardView activeTab={activeTab} data={data} todoData={todoData} />
     </>
   );
 }
