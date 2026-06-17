@@ -23,8 +23,13 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.49.0",
     "next": "^15.3.0",
+    "pdfjs-dist": "^6.0.227",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "overrides": {
+    "postcss": "8.5.15"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.2",

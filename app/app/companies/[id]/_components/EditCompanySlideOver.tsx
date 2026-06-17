@@ -100,6 +100,8 @@ export function EditCompanyButton({
                   label="설립일"
                   name="founded_date"
                   type="date"
+                  className="input--date"
+                  fieldClassName="field--date"
                   defaultValue={company.foundedDate ?? ""}
                 />
                 <div className="form-grid2">

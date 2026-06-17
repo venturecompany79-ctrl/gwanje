@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -10,8 +11,17 @@ import {
   parseNonNegativeInt,
   type ActionResult,
 } from "@/lib/actions/shared";
+import {
+  COMPANY_DOCUMENTS_BUCKET,
+  COMPANY_DOCUMENTS_MAX_BYTES,
+  getFileExtension,
+  storageUrlFromPath,
+} from "@/lib/storage";
 
-export type AddCompanyResult = ActionResult & { companyId?: string };
+export type AddCompanyResult = ActionResult & {
+  companyId?: string;
+  warning?: string;
+};
 
 function optionalList(formData: FormData, key: string): string[] {
   return formData
@@ -22,6 +32,61 @@ function optionalList(formData: FormData, key: string): string[] {
 
 function appendLine(lines: string[], label: string, value: string | null) {
   if (value) lines.push(`- ${label}: ${value}`);
+}
+
+function getBusinessLicenseFile(formData: FormData): File | null {
+  const file = formData.get("business_license");
+  if (!(file instanceof File) || file.size <= 0) return null;
+  return file;
+}
+
+async function saveBusinessLicenseDocument({
+  supabase,
+  tenantId,
+  companyId,
+  file,
+}: {
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>;
+  tenantId: string;
+  companyId: string;
+  file: File;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const extension = getFileExtension(file.name);
+  const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
+  const path = `${tenantId}/${companyId}/${objectName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(COMPANY_DOCUMENTS_BUCKET)
+    .upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+  if (uploadError) {
+    console.error("[addCompany:businessLicenseUpload]", uploadError.message);
+    return { ok: false, error: uploadError.message };
+  }
+
+  const { error: documentError } = await supabase.from("document").insert({
+    tenant_id: tenantId,
+    company_id: companyId,
+    name: file.name.trim() || "사업자등록증",
+    doc_category: "기본서류",
+    version: 1,
+    uploaded_by: "consultant",
+    storage_url: storageUrlFromPath(path),
+    file_type: (extension ?? file.type) || "file",
+    size_bytes: file.size,
+  });
+  if (documentError) {
+    console.error(
+      "[addCompany:businessLicenseDocument]",
+      documentError.code,
+      documentError.message,
+    );
+    return { ok: false, error: documentError.message };
+  }
+
+  return { ok: true };
 }
 
 export async function addCompany(formData: FormData): Promise<AddCompanyResult> {
@@ -36,6 +101,11 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
 
   const headcount = parseNonNegativeInt(formData, "headcount", "인원");
   if (!headcount.ok) return { ok: false, error: headcount.error };
+
+  const businessLicenseFile = getBusinessLicenseFile(formData);
+  if (businessLicenseFile && businessLicenseFile.size > COMPANY_DOCUMENTS_MAX_BYTES) {
+    return { ok: false, error: "사업자등록증 파일은 50MB 이하만 업로드할 수 있습니다." };
+  }
 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
@@ -109,7 +179,21 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
+  let warning: string | undefined;
+  if (businessLicenseFile) {
+    const saved = await saveBusinessLicenseDocument({
+      supabase,
+      tenantId: ctx.tenantId,
+      companyId: data.id,
+      file: businessLicenseFile,
+    });
+    if (!saved.ok) {
+      warning = `기업 정보는 저장됐지만 사업자등록증 파일 저장에 실패했습니다: ${saved.error}`;
+    }
+  }
+
   revalidatePath("/app/companies");
+  revalidatePath(`/app/companies/${data.id}`);
   revalidatePath("/app");
-  return { ok: true, error: null, companyId: data.id };
+  return { ok: true, error: null, companyId: data.id, warning };
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   },
   description:
     "수십 개 기업의 인증·정부지원사업·융자 마감을 한 화면에서 놓치지 않게. 컨설턴트를 위한 다중 기업 관리 SaaS.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

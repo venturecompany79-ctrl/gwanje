@@ -1,9 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import {
+  useRef,
+  useState,
+  useTransition,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/Input";
+import {
+  businessLicenseFieldsSummary,
+  parseBusinessLicenseText,
+  type BusinessLicenseFields,
+} from "@/lib/business-license";
 import {
   IconAlert,
   IconAward,
@@ -59,6 +70,180 @@ const interestOptions = [
   "시설입주/지사설립 및 이전",
 ];
 
+type LicenseParseTone = "idle" | "loading" | "success" | "warning" | "error";
+
+interface CompanyAutofillFields {
+  biz_no: string;
+  name: string;
+  industry: string;
+  founded_date: string;
+  industry_path: string;
+  ceo_name: string;
+}
+
+interface ExtractedLicenseText {
+  text: string;
+  method: string;
+}
+
+const EMPTY_AUTOFILL_FIELDS: CompanyAutofillFields = {
+  biz_no: "",
+  name: "",
+  industry: "",
+  founded_date: "",
+  industry_path: "",
+  ceo_name: "",
+};
+
+function countParsedFields(fields: BusinessLicenseFields): number {
+  return [
+    fields.bizNo,
+    fields.name,
+    fields.ceoName,
+    fields.foundedDate,
+    fields.industry,
+  ].filter(Boolean).length;
+}
+
+function parsedFieldPatch(
+  fields: BusinessLicenseFields,
+): Partial<CompanyAutofillFields> {
+  return {
+    ...(fields.bizNo ? { biz_no: fields.bizNo } : {}),
+    ...(fields.name ? { name: fields.name } : {}),
+    ...(fields.industry ? { industry: fields.industry } : {}),
+    ...(fields.foundedDate ? { founded_date: fields.foundedDate } : {}),
+    ...(fields.industryPath ? { industry_path: fields.industryPath } : {}),
+    ...(fields.ceoName ? { ceo_name: fields.ceoName } : {}),
+  };
+}
+
+function rawPdfTextFallback(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  const latin1 = new TextDecoder("latin1", { fatal: false }).decode(bytes);
+  return `${utf8}\n${latin1}`
+    .replace(/\\([0-9]{3})/g, (_, octal: string) =>
+      String.fromCharCode(Number.parseInt(octal, 8)),
+    )
+    .replace(/[^\S\n]+/g, " ");
+}
+
+async function runImageOcr(
+  image: File | Blob | string,
+  onStatus: (message: string) => void,
+): Promise<string> {
+  const { createWorker, PSM } = await import("tesseract.js");
+  const worker = await createWorker(["kor", "eng"], 1, {
+    logger: (message) => {
+      if (!message.status) return;
+      if (message.progress > 0 && message.progress < 1) {
+        onStatus(`이미지 OCR 중입니다 (${Math.round(message.progress * 100)}%)`);
+        return;
+      }
+      onStatus(`이미지 OCR 준비 중입니다`);
+    },
+  });
+
+  try {
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+    });
+    const {
+      data: { text },
+    } = await worker.recognize(image);
+    return text;
+  } finally {
+    await worker.terminate();
+  }
+}
+
+async function extractPdfText(
+  file: File,
+  onStatus: (message: string) => void,
+): Promise<ExtractedLicenseText> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+  const buffer = await file.arrayBuffer();
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+  const pdf = await loadingTask.promise;
+
+  try {
+    const textPages: string[] = [];
+    const pageCount = Math.min(pdf.numPages, 3);
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      onStatus(`PDF 텍스트를 읽는 중입니다 (${pageNumber}/${pageCount})`);
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      textPages.push(
+        content.items
+          .map((item) => ("str" in item ? String(item.str) : ""))
+          .join(" "),
+      );
+    }
+
+    const text = textPages.join("\n").trim();
+    if (text.length >= 20) {
+      return { text, method: "PDF 텍스트" };
+    }
+
+    onStatus("스캔 PDF로 보여 첫 페이지 OCR을 시도합니다");
+    const firstPage = await pdf.getPage(1);
+    const viewport = firstPage.getViewport({ scale: 2 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return { text: rawPdfTextFallback(buffer), method: "PDF 원문" };
+    }
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    await firstPage.render({ canvas, viewport }).promise;
+    return {
+      text: await runImageOcr(canvas.toDataURL("image/png"), onStatus),
+      method: "PDF 이미지 OCR",
+    };
+  } finally {
+    await loadingTask.destroy();
+  }
+}
+
+async function extractImageText(
+  file: File,
+  onStatus: (message: string) => void,
+): Promise<ExtractedLicenseText> {
+  const url = URL.createObjectURL(file);
+  try {
+    return {
+      text: await runImageOcr(url, onStatus),
+      method: "이미지 OCR",
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function extractBusinessLicenseText(
+  file: File,
+  onStatus: (message: string) => void,
+): Promise<ExtractedLicenseText> {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+
+  if (type === "application/pdf" || name.endsWith(".pdf")) {
+    return extractPdfText(file, onStatus);
+  }
+  if (type.startsWith("image/") || /\.(jpe?g|png|tiff?|webp)$/.test(name)) {
+    return extractImageText(file, onStatus);
+  }
+  if (type.startsWith("text/") || /\.(txt|csv)$/.test(name)) {
+    return { text: await file.text(), method: "텍스트 파일" };
+  }
+
+  return { text: await file.text(), method: "파일 텍스트" };
+}
+
 function ChoiceGroup({
   name,
   options,
@@ -84,10 +269,65 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
+  const [licenseTone, setLicenseTone] = useState<LicenseParseTone>("idle");
+  const [licenseStatus, setLicenseStatus] = useState("");
+  const [licenseSummary, setLicenseSummary] = useState("");
+  const [autofillFields, setAutofillFields] =
+    useState<CompanyAutofillFields>(EMPTY_AUTOFILL_FIELDS);
   const [pending, startTransition] = useTransition();
+  const parseRunRef = useRef(0);
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    setFileName(e.target.files?.[0]?.name ?? "");
+  function updateAutofillField(
+    key: keyof CompanyAutofillFields,
+    value: string,
+  ) {
+    setAutofillFields((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    const runId = parseRunRef.current + 1;
+    parseRunRef.current = runId;
+    setFileName(file?.name ?? "");
+    setLicenseSummary("");
+    setError(null);
+
+    if (!file) {
+      setLicenseTone("idle");
+      setLicenseStatus("");
+      return;
+    }
+
+    setLicenseTone("loading");
+    setLicenseStatus("사업자등록증 정보를 읽는 중입니다");
+
+    try {
+      const extracted = await extractBusinessLicenseText(file, (message) => {
+        if (parseRunRef.current !== runId) return;
+        setLicenseStatus(message);
+      });
+      if (parseRunRef.current !== runId) return;
+
+      const parsed = parseBusinessLicenseText(extracted.text);
+      const filledCount = countParsedFields(parsed);
+      const summary = businessLicenseFieldsSummary(parsed);
+      setAutofillFields((prev) => ({ ...prev, ...parsedFieldPatch(parsed) }));
+      setLicenseSummary(`${extracted.method} · ${summary}`);
+      setLicenseTone(filledCount > 0 ? "success" : "warning");
+      setLicenseStatus(
+        filledCount > 0
+          ? `${filledCount}개 항목을 자동 입력했습니다`
+          : "텍스트는 읽었지만 자동 입력할 항목을 찾지 못했습니다",
+      );
+    } catch (err) {
+      console.error("[businessLicenseParse]", err);
+      if (parseRunRef.current !== runId) return;
+      setLicenseTone("error");
+      setLicenseStatus(
+        "자동 읽기에 실패했습니다. 아래 항목을 직접 입력하거나 파일 상태를 확인해 주세요.",
+      );
+      setLicenseSummary("자동 읽기 실패");
+    }
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -132,7 +372,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           <IconFile />
           <div>
             <b>{fileName || "사업자등록증 파일 선택"}</b>
-            <span>PDF, JPG, PNG, TIFF 형식. 파일 저장 자동화는 스토리지 연동 후 붙입니다.</span>
+            <span>PDF, JPG, PNG, TIFF 형식. 업로드하면 사업자등록증 정보로 아래 항목을 자동 입력합니다.</span>
           </div>
           <input
             type="file"
@@ -142,18 +382,36 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             aria-label="사업자등록증 파일"
           />
         </div>
+        {licenseStatus ? (
+          <p className={`license-status license-status--${licenseTone}`}>
+            {licenseStatus}
+          </p>
+        ) : null}
         <input
           type="hidden"
           name="business_license_status"
-          value={fileName ? `${fileName} 선택됨, 파일 저장 연동 예정` : ""}
+          value={
+            fileName
+              ? `${fileName} 업로드됨${licenseSummary ? ` · ${licenseSummary}` : ""}`
+              : ""
+          }
         />
         <div className="form-grid2">
           <InputField
             label="사업자등록번호"
             name="biz_no"
             placeholder="123-45-67890"
+            value={autofillFields.biz_no}
+            onChange={(e) => updateAutofillField("biz_no", e.target.value)}
           />
-          <InputField label="기업명 *" name="name" required placeholder="(주)테크노바" />
+          <InputField
+            label="기업명 *"
+            name="name"
+            required
+            placeholder="(주)테크노바"
+            value={autofillFields.name}
+            onChange={(e) => updateAutofillField("name", e.target.value)}
+          />
         </div>
       </section>
 
@@ -168,13 +426,31 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           </div>
         </div>
         <div className="form-grid2">
-          <InputField label="대표 업종" name="industry" placeholder="IT/소프트웨어" />
-          <InputField label="설립일" name="founded_date" type="date" />
+          <InputField
+            label="대표 업종"
+            name="industry"
+            placeholder="IT/소프트웨어"
+            value={autofillFields.industry}
+            onChange={(e) => updateAutofillField("industry", e.target.value)}
+          />
+          <InputField
+            label="설립일"
+            name="founded_date"
+            type="date"
+            className="input--date"
+            fieldClassName="field--date"
+            value={autofillFields.founded_date}
+            onChange={(e) =>
+              updateAutofillField("founded_date", e.target.value)
+            }
+          />
         </div>
         <InputField
           label="업종 경로"
           name="industry_path"
           placeholder="도매 및 소매업 > 생활용품 도매업 > 남녀용 겉옷 및 셔츠 도매업"
+          value={autofillFields.industry_path}
+          onChange={(e) => updateAutofillField("industry_path", e.target.value)}
         />
         <div className="form-grid2">
           <InputField
@@ -194,7 +470,13 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           />
         </div>
         <div className="form-grid2">
-          <InputField label="대표자" name="ceo_name" placeholder="박지훈" />
+          <InputField
+            label="대표자"
+            name="ceo_name"
+            placeholder="박지훈"
+            value={autofillFields.ceo_name}
+            onChange={(e) => updateAutofillField("ceo_name", e.target.value)}
+          />
           <InputField label="담당자" name="contact_name" placeholder="김민서" />
         </div>
         <div className="form-grid2">
@@ -285,8 +567,16 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
       </section>
 
       <div className="intake-actions">
-        <Button variant="cta" type="submit" disabled={pending}>
-          {pending ? "저장 중..." : "기업 정보 저장"}
+        <Button
+          variant="cta"
+          type="submit"
+          disabled={pending || licenseTone === "loading"}
+        >
+          {pending
+            ? "저장 중..."
+            : licenseTone === "loading"
+              ? "사업자등록증 읽는 중..."
+              : "기업 정보 저장"}
         </Button>
         <LinkButton variant="ghost" href="/app/companies">
           취소

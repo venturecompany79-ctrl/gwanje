@@ -18,9 +18,9 @@ const requiredItems = [
 ];
 
 const implementationPlan = [
-  "1차 저장: 기존 company 테이블에 기본 프로파일을 저장하고 매칭용 분류는 메모에 구조화",
+  "1차 저장: 사업자등록증 자동 입력값과 기본 프로파일을 company 테이블에 저장",
   "2차 확장: 업종, 기술, 인증, 관심분야를 별도 테이블로 분리해 추천 엔진 입력값으로 사용",
-  "3차 자동화: 사업자등록증 OCR, 공공데이터 조회, 서류함 업로드와 연결",
+  "3차 확장: 공공데이터 조회와 추천 엔진 입력값을 고도화",
 ];
 
 export default async function NewCompanyPage() {

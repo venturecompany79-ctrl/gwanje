@@ -110,6 +110,11 @@ const STAGE_SORT: Record<TaskStage, number> = {
   result: 3,
 };
 
+function logRelatedQueryError(label: string, error: { message: string } | null) {
+  if (!error) return;
+  console.error(`[getCompanyDetail:${label}]`, error.message);
+}
+
 export async function getCompanyDetail(
   companyId: string,
 ): Promise<CompanyDetailData | null> {
@@ -134,33 +139,39 @@ export async function getCompanyDetail(
   // 잘못된 uuid 형식(22P02)은 '없는 기업'으로 처리 → 404
   if (company.error?.code === "22P02") return null;
 
-  const firstError =
-    company.error ??
-    credentials.error ??
-    tasks.error ??
-    schedules.error ??
-    documents.error ??
-    categories.error ??
-    profiles.error;
-  if (firstError) {
-    throw new Error(`기업 정보를 불러오지 못했습니다: ${firstError.message}`);
+  if (company.error) {
+    throw new Error(`기업 정보를 불러오지 못했습니다: ${company.error.message}`);
   }
   if (!company.data) return null;
 
+  logRelatedQueryError("credentials", credentials.error);
+  logRelatedQueryError("tasks", tasks.error);
+  logRelatedQueryError("schedules", schedules.error);
+  logRelatedQueryError("documents", documents.error);
+  logRelatedQueryError("categories", categories.error);
+  logRelatedQueryError("profiles", profiles.error);
+
+  const credentialData = credentials.error ? [] : (credentials.data ?? []);
+  const taskData = tasks.error ? [] : (tasks.data ?? []);
+  const scheduleData = schedules.error ? [] : (schedules.data ?? []);
+  const documentData = documents.error ? [] : (documents.data ?? []);
+  const categoryData = categories.error ? [] : (categories.data ?? []);
+  const profileData = profiles.error ? [] : (profiles.data ?? []);
+
   const categoryName = new Map(
-    (categories.data ?? []).map((c) => [c.id, c.name]),
+    categoryData.map((c) => [c.id, c.name]),
   );
   const profileName = new Map(
-    (profiles.data ?? []).map((p) => [p.id, p.name]),
+    profileData.map((p) => [p.id, p.name]),
   );
-  const taskTitle = new Map((tasks.data ?? []).map((t) => [t.id, t.title]));
+  const taskTitle = new Map(taskData.map((t) => [t.id, t.title]));
   const renewalSources = new Set(
-    (tasks.data ?? [])
+    taskData
       .map((t) => t.source_credential_id)
       .filter((id): id is string => id !== null),
   );
 
-  const credentialRows: CredentialRow[] = (credentials.data ?? [])
+  const credentialRows: CredentialRow[] = credentialData
     .map((c) => {
       const daysLeft = c.expires_date ? daysFromToday(c.expires_date) : null;
       return {
@@ -185,7 +196,7 @@ export async function getCompanyDetail(
         (b.daysLeft ?? Number.MAX_SAFE_INTEGER),
     );
 
-  const taskRows: TaskRow[] = (tasks.data ?? [])
+  const taskRows: TaskRow[] = taskData
     .map((t) => ({
       id: t.id,
       title: t.title,
@@ -213,7 +224,7 @@ export async function getCompanyDetail(
       );
     });
 
-  const scheduleRows: ScheduleRow[] = (schedules.data ?? [])
+  const scheduleRows: ScheduleRow[] = scheduleData
     .map((s) => ({
       id: s.id,
       title: s.title,
@@ -240,13 +251,13 @@ export async function getCompanyDetail(
       contactName: company.data.contact_name,
       contactPhone: company.data.contact_phone,
       contactEmail: company.data.contact_email,
-      conditionTags: company.data.condition_tags,
+      conditionTags: company.data.condition_tags ?? [],
       memo: company.data.memo,
     },
     credentials: credentialRows,
     tasks: taskRows,
     schedules: scheduleRows,
-    documents: (documents.data ?? []).map((d) => ({
+    documents: documentData.map((d) => ({
       id: d.id,
       name: d.name,
       docCategory: d.doc_category,
@@ -257,6 +268,6 @@ export async function getCompanyDetail(
       sizeBytes: d.size_bytes,
       createdAt: d.created_at,
     })),
-    categories: categories.data ?? [],
+    categories: categoryData,
   };
 }

@@ -4,12 +4,19 @@ import { useId } from "react";
 interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
+  fieldClassName?: string;
 }
 
-export function InputField({ label, error, className, ...rest }: InputFieldProps) {
+export function InputField({
+  label,
+  error,
+  className,
+  fieldClassName,
+  ...rest
+}: InputFieldProps) {
   const id = useId();
   return (
-    <div className="field">
+    <div className={["field", fieldClassName].filter(Boolean).join(" ")}>
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
