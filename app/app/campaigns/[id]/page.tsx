@@ -10,7 +10,7 @@ import { formatKstDate } from "@/lib/datetime";
 import { CampaignStatusBadge } from "../_components/CampaignStatusBadge";
 import { SentToast } from "./_components/SentToast";
 
-export const metadata: Metadata = { title: "캠페인 집계" };
+export const metadata: Metadata = { title: "일괄안내 집계" };
 export const dynamic = "force-dynamic";
 
 export default async function CampaignDetailPage({

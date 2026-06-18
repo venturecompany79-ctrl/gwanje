@@ -36,7 +36,7 @@ export async function createCampaign(
   const title = input.title.trim();
   const body = input.body.trim();
   if (!title) {
-    return { ok: false, error: "캠페인 제목을 입력해 주세요.", id: null };
+    return { ok: false, error: "일괄안내 제목을 입력해 주세요.", id: null };
   }
   if (!body) {
     return { ok: false, error: "메시지 본문을 입력해 주세요.", id: null };

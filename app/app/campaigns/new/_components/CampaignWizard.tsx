@@ -391,7 +391,7 @@ export function CampaignWizard({
             <PanelHead title="메시지 작성" />
             <div className="panel-body">
               <InputField
-                label="캠페인 제목 *"
+                label="일괄안내 제목 *"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="2026 벤처확인 갱신 안내"

@@ -31,24 +31,24 @@ export default async function CampaignsPage() {
         </div>
         <div className="spacer" />
         <LinkButton variant="cta" href="/app/campaigns/new">
-          <IconPlus /> 새 캠페인
+          <IconPlus /> 새 일괄안내
         </LinkButton>
       </div>
 
       {data.campaigns.length === 0 ? (
         <EmptyState
           icon={<IconSend />}
-          title="첫 캠페인을 만들어보세요"
+          title="첫 일괄안내를 만들어보세요"
           description="조건으로 대상 기업을 추려 알림톡으로 한 번에 안내하고, 수신·응답 현황을 모아 확인할 수 있습니다."
           action={
             <LinkButton variant="cta" href="/app/campaigns/new">
-              <IconPlus /> 새 캠페인
+              <IconPlus /> 새 일괄안내
             </LinkButton>
           }
         />
       ) : (
         <Panel>
-          <PanelHead title="캠페인" count={`${data.campaigns.length}건`} />
+          <PanelHead title="일괄안내" count={`${data.campaigns.length}건`} />
           <CampaignsTable campaigns={data.campaigns} />
         </Panel>
       )}
