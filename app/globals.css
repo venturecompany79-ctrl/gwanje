@@ -269,6 +269,19 @@ h4 {
   color: var(--color-disabled-text);
   cursor: not-allowed;
 }
+.pill-tab--soon:disabled {
+  opacity: 0.65;
+  background: var(--color-surface-soft);
+}
+.pill-tab-soon {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-hairline-soft);
+  color: var(--color-steel);
+}
 
 /* button-icon-circular */
 .icon-btn {

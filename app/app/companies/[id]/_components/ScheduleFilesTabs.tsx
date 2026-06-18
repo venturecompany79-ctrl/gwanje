@@ -221,7 +221,7 @@ export function FilesTab({
           bare
           icon={<IconFile />}
           title="등록된 자료가 없습니다"
-          description="재무제표, 인증서 같은 기업 자료가 이곳에 모입니다. 업로드한 파일은 Supabase Storage에 저장됩니다."
+          description="재무제표, 인증서 같은 기업 자료가 이곳에 모입니다. 업로드한 파일은 안전하게 보관됩니다."
           action={<UploadDocumentButton companyId={companyId} />}
         />
       ) : (

@@ -17,16 +17,28 @@ export function DeadlinePanel({
   return (
     <Panel>
       <PanelHead title="마감 임박" count={`${deadlines.length}건`}>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button type="button" className="pill-tab is-active">
             <IconList /> D-day 리스트
           </button>
           {/* 캘린더·칸반 뷰는 후속 세션 구현 (와이어프레임도 골격만 존재) */}
-          <button type="button" className="pill-tab" disabled title="준비 중">
-            <IconCalendar /> 캘린더
+          <button
+            type="button"
+            className="pill-tab pill-tab--soon"
+            disabled
+            aria-disabled
+            title="준비 중인 기능입니다"
+          >
+            <IconCalendar /> 캘린더 <span className="pill-tab-soon">준비 중</span>
           </button>
-          <button type="button" className="pill-tab" disabled title="준비 중">
-            <IconKanban /> 칸반
+          <button
+            type="button"
+            className="pill-tab pill-tab--soon"
+            disabled
+            aria-disabled
+            title="준비 중인 기능입니다"
+          >
+            <IconKanban /> 칸반 <span className="pill-tab-soon">준비 중</span>
           </button>
         </div>
       </PanelHead>
