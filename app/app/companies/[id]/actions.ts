@@ -266,6 +266,53 @@ export async function createRenewalTask(
   return { ok: true, error: null };
 }
 
+const SCHEDULE_TYPES = ["expiry", "deadline", "meeting", "renewal", "etc"] as const;
+type ScheduleTypeValue = (typeof SCHEDULE_TYPES)[number];
+
+function isScheduleType(value: string): value is ScheduleTypeValue {
+  return (SCHEDULE_TYPES as readonly string[]).includes(value);
+}
+
+/** 일정 추가 (일정 탭 — GWJ-021) */
+export async function addSchedule(
+  companyId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { ok: false, error: "일정명을 입력해 주세요." };
+
+  const date = optionalText(formData, "date");
+  if (!date) return { ok: false, error: "날짜를 선택해 주세요." };
+
+  const typeRaw = String(formData.get("type") ?? "etc");
+  const type: ScheduleTypeValue = isScheduleType(typeRaw) ? typeRaw : "etc";
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const { error } = await supabase.from("schedule").insert({
+    tenant_id: ctx.tenantId,
+    company_id: companyId,
+    title,
+    date,
+    type,
+    memo: optionalText(formData, "memo"),
+  });
+  if (error) {
+    console.error("[addSchedule]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
 export async function updateCompany(
   companyId: string,
   formData: FormData,

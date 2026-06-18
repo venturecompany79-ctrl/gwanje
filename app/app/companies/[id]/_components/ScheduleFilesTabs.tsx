@@ -1,38 +1,171 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
-import { IconAlert, IconCalendar, IconDownload, IconFile, IconPlus } from "@/components/ui/icons";
+import { IconAlert, IconCalendar, IconDownload, IconFile, IconPlus, IconX } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
 import type { DocumentRow, ScheduleRow } from "@/lib/data/company-detail";
 import { createClient } from "@/lib/supabase/client";
 import {
+  addSchedule,
   createDocumentDownloadUrl,
   prepareDocumentUpload,
   registerUploadedDocument,
 } from "../actions";
 
-export function ScheduleTab({ schedules }: { schedules: ScheduleRow[] }) {
+function AddScheduleSlideOver({
+  companyId,
+  demo,
+  showToast,
+  onClose,
+}: {
+  companyId: string;
+  demo: boolean;
+  showToast: (message: string) => void;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await addSchedule(companyId, formData);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onClose();
+      showToast("일정을 추가했습니다");
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="slideover-root">
+      <div className="slideover-backdrop" onClick={onClose} />
+      <aside className="slideover" role="dialog" aria-modal="true" aria-label="일정 추가">
+        <div className="slideover-head">
+          <h2>일정 추가</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
+            <IconX />
+          </button>
+        </div>
+        <form className="slideover-form" onSubmit={handleSubmit}>
+          <div className="slideover-body">
+            {demo ? (
+              <div className="auth-notice">
+                <b>데모 모드</b> — 입력 내용은 저장되지 않습니다. Supabase
+                연결(.env.local) 후 실제 등록이 가능합니다.
+              </div>
+            ) : null}
+            {error ? (
+              <div className="auth-error">
+                <IconAlert /> {error}
+              </div>
+            ) : null}
+            <InputField
+              label="일정명 *"
+              name="title"
+              required
+              placeholder="예: 갱신 서류 제출"
+              autoFocus
+            />
+            <div className="form-grid2">
+              <InputField label="날짜 *" name="date" type="date" required />
+              <div className="field">
+                <label htmlFor="schedule-type">유형</label>
+                <select
+                  id="schedule-type"
+                  name="type"
+                  className="input"
+                  defaultValue="etc"
+                >
+                  {Object.entries(SCHEDULE_TYPE_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="schedule-memo">메모</label>
+              <textarea
+                id="schedule-memo"
+                name="memo"
+                className="memo-input"
+                placeholder="장소, 준비물 등"
+              />
+            </div>
+          </div>
+          <div className="slideover-foot">
+            <Button variant="cta" type="submit" disabled={pending}>
+              {pending ? "저장 중…" : "저장"}
+            </Button>
+            <Button variant="ghost" type="button" onClick={onClose}>
+              닫기
+            </Button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
+export function ScheduleTab({
+  companyId,
+  schedules,
+  demo,
+  showToast,
+}: {
+  companyId: string;
+  schedules: ScheduleRow[];
+  demo: boolean;
+  showToast: (message: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
   return (
     <Panel>
       <PanelHead
         title="일정"
         count={schedules.length > 0 ? `${schedules.length}건` : undefined}
-      />
+      >
+        <Button variant="cta" size="sm" onClick={() => setAdding(true)}>
+          <IconPlus /> 일정 추가
+        </Button>
+      </PanelHead>
+      {adding ? (
+        <AddScheduleSlideOver
+          companyId={companyId}
+          demo={demo}
+          showToast={showToast}
+          onClose={() => setAdding(false)}
+        />
+      ) : null}
       {schedules.length === 0 ? (
         <EmptyState
           bare
           icon={<IconCalendar />}
           title="등록된 일정이 없습니다"
-          description="자격 만료·과제 마감·미팅 일정이 이곳에 모입니다. 만료일이 있는 자격을 등록하면 자동으로 추적됩니다."
+          description="자격 만료·과제 마감·미팅 일정이 이곳에 모입니다. 만료일이 있는 자격을 등록하면 자동으로 추적되고, 직접 일정을 추가할 수도 있습니다."
+          action={
+            <Button variant="cta" onClick={() => setAdding(true)}>
+              <IconPlus /> 일정 추가
+            </Button>
+          }
         />
       ) : (
         <table className="dlist">
