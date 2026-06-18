@@ -14,7 +14,7 @@ import {
 const NAV_ITEMS = [
   { href: "/app", label: "대시보드", icon: IconGrid },
   { href: "/app/companies", label: "기업", icon: IconBuilding },
-  { href: "/app/board", label: "관리포인트 보드", icon: IconKanban },
+  { href: "/app/board", label: "과제 보드", icon: IconKanban },
   { href: "/app/campaigns", label: "일괄안내", icon: IconSend },
   { href: "/app/notifications", label: "알림", icon: IconBell },
   { href: "/app/settings", label: "설정", icon: IconGear },

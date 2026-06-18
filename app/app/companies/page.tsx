@@ -11,9 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; sort?: string }>;
 }) {
-  const [{ q }, data] = await Promise.all([searchParams, getCompaniesData()]);
+  const [{ q, tag, sort }, data] = await Promise.all([
+    searchParams,
+    getCompaniesData(),
+  ]);
   const count = data.companies.length;
 
   return (
@@ -45,11 +48,16 @@ export default async function CompaniesPage({
         <EmptyState
           icon={<IconBuilding />}
           title="첫 기업을 등록하세요"
-          description="기업을 추가하면 보유 자격·관리포인트의 만료와 마감이 자동으로 추적되고, 이 목록에서 한눈에 관제할 수 있습니다."
+          description="기업을 추가하면 보유 자격·과제의 만료와 마감이 자동으로 추적되고, 이 목록에서 한눈에 관제할 수 있습니다."
           action={<AddCompanyButton demo={data.demo} size="md" />}
         />
       ) : (
-        <CompaniesTable companies={data.companies} initialQuery={q ?? ""} />
+        <CompaniesTable
+          companies={data.companies}
+          initialQuery={q ?? ""}
+          initialTag={tag ?? null}
+          initialSort={sort ?? null}
+        />
       )}
     </>
   );

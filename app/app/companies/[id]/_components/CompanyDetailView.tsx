@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
@@ -15,13 +15,17 @@ type TabKey = "overview" | "cert" | "tasks" | "schedule" | "files";
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "개요/프로파일" },
   { key: "cert", label: "자격·인증" },
-  { key: "tasks", label: "관리포인트" },
+  { key: "tasks", label: "과제" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
 ];
 
-function isTabKey(value: string): value is TabKey {
-  return TAB_DEFS.some((t) => t.key === value);
+// ?tab= 별칭 — 자연스러운 표기(docs)도 허용 (GWJ-012)
+const TAB_ALIASES: Record<string, TabKey> = { docs: "files" };
+
+function resolveTab(value: string): TabKey {
+  if (TAB_DEFS.some((t) => t.key === value)) return value as TabKey;
+  return TAB_ALIASES[value] ?? "overview";
 }
 
 function CompanyHeader({
@@ -76,11 +80,23 @@ export function CompanyDetailView({
   data: CompanyDetailData;
   initialTab: string;
 }) {
-  const [tab, setTab] = useState<TabKey>(
-    isTabKey(initialTab) ? initialTab : "overview",
-  );
+  const [tab, setTab] = useState<TabKey>(() => resolveTab(initialTab));
   const { toast, showToast } = useToast();
   const company = data.company;
+
+  // 탭 전환 시 데이터는 이미 모두 로드돼 있으므로 즉시 전환하고,
+  // URL ?tab= 만 갱신해 새로고침·공유 시 상태를 복원한다 (GWJ-012, 보드와 동일하게 URL 보존)
+  const selectTab = useCallback(
+    (key: TabKey) => {
+      setTab(key);
+      const url =
+        key === "overview"
+          ? `/app/companies/${company.id}`
+          : `/app/companies/${company.id}?tab=${key}`;
+      window.history.replaceState(null, "", url);
+    },
+    [company.id],
+  );
 
   return (
     <>
@@ -94,7 +110,7 @@ export function CompanyDetailView({
             role="tab"
             aria-selected={tab === t.key}
             className={`pill-tab${tab === t.key ? " is-active" : ""}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => selectTab(t.key)}
           >
             {t.label}
           </button>

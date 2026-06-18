@@ -92,7 +92,7 @@ export function BoardView({
     <>
       <div className="page-head">
         <div>
-          <h1>관리포인트 보드</h1>
+          <h1>과제 보드</h1>
           <div className="sub">{pageSub}</div>
         </div>
         <div className="spacer" />
@@ -124,7 +124,7 @@ export function BoardView({
           role="tab"
           aria-selected={activeTab === "todos"}
         >
-          <IconList /> To-dos 보드
+          <IconList /> 업무 노트
         </Link>
         <Link
           href="/app/board?tab=tasks"
@@ -132,7 +132,7 @@ export function BoardView({
           role="tab"
           aria-selected={activeTab === "tasks"}
         >
-          <IconKanban /> Task 보드
+          <IconKanban /> 과제 칸반
         </Link>
       </div>
 
@@ -159,7 +159,7 @@ export function BoardView({
       ) : (
         <EmptyState
           icon={<IconKanban />}
-          title="Task 보드를 불러오지 못했습니다"
+          title="과제 칸반을 불러오지 못했습니다"
           description="잠시 후 다시 시도해주세요."
         />
       )}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel } from "@/components/ui/Panel";
@@ -18,18 +18,46 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "recent", label: "최근 등록순" },
 ];
 
+function isSortKey(value: string | null): value is SortKey {
+  return value === "urgent" || value === "name" || value === "recent";
+}
+
 export function CompaniesTable({
   companies,
   initialQuery = "",
+  initialTag = null,
+  initialSort = null,
 }: {
   companies: CompanyListRow[];
   /** 상단바 전역 검색(/app/companies?q=)에서 넘어온 초기 검색어 */
   initialQuery?: string;
+  /** URL ?tag= 초기 필터 (GWJ-011) */
+  initialTag?: string | null;
+  /** URL ?sort= 초기 정렬 (GWJ-011) */
+  initialSort?: string | null;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
-  const [tag, setTag] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("urgent");
+  const [tag, setTag] = useState<string | null>(initialTag);
+  const [sort, setSort] = useState<SortKey>(
+    isSortKey(initialSort) ? initialSort : "urgent",
+  );
+
+  // 검색·필터·정렬 상태를 URL 쿼리에 보존 — 새로고침·공유 시 복원 (GWJ-011).
+  // history.replaceState로 갱신해 서버 재요청(스켈레톤) 없이 클라이언트 필터링 유지.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    const q = query.trim();
+    if (q) params.set("q", q);
+    if (tag) params.set("tag", tag);
+    if (sort !== "urgent") params.set("sort", sort);
+    const qs = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `/app/companies?${qs}` : "/app/companies",
+    );
+  }, [query, tag, sort]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();

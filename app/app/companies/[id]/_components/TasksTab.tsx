@@ -34,7 +34,7 @@ export function TasksTab({
     <>
       <Panel>
         <PanelHead
-          title="관리포인트"
+          title="과제"
           count={tasks.length > 0 ? `${tasks.length}건` : undefined}
         >
           <Button variant="cta" size="sm" onClick={() => setAdding(true)}>
@@ -47,7 +47,7 @@ export function TasksTab({
             bare
             icon={<IconTarget />}
             title="등록된 과제가 없습니다"
-            description="인증 갱신, 정부지원 과제 신청 같은 관리포인트를 등록하면 단계와 마감이 한눈에 추적됩니다."
+            description="인증 갱신, 정부지원 과제 신청 같은 과제를 등록하면 단계와 마감이 한눈에 추적됩니다."
             action={
               <Button variant="cta" onClick={() => setAdding(true)}>
                 <IconPlus /> 과제 추가
