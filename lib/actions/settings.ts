@@ -10,7 +10,9 @@ import {
   type Supabase,
 } from "@/lib/actions/shared";
 
-const LEAD_DAY_OPTIONS = [7, 3, 1];
+// 사전 알림 시점은 사용자가 자유롭게 추가/변경 (GWJ-017) — 1~365일 정수 범위만 검증
+const LEAD_DAY_MIN = 1;
+const LEAD_DAY_MAX = 365;
 const CHANNEL_OPTIONS = ["email", "alimtalk"];
 
 function clean(value: string | null): string | null {
@@ -84,8 +86,15 @@ export async function updateNotifyRules(
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
-  if (input.leadDays.some((d) => !LEAD_DAY_OPTIONS.includes(d))) {
-    return { ok: false, error: "사전 알림 시점 값이 올바르지 않습니다." };
+  if (
+    input.leadDays.some(
+      (d) => !Number.isInteger(d) || d < LEAD_DAY_MIN || d > LEAD_DAY_MAX,
+    )
+  ) {
+    return {
+      ok: false,
+      error: "사전 알림 시점은 1~365일 사이의 일수여야 합니다.",
+    };
   }
   if (input.channels.some((c) => !CHANNEL_OPTIONS.includes(c))) {
     return { ok: false, error: "발송 채널 값이 올바르지 않습니다." };
@@ -103,7 +112,7 @@ export async function updateNotifyRules(
   const { error } = await supabase
     .from("profile")
     .update({
-      notify_lead_days: [...input.leadDays].sort((a, b) => b - a),
+      notify_lead_days: [...new Set(input.leadDays)].sort((a, b) => b - a),
       notify_channels: input.channels,
       notify_match: input.notifyMatch,
       daily_summary_at: input.dailySummaryAt,

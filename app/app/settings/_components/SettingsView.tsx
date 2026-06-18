@@ -166,11 +166,8 @@ function ProfileSection({
   );
 }
 
-const LEAD_DAY_ROWS: { day: number; desc: string }[] = [
-  { day: 7, desc: "만료·마감 7일 전 알림" },
-  { day: 3, desc: "3일 전 — 긴급 단계 진입" },
-  { day: 1, desc: "하루 전 최종 리마인드" },
-];
+// 빠른 추가용 프리셋 — 이 외 임의 일수도 직접 추가 가능 (GWJ-017)
+const LEAD_DAY_PRESETS = [30, 14, 7, 3, 1];
 
 function toggleIn<T>(list: T[], value: T): T[] {
   return list.includes(value)
@@ -196,7 +193,21 @@ function RulesSection({
 }) {
   const [pending, startTransition] = useTransition();
   const [leadDays, setLeadDays] = useState<number[]>(profile.notifyLeadDays);
+  const [newLead, setNewLead] = useState("");
   const [channels, setChannels] = useState<string[]>(profile.notifyChannels);
+
+  const sortedLeadDays = [...leadDays].sort((a, b) => b - a);
+
+  function addLeadDay(value: number) {
+    if (!Number.isInteger(value) || value < 1 || value > 365) return;
+    setLeadDays((l) => (l.includes(value) ? l : [...l, value]));
+  }
+
+  function addNewLead() {
+    const value = Number.parseInt(newLead, 10);
+    addLeadDay(value);
+    setNewLead("");
+  }
   const [match, setMatch] = useState(profile.notifyMatch);
   const [dailyOn, setDailyOn] = useState(profile.dailySummaryAt !== null);
   const [dailyAt, setDailyAt] = useState(profile.dailySummaryAt ?? "09:00");
@@ -221,20 +232,71 @@ function RulesSection({
       </div>
       <div className="sp-body">
         <div className="grp-label">만료·마감 사전 알림 시점</div>
-        {LEAD_DAY_ROWS.map(({ day, desc }) => (
-          <div key={day} className="setrow">
-            <span className="dn-chip num">D-{day}</span>
-            <div className="sr-body">
-              <div className="sr-t">D-{day} 사전 알림</div>
-              <div className="sr-s">{desc}</div>
-            </div>
-            <Switch
-              on={leadDays.includes(day)}
-              label={`D-${day} 사전 알림`}
-              onToggle={() => setLeadDays((l) => toggleIn(l, day))}
-            />
+        <p className="sr-s" style={{ marginBottom: 12 }}>
+          설정한 D-day마다 사전 알림이 발송됩니다. 원하는 일수를 자유롭게
+          추가·삭제할 수 있습니다.
+        </p>
+        <div className="lead-day-chips">
+          {sortedLeadDays.length === 0 ? (
+            <span className="sr-s">설정된 사전 알림이 없습니다.</span>
+          ) : (
+            sortedLeadDays.map((day) => (
+              <span key={day} className="lead-day-chip num">
+                D-{day}
+                <button
+                  type="button"
+                  aria-label={`D-${day} 제거`}
+                  onClick={() =>
+                    setLeadDays((l) => l.filter((d) => d !== day))
+                  }
+                >
+                  <IconX />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <div className="lead-day-add">
+          <div className="lead-day-presets">
+            {LEAD_DAY_PRESETS.filter((d) => !leadDays.includes(d)).map((day) => (
+              <button
+                key={day}
+                type="button"
+                className="pill-tab"
+                onClick={() => addLeadDay(day)}
+              >
+                <IconPlus /> D-{day}
+              </button>
+            ))}
           </div>
-        ))}
+          <div className="lead-day-custom">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              inputMode="numeric"
+              className="input"
+              placeholder="직접 입력 (일)"
+              value={newLead}
+              onChange={(e) => setNewLead(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addNewLead();
+                }
+              }}
+              aria-label="사전 알림 일수 직접 입력"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addNewLead}
+            >
+              추가
+            </Button>
+          </div>
+        </div>
 
         <div className="grp-label mt">발송 채널</div>
         <div className="setrow">
