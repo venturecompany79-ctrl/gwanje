@@ -54,11 +54,7 @@ export function ScheduleTab({ schedules }: { schedules: ScheduleRow[] }) {
                 </td>
                 <td className="date num">{s.date}</td>
                 <td>
-                  {s.daysLeft < 0 ? (
-                    <span className="cell-muted">지남</span>
-                  ) : (
-                    <DdayBadge daysLeft={s.daysLeft} />
-                  )}
+                  <DdayBadge daysLeft={s.daysLeft} />
                 </td>
                 <td>
                   {s.relatedTaskTitle ? (

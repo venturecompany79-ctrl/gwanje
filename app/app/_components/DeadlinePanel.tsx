@@ -60,9 +60,7 @@ export function DeadlinePanel({
                   <td className="item" data-label="항목">{row.title}</td>
                   <td className="date num" data-label="마감일">{row.due_date}</td>
                   <td className="r" data-label="D-day">
-                    <span className="dday dday--critical num">
-                      D+{Math.abs(row.days_left)}
-                    </span>
+                    <DdayBadge daysLeft={row.days_left} />
                   </td>
                 </DeadlineRow>
               ))}
