@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { IconAlert, IconBuilding, IconPlus } from "@/components/ui/icons";
+import { IconAlert, IconBuilding, IconPlus, IconSend } from "@/components/ui/icons";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { DashboardWidgets } from "./_components/DashboardWidgets";
 import { DeadlinePanel } from "./_components/DeadlinePanel";
@@ -67,9 +67,11 @@ export default async function DashboardPage() {
         <div className="spacer" />
         <div className="head-actions">
           <ExportButton />
-          <LinkButton variant="cta" size="sm" href="/app/companies">
-            <IconPlus /> 기업 추가
-          </LinkButton>
+          {!isEmpty ? (
+            <LinkButton variant="cta" size="sm" href="/app/campaigns/new">
+              <IconSend /> 일괄안내
+            </LinkButton>
+          ) : null}
         </div>
       </div>
 
