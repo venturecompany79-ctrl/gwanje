@@ -69,6 +69,7 @@ export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
         sub={kpi.due7 > 0 ? "즉시 확인 필요" : "—"}
         icon={<IconAlert />}
         urgent={kpi.due7 > 0}
+        href={kpi.due7 > 0 ? "/app?due=7" : undefined}
       />
       <KpiCard
         label="30일 내 만료"
@@ -76,6 +77,7 @@ export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
         unit="건"
         sub={hasData ? "자격·인증 갱신" : "—"}
         icon={<IconCalendar />}
+        href={kpi.expire30 > 0 ? "/app?expire=30" : undefined}
       />
       <KpiCard
         label="진행 중 과제"

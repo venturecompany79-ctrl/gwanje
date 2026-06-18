@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel, PanelHead } from "@/components/ui/Panel";
@@ -9,14 +10,25 @@ import { DeadlineRow } from "./DeadlineRow";
 export function DeadlinePanel({
   deadlines,
   overdue = [],
+  filterLabel = null,
 }: {
   deadlines: DeadlineItem[];
   /** 기한 지남 항목 — 가장 시급, 상단에 별도 강조 */
   overdue?: DeadlineItem[];
+  /** KPI 딥링크로 필터링된 경우 활성 필터명 (GWJ-009) */
+  filterLabel?: string | null;
 }) {
   return (
     <Panel>
-      <PanelHead title="마감 임박" count={`${deadlines.length}건`}>
+      <PanelHead
+        title={filterLabel ?? "마감 임박"}
+        count={`${deadlines.length}건`}
+      >
+        {filterLabel ? (
+          <Link href="/app" className="panel-filter-clear">
+            전체 보기 ✕
+          </Link>
+        ) : null}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button type="button" className="pill-tab is-active">
             <IconList /> D-day 리스트

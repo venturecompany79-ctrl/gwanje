@@ -165,11 +165,47 @@ function normalizeDeadlineItems(rows: unknown[]): DeadlineItem[] {
   });
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+/** KPI 카드 딥링크용 마감 패널 필터 (GWJ-009) */
+export type DeadlineFilter = "due7" | "expire30" | null;
+
+export function parseDeadlineFilter(params: {
+  due?: string;
+  expire?: string;
+}): DeadlineFilter {
+  if (params.due === "7") return "due7";
+  if (params.expire === "30") return "expire30";
+  return null;
+}
+
+export const DEADLINE_FILTER_LABEL: Record<"due7" | "expire30", string> = {
+  due7: "7일 내 마감",
+  expire30: "30일 내 자격 만료",
+};
+
+export async function getDashboardData(
+  filter: DeadlineFilter = null,
+): Promise<DashboardData> {
   const supabase = await createClient();
-  if (!supabase) return DEMO_DASHBOARD();
+  if (!supabase) return DEMO_DASHBOARD(filter);
 
   const now = new Date();
+
+  // 필터별 마감 패널 쿼리 — KPI 카운트와 동일한 조건으로 목록을 맞춘다 (GWJ-009)
+  let deadlineQuery = supabase
+    .from("deadline_item")
+    .select("*")
+    .gte("days_left", 0)
+    .order("due_date", { ascending: true });
+  if (filter === "due7") {
+    deadlineQuery = deadlineQuery.lte("days_left", 7).limit(50);
+  } else if (filter === "expire30") {
+    deadlineQuery = deadlineQuery
+      .eq("source", "credential")
+      .lte("days_left", 30)
+      .limit(50);
+  } else {
+    deadlineQuery = deadlineQuery.limit(8);
+  }
 
   const [
     companyCount,
@@ -198,12 +234,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .from("task")
       .select("id", { count: "exact", head: true })
       .neq("stage", "result"),
-    supabase
-      .from("deadline_item")
-      .select("*")
-      .gte("days_left", 0)
-      .order("due_date", { ascending: true })
-      .limit(8),
+    deadlineQuery,
     // 기한 지남 — 가장 오래된 것 먼저(가장 시급). 보드의 result 단계는 뷰에서 이미 제외됨.
     supabase
       .from("deadline_item")

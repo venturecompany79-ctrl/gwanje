@@ -58,18 +58,29 @@ function demoDeadline(
   };
 }
 
-export function DEMO_DASHBOARD(): DashboardData {
+export function DEMO_DASHBOARD(
+  filter: "due7" | "expire30" | null = null,
+): DashboardData {
+  const allDeadlines = [
+    demoDeadline(1, "(주)테크노바", "벤처기업확인 만료", "벤처기업확인", 2, "credential", "expiring"),
+    demoDeadline(2, "한빛정밀", "R&D 세액공제 신청마감", "세액공제", 5, "task", "application"),
+    demoDeadline(3, "그린에너지솔루션", "기업부설연구소 갱신", "기업부설연구소", 7, "credential", "expiring"),
+    demoDeadline(4, "메디케어랩", "정책자금 상환일", "정책자금", 9, "task", "application"),
+    demoDeadline(5, "스마트팩토리(주)", "이노비즈 인증 갱신", "정부지원사업", 14, "credential", "expiring"),
+    demoDeadline(6, "블루오션테크", "디딤돌 과제 중간보고", "정부지원사업", 21, "task", "diagnosis"),
+  ];
+  const deadlines =
+    filter === "due7"
+      ? allDeadlines.filter((d) => d.days_left <= 7)
+      : filter === "expire30"
+        ? allDeadlines.filter(
+            (d) => d.source === "credential" && d.days_left <= 30,
+          )
+        : allDeadlines;
   return {
     demo: true,
     kpi: { companyCount: 14, due7: 5, expire30: 3, activeTasks: 22 },
-    deadlines: [
-      demoDeadline(1, "(주)테크노바", "벤처기업확인 만료", "벤처기업확인", 2, "credential", "expiring"),
-      demoDeadline(2, "한빛정밀", "R&D 세액공제 신청마감", "세액공제", 5, "task", "application"),
-      demoDeadline(3, "그린에너지솔루션", "기업부설연구소 갱신", "기업부설연구소", 7, "credential", "expiring"),
-      demoDeadline(4, "메디케어랩", "정책자금 상환일", "정책자금", 9, "task", "application"),
-      demoDeadline(5, "스마트팩토리(주)", "이노비즈 인증 갱신", "정부지원사업", 14, "credential", "expiring"),
-      demoDeadline(6, "블루오션테크", "디딤돌 과제 중간보고", "정부지원사업", 21, "task", "diagnosis"),
-    ],
+    deadlines,
     overdue: [
       demoDeadline(7, "메디케어랩", "벤처기업확인 만료", "벤처기업확인", -12, "credential", "expired"),
     ],

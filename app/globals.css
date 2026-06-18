@@ -273,6 +273,69 @@ h4 {
   opacity: 0.65;
   background: var(--color-surface-soft);
 }
+/* 알림 사전 시점 편집 (GWJ-017) */
+.lead-day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.lead-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+.lead-day-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-circle);
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+.lead-day-chip button svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+}
+.lead-day-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.lead-day-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lead-day-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lead-day-custom .input {
+  width: 150px;
+}
+.panel-filter-clear {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.panel-filter-clear:hover {
+  text-decoration: underline;
+}
 .pill-tab-soon {
   font-size: 11px;
   font-weight: 700;

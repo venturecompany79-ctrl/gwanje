@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconAlert, IconBuilding, IconPlus, IconSend } from "@/components/ui/icons";
-import { getDashboardData } from "@/lib/data/dashboard";
+import {
+  DEADLINE_FILTER_LABEL,
+  getDashboardData,
+  parseDeadlineFilter,
+} from "@/lib/data/dashboard";
 import { DashboardWidgets } from "./_components/DashboardWidgets";
 import { DeadlinePanel } from "./_components/DeadlinePanel";
 import { ExportButton } from "./_components/ExportButton";
@@ -20,8 +24,13 @@ function todayLabel(): string {
   }).format(new Date());
 }
 
-export default async function DashboardPage() {
-  const data = await getDashboardData();
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ due?: string; expire?: string }>;
+}) {
+  const filter = parseDeadlineFilter(await searchParams);
+  const data = await getDashboardData(filter);
   const isEmpty = data.kpi.companyCount === 0;
   const mostOverdue = data.overdue[0];
   const mostUrgent = data.deadlines[0];
@@ -93,7 +102,11 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="dash-grid">
-          <DeadlinePanel deadlines={data.deadlines} overdue={data.overdue} />
+          <DeadlinePanel
+            deadlines={data.deadlines}
+            overdue={filter ? [] : data.overdue}
+            filterLabel={filter ? DEADLINE_FILTER_LABEL[filter] : null}
+          />
           <DashboardWidgets alerts={data.alerts} files={data.files} />
         </div>
       )}
