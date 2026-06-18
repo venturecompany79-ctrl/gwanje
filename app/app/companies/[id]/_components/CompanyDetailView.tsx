@@ -115,10 +115,15 @@ export function CompanyDetailView({
             {t.label}
           </button>
         ))}
-        {/* 추천 — Phase2 자리만 (CLAUDE.md 11절) */}
-        <button type="button" className="pill-tab" disabled>
-          추천
-          <span className="tab-badge">Phase2 준비 중</span>
+        {/* 추천 — Phase2 자리만 (CLAUDE.md 11절). 미출시 표기는 GWJ-006과 동일 정책 */}
+        <button
+          type="button"
+          className="pill-tab pill-tab--soon"
+          disabled
+          aria-disabled
+          title="준비 중인 기능입니다"
+        >
+          추천 <span className="pill-tab-soon">준비 중</span>
         </button>
       </div>
 
@@ -141,7 +146,14 @@ export function CompanyDetailView({
           showToast={showToast}
         />
       ) : null}
-      {tab === "schedule" ? <ScheduleTab schedules={data.schedules} /> : null}
+      {tab === "schedule" ? (
+        <ScheduleTab
+          companyId={company.id}
+          schedules={data.schedules}
+          demo={data.demo}
+          showToast={showToast}
+        />
+      ) : null}
       {tab === "files" ? (
         <FilesTab companyId={company.id} documents={data.documents} />
       ) : null}

@@ -323,6 +323,7 @@ export function CampaignWizard({
                         setRules((prev) => prev.filter((_, idx) => idx !== i))
                       }
                       aria-label="조건 삭제"
+                      title="조건 삭제"
                     >
                       <IconX />
                     </button>

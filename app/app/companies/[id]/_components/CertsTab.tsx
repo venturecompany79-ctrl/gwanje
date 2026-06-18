@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -40,7 +41,14 @@ function RenewalTaskButton({
   const [pending, startTransition] = useTransition();
 
   if (credential.hasRenewalTask) {
-    return <span className="cell-muted">갱신 과제 있음</span>;
+    return (
+      <Link
+        href={`/app/companies/${companyId}?tab=tasks`}
+        className="pill-btn"
+      >
+        <IconRefresh /> 과제 보기
+      </Link>
+    );
   }
 
   function handleClick() {
