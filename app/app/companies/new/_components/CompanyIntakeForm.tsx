@@ -456,7 +456,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             label="기업명 *"
             name="name"
             required
-            placeholder="(주)테크노바"
+            placeholder="예: (주)테크노바"
             value={autofillFields.name}
             onChange={(e) => updateAutofillField("name", e.target.value)}
           />
@@ -477,7 +477,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           <InputField
             label="대표 업종"
             name="industry"
-            placeholder="IT/소프트웨어"
+            placeholder="예: IT·소프트웨어"
             value={autofillFields.industry}
             onChange={(e) => updateAutofillField("industry", e.target.value)}
           />
@@ -496,7 +496,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
         <InputField
           label="업종 경로"
           name="industry_path"
-          placeholder="도매 및 소매업 > 생활용품 도매업 > 남녀용 겉옷 및 셔츠 도매업"
+          placeholder="예: 정보통신업 > 소프트웨어 개발·공급업 > 응용 소프트웨어 개발"
           value={autofillFields.industry_path}
           onChange={(e) => updateAutofillField("industry_path", e.target.value)}
         />
@@ -507,25 +507,25 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             type="number"
             min={0}
             step={0.1}
-            placeholder="42"
+            placeholder="예: 42"
           />
           <InputField
             label="인원 (명)"
             name="headcount"
             type="number"
             min={0}
-            placeholder="28"
+            placeholder="예: 28"
           />
         </div>
         <div className="form-grid2">
           <InputField
             label="대표자"
             name="ceo_name"
-            placeholder="박지훈"
+            placeholder="예: 홍길동"
             value={autofillFields.ceo_name}
             onChange={(e) => updateAutofillField("ceo_name", e.target.value)}
           />
-          <InputField label="담당자" name="contact_name" placeholder="김민서" />
+          <InputField label="담당자" name="contact_name" placeholder="예: 김담당" />
         </div>
         <div className="form-grid2">
           <MaskedInputField
@@ -538,7 +538,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             label="담당자 이메일"
             name="contact_email"
             type="email"
-            placeholder="manager@company.com"
+            placeholder="예: manager@company.com"
           />
         </div>
       </section>
