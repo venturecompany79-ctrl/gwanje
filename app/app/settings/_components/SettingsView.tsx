@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { InputField } from "@/components/ui/Input";
+import { InputField, MaskedInputField } from "@/components/ui/Input";
 import { Toast, useToast } from "@/components/ui/Toast";
 import {
   IconBell,
@@ -129,7 +129,8 @@ function ProfileSection({
             error={nameError}
           />
           <InputField label="직함" value={form.title} onChange={set("title")} />
-          <InputField
+          <MaskedInputField
+            mask="phone"
             label="연락처"
             value={form.phone}
             onChange={set("phone")}
@@ -147,7 +148,8 @@ function ProfileSection({
             value={form.senderName}
             onChange={set("senderName")}
           />
-          <InputField
+          <MaskedInputField
+            mask="phone"
             label="발신번호"
             value={form.senderPhone}
             onChange={set("senderPhone")}
