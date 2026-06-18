@@ -155,6 +155,16 @@ function demoCompany(
   expiredCount: number,
   createdDaysAgo: number,
 ): CompanyListRow {
+  // 데모 "외 N건" 툴팁용 — nearest부터 7일 간격으로 임박 항목을 합성 (GWJ-020)
+  const upcomingItems =
+    nearestDaysLeft === null
+      ? []
+      : Array.from({ length: upcomingCount }, (_, i) => ({
+          title: credentialTypes[i]
+            ? `${credentialTypes[i]} 갱신`
+            : "다가오는 마감",
+          daysLeft: nearestDaysLeft + i * 7,
+        }));
   return {
     id: `00000000-0000-0000-0000-0000000000c${n}`,
     name,
@@ -167,6 +177,7 @@ function demoCompany(
     credentialTypes,
     nearestDaysLeft,
     upcomingCount,
+    upcomingItems,
     expiredCount,
   };
 }

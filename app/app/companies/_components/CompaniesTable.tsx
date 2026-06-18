@@ -226,7 +226,15 @@ export function CompaniesTable({
                         <>
                           <DdayBadge daysLeft={co.nearestDaysLeft} />
                           {co.upcomingCount > 1 ? (
-                            <span className="due-more num">
+                            <span
+                              className="due-more num"
+                              title={co.upcomingItems
+                                .map(
+                                  (it) =>
+                                    `${it.title} · ${it.daysLeft < 0 ? `D+${-it.daysLeft}` : it.daysLeft === 0 ? "D-day" : `D-${it.daysLeft}`}`,
+                                )
+                                .join("\n")}
+                            >
                               외 {co.upcomingCount - 1}건
                             </span>
                           ) : null}

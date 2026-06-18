@@ -16,6 +16,8 @@ export interface CompanyListRow {
   nearestDaysLeft: number | null;
   /** 다가오는(D-0 이상) 항목 수 */
   upcomingCount: number;
+  /** 다가오는 항목 상세 (임박순) — "외 N건" 툴팁용 (GWJ-020) */
+  upcomingItems: { title: string; daysLeft: number }[];
   /** 만료된 자격 수 */
   expiredCount: number;
 }
@@ -33,7 +35,9 @@ export async function getCompaniesData(): Promise<CompaniesData> {
   const [companies, credentials, deadlines] = await Promise.all([
     supabase.from("company").select("*").order("name"),
     supabase.from("credential").select("company_id, type"),
-    supabase.from("deadline_item").select("source, company_id, days_left"),
+    supabase
+      .from("deadline_item")
+      .select("source, company_id, days_left, title"),
   ]);
 
   const firstError = companies.error ?? credentials.error ?? deadlines.error;
@@ -48,20 +52,20 @@ export async function getCompaniesData(): Promise<CompaniesData> {
     credsByCompany.set(cred.company_id, list);
   }
 
-  const nearest = new Map<string, number>();
-  const upcoming = new Map<string, number>();
+  const upcomingItems = new Map<string, { title: string; daysLeft: number }[]>();
   const expired = new Map<string, number>();
   for (const item of deadlines.data ?? []) {
     if (!item.company_id || item.days_left === null) continue;
     if (item.days_left >= 0) {
-      upcoming.set(item.company_id, (upcoming.get(item.company_id) ?? 0) + 1);
-      const current = nearest.get(item.company_id);
-      if (current === undefined || item.days_left < current) {
-        nearest.set(item.company_id, item.days_left);
-      }
+      const list = upcomingItems.get(item.company_id) ?? [];
+      list.push({ title: item.title ?? "항목", daysLeft: item.days_left });
+      upcomingItems.set(item.company_id, list);
     } else if (item.source === "credential") {
       expired.set(item.company_id, (expired.get(item.company_id) ?? 0) + 1);
     }
+  }
+  for (const list of upcomingItems.values()) {
+    list.sort((a, b) => a.daysLeft - b.daysLeft);
   }
 
   return {
@@ -76,8 +80,9 @@ export async function getCompaniesData(): Promise<CompaniesData> {
       conditionTags: co.condition_tags,
       createdAt: co.created_at,
       credentialTypes: credsByCompany.get(co.id) ?? [],
-      nearestDaysLeft: nearest.get(co.id) ?? null,
-      upcomingCount: upcoming.get(co.id) ?? 0,
+      nearestDaysLeft: upcomingItems.get(co.id)?.[0]?.daysLeft ?? null,
+      upcomingCount: upcomingItems.get(co.id)?.length ?? 0,
+      upcomingItems: upcomingItems.get(co.id) ?? [],
       expiredCount: expired.get(co.id) ?? 0,
     })),
   };
