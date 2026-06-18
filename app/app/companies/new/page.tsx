@@ -17,12 +17,6 @@ const requiredItems = [
   "관심사업분야",
 ];
 
-const implementationPlan = [
-  "1차 저장: 사업자등록증 자동 입력값과 기본 프로파일을 company 테이블에 저장",
-  "2차 확장: 업종, 기술, 인증, 관심분야를 별도 테이블로 분리해 추천 엔진 입력값으로 사용",
-  "3차 확장: 공공데이터 조회와 추천 엔진 입력값을 고도화",
-];
-
 export default async function NewCompanyPage() {
   const supabase = await createClient();
   const demo = !supabase;
@@ -61,13 +55,13 @@ export default async function NewCompanyPage() {
           <CompanyIntakeForm demo={demo} />
         </div>
 
-        <aside className="intake-side" aria-label="기업 신청 정보 수집 계획">
+        <aside className="intake-side" aria-label="입력 항목 안내">
           <section className="intake-plan">
             <div className="intake-plan-head">
               <IconInfo />
               <div>
-                <h2>스크린샷 기반 항목 정리</h2>
-                <p>wellobiz 신청 흐름에서 확인한 기업정보 입력 항목입니다.</p>
+                <h2>입력 항목 안내</h2>
+                <p>아래 정보를 입력하면 기업 프로필과 마감 관리가 시작됩니다.</p>
               </div>
             </div>
             <ul className="intake-plan-list">
@@ -78,21 +72,6 @@ export default async function NewCompanyPage() {
                 </li>
               ))}
             </ul>
-          </section>
-
-          <section className="intake-plan">
-            <div className="intake-plan-head">
-              <IconInfo />
-              <div>
-                <h2>구현 계획</h2>
-                <p>빠른 창전환을 우선해 별도 라우트와 가벼운 폼으로 시작합니다.</p>
-              </div>
-            </div>
-            <ol className="intake-steps">
-              {implementationPlan.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
           </section>
         </aside>
       </div>

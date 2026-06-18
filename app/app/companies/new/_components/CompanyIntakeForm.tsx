@@ -9,7 +9,8 @@ import {
   type FormEvent,
 } from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { InputField } from "@/components/ui/Input";
+import { InputField, MaskedInputField } from "@/components/ui/Input";
+import { isValidBizNo } from "@/lib/format";
 import {
   businessLicenseFieldsSummary,
   parseBusinessLicenseText,
@@ -268,6 +269,7 @@ function ChoiceGroup({
 export function CompanyIntakeForm({ demo }: { demo: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [bizNoError, setBizNoError] = useState<string | undefined>();
   const [fileName, setFileName] = useState("");
   const [licenseTone, setLicenseTone] = useState<LicenseParseTone>("idle");
   const [licenseStatus, setLicenseStatus] = useState("");
@@ -332,6 +334,11 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!isValidBizNo(autofillFields.biz_no)) {
+      setBizNoError("사업자등록번호는 숫자 10자리여야 합니다.");
+      return;
+    }
+    setBizNoError(undefined);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await addCompany(formData);
@@ -365,7 +372,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           </span>
           <div>
             <h2 id="license-section">사업자 확인</h2>
-            <p>스크린샷의 첫 단계처럼 사업자등록증에서 기본 식별값을 먼저 확보합니다.</p>
+            <p>사업자등록증을 올리면 기본 식별 정보를 자동으로 채워 드립니다.</p>
           </div>
         </div>
         <div className="license-drop">
@@ -397,10 +404,12 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           }
         />
         <div className="form-grid2">
-          <InputField
+          <MaskedInputField
+            mask="bizNo"
             label="사업자등록번호"
             name="biz_no"
             placeholder="123-45-67890"
+            error={bizNoError}
             value={autofillFields.biz_no}
             onChange={(e) => updateAutofillField("biz_no", e.target.value)}
           />
@@ -480,7 +489,8 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           <InputField label="담당자" name="contact_name" placeholder="김민서" />
         </div>
         <div className="form-grid2">
-          <InputField
+          <MaskedInputField
+            mask="phone"
             label="담당자 연락처"
             name="contact_phone"
             placeholder="010-0000-0000"
@@ -501,14 +511,14 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           </span>
           <div>
             <h2 id="matching-section">지원사업 매칭 정보</h2>
-            <p>스크린샷의 Step01-04 항목을 우리 시스템의 추천 입력값으로 정리했습니다.</p>
+            <p>전략품목·인증·관심분야를 입력하면 맞춤 지원사업 추천에 활용됩니다.</p>
           </div>
         </div>
 
         <div className="intake-subsection">
           <div className="intake-subtitle">
             <IconTag />
-            <span>Step02. 전략품목 및 기술</span>
+            <span>전략품목 및 기술</span>
           </div>
           <ChoiceGroup name="technologies" options={technologyOptions} compact />
           <InputField
@@ -521,7 +531,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
         <div className="intake-subsection">
           <div className="intake-subtitle">
             <IconAward />
-            <span>Step03. 기업인증정보</span>
+            <span>기업인증정보</span>
           </div>
           <ChoiceGroup name="certifications" options={certificationOptions} compact />
         </div>
@@ -529,7 +539,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
         <div className="intake-subsection">
           <div className="intake-subtitle">
             <IconCheck />
-            <span>Step04. 관심사업분야</span>
+            <span>관심사업분야</span>
           </div>
           <ChoiceGroup name="interest_areas" options={interestOptions} />
           <InputField
