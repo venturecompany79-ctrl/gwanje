@@ -276,8 +276,10 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
   const [licenseSummary, setLicenseSummary] = useState("");
   const [autofillFields, setAutofillFields] =
     useState<CompanyAutofillFields>(EMPTY_AUTOFILL_FIELDS);
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const parseRunRef = useRef(0);
+  const formRef = useRef<HTMLFormElement>(null);
 
   function updateAutofillField(
     key: keyof CompanyAutofillFields,
@@ -332,16 +334,23 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
     }
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function submitCompany(force: boolean) {
+    const form = formRef.current;
+    if (!form) return;
     if (!isValidBizNo(autofillFields.biz_no)) {
       setBizNoError("사업자등록번호는 숫자 10자리여야 합니다.");
       return;
     }
     setBizNoError(undefined);
-    const formData = new FormData(e.currentTarget);
+    setError(null);
+    const formData = new FormData(form);
+    if (force) formData.set("confirm_duplicate", "1");
     startTransition(async () => {
       const result = await addCompany(formData);
+      if (result.duplicate) {
+        setDupWarning(result.error);
+        return;
+      }
       if (!result.ok) {
         setError(result.error);
         return;
@@ -351,8 +360,14 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
     });
   }
 
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setDupWarning(null);
+    submitCompany(false);
+  }
+
   return (
-    <form className="intake-form" onSubmit={handleSubmit}>
+    <form className="intake-form" onSubmit={handleSubmit} ref={formRef}>
       {demo ? (
         <div className="auth-notice">
           <b>데모 모드</b> - 입력 내용은 저장되지 않습니다. Supabase 연결(.env.local)
@@ -362,6 +377,30 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
       {error ? (
         <div className="auth-error">
           <IconAlert /> {error}
+        </div>
+      ) : null}
+      {dupWarning ? (
+        <div className="auth-notice" role="alert">
+          <IconAlert /> {dupWarning}
+          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => submitCompany(true)}
+              disabled={pending}
+            >
+              그래도 등록
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDupWarning(null)}
+            >
+              취소
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -560,10 +599,24 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             <p>컨설턴트가 기업 컨디션과 상담 맥락을 빠르게 남기는 영역입니다.</p>
           </div>
         </div>
+        <div className="field">
+          <label htmlFor="company-growth-stage">성장 단계</label>
+          <select
+            id="company-growth-stage"
+            name="growth_stage"
+            className="input"
+            defaultValue=""
+          >
+            <option value="">선택 안 함</option>
+            <option value="초기">초기</option>
+            <option value="성장기">성장기</option>
+            <option value="성숙기">성숙기</option>
+          </select>
+        </div>
         <InputField
-          label="컨디션 태그"
+          label="추가 컨디션 태그"
           name="condition_tags"
-          placeholder="성장기, 수출기업, 연구개발형 - 쉼표로 구분"
+          placeholder="수출기업, 연구개발형 - 쉼표로 구분 (성장 단계 외 태그)"
         />
         <div className="field">
           <label htmlFor="company-intake-memo">메모</label>

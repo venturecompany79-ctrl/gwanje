@@ -21,7 +21,29 @@ import {
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
   warning?: string;
+  /** 상호·사업자번호 중복 의심 — 사용자 확인 후 confirm_duplicate=1로 재제출 (GWJ-016) */
+  duplicate?: boolean;
 };
+
+/** 공백·대소문자 무시 정규화 (상호 유사중복 비교용) */
+function normalizeName(value: string): string {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
+// 성장 단계 표기 통일 (GWJ-010) — 변형/오타 라벨을 표준값으로 매핑
+const GROWTH_STAGE_CANON: Record<string, string> = {
+  얼라스테이징: "초기",
+  창업기: "초기",
+  초창기: "초기",
+  초기단계: "초기",
+  성장단계: "성장기",
+  성숙단계: "성숙기",
+  성숙: "성숙기",
+};
+
+function normalizeGrowthStageTag(tag: string): string {
+  return GROWTH_STAGE_CANON[tag] ?? tag;
+}
 
 function optionalList(formData: FormData, key: string): string[] {
   return formData
@@ -110,10 +132,36 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const conditionTags = (optionalText(formData, "condition_tags") ?? "")
+  // 상호·사업자번호 중복 검사 — 사용자가 확인(재제출)하면 건너뛴다 (GWJ-016)
+  const bizNoDigits = (optionalText(formData, "biz_no") ?? "").replace(/\D/g, "");
+  const confirmDuplicate = String(formData.get("confirm_duplicate") ?? "") === "1";
+  if (!confirmDuplicate) {
+    const { data: existing } = await supabase
+      .from("company")
+      .select("name, biz_no");
+    const normName = normalizeName(name);
+    const matches = (existing ?? []).filter((c) => {
+      const cDigits = (c.biz_no ?? "").replace(/\D/g, "");
+      if (bizNoDigits && cDigits && cDigits === bizNoDigits) return true;
+      return normalizeName(c.name) === normName;
+    });
+    if (matches.length > 0) {
+      const names = [...new Set(matches.map((m) => m.name))].join(", ");
+      return {
+        ok: false,
+        error: `이미 등록된 기업과 상호·사업자번호가 겹칩니다: ${names}. 중복이 아니라면 한 번 더 눌러 그대로 등록할 수 있습니다.`,
+        duplicate: true,
+      };
+    }
+  }
+
+  // 성장 단계는 표준 select 값으로 받고, 자유 태그와 합쳐 condition_tags에 저장 (GWJ-010)
+  const growthStage = optionalText(formData, "growth_stage");
+  const freeTags = (optionalText(formData, "condition_tags") ?? "")
     .split(",")
-    .map((tag) => tag.trim())
+    .map((tag) => normalizeGrowthStageTag(tag.trim()))
     .filter(Boolean);
+  const conditionTags = [...new Set([growthStage, ...freeTags].filter(Boolean))] as string[];
 
   const matchingProfileLines: string[] = [];
   appendLine(matchingProfileLines, "업종 경로", optionalText(formData, "industry_path"));
