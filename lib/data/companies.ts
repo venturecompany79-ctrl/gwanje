@@ -33,7 +33,13 @@ export async function getCompaniesData(): Promise<CompaniesData> {
   if (!supabase) return DEMO_COMPANIES();
 
   const [companies, credentials, deadlines] = await Promise.all([
-    supabase.from("company").select("*").order("name"),
+    // 목록 표시에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019)
+    supabase
+      .from("company")
+      .select(
+        "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at",
+      )
+      .order("name"),
     supabase.from("credential").select("company_id, type"),
     supabase
       .from("deadline_item")
