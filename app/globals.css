@@ -736,6 +736,23 @@ h4 {
 .search-pill input::placeholder {
   color: var(--color-stone);
 }
+/* 전역 검색 'Enter로 검색' 힌트 — 포커스/입력 시 노출 (GWJ-026) */
+.search-hint {
+  flex: none;
+  display: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-stone);
+}
+.search-pill:focus-within .search-hint {
+  display: inline;
+}
+@media (max-width: 640px) {
+  .search-pill:focus-within .search-hint {
+    display: none;
+  }
+}
 .topbar-noti {
   position: relative;
 }

@@ -13,7 +13,8 @@ export function Topbar({
 }) {
   return (
     <header className="topbar">
-      {/* 전역 검색 — 기업 목록 검색으로 전송(GET). JS 없이도 동작 (F14) */}
+      {/* 전역 검색 — 기업 목록 검색으로 전송(GET). JS 없이도 동작 (F14)
+          입력 중 동작 예측을 위한 'Enter로 검색' 정적 힌트 (GWJ-026, Server Component 유지) */}
       <form className="search-pill" action="/app/companies" role="search">
         <IconSearch />
         <input
@@ -21,7 +22,11 @@ export function Topbar({
           name="q"
           placeholder="기업 검색"
           aria-label="기업 검색"
+          aria-describedby="global-search-hint"
         />
+        <span id="global-search-hint" className="search-hint">
+          Enter로 검색
+        </span>
       </form>
       <div className="spacer" />
       <div className="topbar-noti">
