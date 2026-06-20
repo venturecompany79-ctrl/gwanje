@@ -34,3 +34,16 @@ npm run audit:test-data
 - 승인 전 `delete`/`update`/`truncate` 금지.
 - 병합 시 연결 데이터 이전 → 검증 → 원본 정리 순서.
 - 실행 SQL은 트랜잭션으로 감싸고, 사전 `select`로 영향 행을 재확인.
+
+## 확정 내역 (2026-06-20 승인)
+
+audit-test-data.mjs 1차 결과 기준으로 아래 2건 확정.
+
+| candidate_type | record_id | display_name | approved_action |
+|---|---|---|---|
+| test_task | ebbbd37d-ee65-45ed-86be-c523ca3419e2 | 테스트 | **delete** (완전 삭제) |
+| duplicate_company | cb447982-1a77-46b7-95f4-ebb0ac55bd75 | 유니콘파트너스 | **merge → 삭제** (유지: 유니콘 파트너스 f9d46b10…) |
+
+- 정리 SQL: [`scripts/cleanup-gwj-027.sql`](../scripts/cleanup-gwj-027.sql) — `migrations/`가 아니라 `scripts/`에 있어 `supabase db push`로 자동 실행되지 않는다.
+- 적용: 운영자 승인 후 Supabase SQL Editor 또는 psql에서 수동 실행(단일 트랜잭션, 내장 검증 실패 시 자동 rollback).
+- 적용 후 `npm run audit:test-data`로 잔여 후보 0건 재확인 권장.
