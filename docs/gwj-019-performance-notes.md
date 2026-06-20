@@ -18,6 +18,18 @@
 - `getSegmentCompanies`는 이미 명시 컬럼만 조회(추가 변경 없음).
 - `getShellData`는 이미 3개 병렬 최소 쿼리(추가 변경 없음).
 
+## 2차에서 적용한 변경 — 대시보드 Suspense 스트리밍 (부분 로딩)
+
+`getDashboardData` 단일 로더를 3개로 분리하고 `/app`을 Suspense 경계로 쪼갰다.
+
+- `getDashboardKpi()` — 카운트 4종(head count) + 가장 시급 1건(limit 1) 만. **page에서 await** → 헤드/KPI 즉시 렌더.
+- `getDashboardDeadlines(filter)` — 마감 패널(다가오는 + 기한 지남). `<Suspense fallback={DeadlinePanelSkeleton}>`로 스트리밍.
+- `getDashboardActivity()` — 우측 위젯(알림 + 자료). `<Suspense fallback={WidgetsSkeleton}>`로 스트리밍.
+
+효과: 라우트 진입 시 **전체 스켈레톤이 아니라** 헤드·KPI는 바로 보이고, 무거운 마감 목록/위젯만 자리표시자(skeleton) 후 채워진다. 캐시는 도입하지 않았으므로 데이터 신선도·tenant 격리는 그대로다. 두 패널은 서로 독립적으로 그려진다.
+
+검증: `npm run build` 성공, `/app` First Load JS 109 kB(증가 없음).
+
 ## revalidatePath 감사 (넓은 무효화 점검)
 
 | 위치 | 호출 | 판정 |
@@ -45,9 +57,10 @@ npm run build && npm run start
 
 Supabase query/log explorer에서 라우트별 쿼리 수·가장 느린 로더도 함께 본다.
 
-## 후속 작업 (이번 1차 범위 밖 — 측정 후 별도 PR)
+## 후속 작업 (측정 후 별도 PR)
 
-- `/app` 대시보드를 KPI / 마감 패널 / 위젯 단위 Suspense boundary로 분리해 먼저 그릴 영역과 늦게 오는 영역 분리.
+- ~~`/app` 대시보드를 KPI / 마감 패널 / 위젯 단위 Suspense boundary로 분리~~ → **2차에서 적용 완료**.
+- `/app/companies`, `/app/board` 등 다른 라우트에도 동일한 패널 단위 Suspense 분리 검토.
 - `deadline_item.days_left` 필터를 `due_date` 범위 필터로 전환(KST today 기준)해 인덱스 활용성 향상 — 경계(off-by-one) 검증 필요.
 - route-level `loading.tsx`가 과대한 페이지는 실제 구조에 맞춘 작은 fallback으로 축소.
 - 앱 셸 blocking 완화: 셸을 즉시 렌더하고 children을 스트리밍하는 구조 검토(캐시 없이).

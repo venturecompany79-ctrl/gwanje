@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconAlert, IconBuilding, IconPlus, IconSend } from "@/components/ui/icons";
 import {
   DEADLINE_FILTER_LABEL,
-  getDashboardData,
+  getDashboardKpi,
   parseDeadlineFilter,
 } from "@/lib/data/dashboard";
 import { DashboardWidgets } from "./_components/DashboardWidgets";
-import { DeadlinePanel } from "./_components/DeadlinePanel";
+import {
+  DeadlinePanelSection,
+  DeadlinePanelSkeleton,
+  WidgetsSection,
+  WidgetsSkeleton,
+} from "./_components/DashboardSections";
 import { ExportButton } from "./_components/ExportButton";
 import { KpiRow } from "./_components/KpiRow";
 
@@ -30,14 +36,13 @@ export default async function DashboardPage({
   searchParams: Promise<{ due?: string; expire?: string }>;
 }) {
   const filter = parseDeadlineFilter(await searchParams);
-  const data = await getDashboardData(filter);
-  const isEmpty = data.kpi.companyCount === 0;
-  const mostOverdue = data.overdue[0];
-  const mostUrgent = data.deadlines[0];
+  // 헤드(카운트 + 가장 시급 1건)만 먼저 await — 마감 패널/위젯은 아래에서 스트리밍 (GWJ-019)
+  const { demo, kpi, mostOverdue, mostUrgent } = await getDashboardKpi();
+  const isEmpty = kpi.companyCount === 0;
 
   return (
     <>
-      {data.demo ? (
+      {demo ? (
         <div className="demo-banner">
           <IconAlert />
           데모 데이터 표시 중 — Supabase 환경변수(.env.local)를 설정하면 실제
@@ -84,7 +89,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <KpiRow kpi={data.kpi} />
+      <KpiRow kpi={kpi} />
 
       {isEmpty ? (
         <div className="dash-grid">
@@ -102,12 +107,15 @@ export default async function DashboardPage({
         </div>
       ) : (
         <div className="dash-grid">
-          <DeadlinePanel
-            deadlines={data.deadlines}
-            overdue={filter ? [] : data.overdue}
-            filterLabel={filter ? DEADLINE_FILTER_LABEL[filter] : null}
-          />
-          <DashboardWidgets alerts={data.alerts} files={data.files} />
+          <Suspense fallback={<DeadlinePanelSkeleton />}>
+            <DeadlinePanelSection
+              filter={filter}
+              filterLabel={filter ? DEADLINE_FILTER_LABEL[filter] : null}
+            />
+          </Suspense>
+          <Suspense fallback={<WidgetsSkeleton />}>
+            <WidgetsSection />
+          </Suspense>
         </div>
       )}
     </>

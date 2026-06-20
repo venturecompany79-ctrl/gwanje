@@ -182,13 +182,103 @@ export const DEADLINE_FILTER_LABEL: Record<"due7" | "expire30", string> = {
   expire30: "30일 내 자격 만료",
 };
 
-export async function getDashboardData(
-  filter: DeadlineFilter = null,
-): Promise<DashboardData> {
-  const supabase = await createClient();
-  if (!supabase) return DEMO_DASHBOARD(filter);
+// GWJ-019: 대시보드를 독립 로더 3개로 분리 → 각 패널을 Suspense로 스트리밍한다.
+// (캐시는 도입하지 않음 — 매 요청 조회는 유지, 단지 블로킹을 패널 단위로 쪼갠다)
 
-  const now = new Date();
+export interface DashboardKpiResult {
+  demo: boolean;
+  kpi: DashboardKpi;
+  /** 헤드라인용 — 가장 시급한 기한 지남/임박 1건 (가벼운 limit 1 조회) */
+  mostOverdue: DeadlineItem | null;
+  mostUrgent: DeadlineItem | null;
+}
+export interface DashboardDeadlinesResult {
+  deadlines: DeadlineItem[];
+  overdue: DeadlineItem[];
+}
+export interface DashboardActivityResult {
+  alerts: DashboardAlert[];
+  files: DashboardFile[];
+}
+
+/** KPI 카운트 + 빈 상태 판단용 — head count 쿼리라 가볍다(레이아웃 분기 기준) */
+export async function getDashboardKpi(): Promise<DashboardKpiResult> {
+  const supabase = await createClient();
+  if (!supabase) {
+    const demo = DEMO_DASHBOARD();
+    return {
+      demo: true,
+      kpi: demo.kpi,
+      mostOverdue: demo.overdue[0] ?? null,
+      mostUrgent: demo.deadlines[0] ?? null,
+    };
+  }
+
+  const [companyCount, due7, expire30, activeTasks, overdueTop, urgentTop] =
+    await Promise.all([
+      supabase.from("company").select("id", { count: "exact", head: true }),
+      supabase
+        .from("deadline_item")
+        .select("id", { count: "exact", head: true })
+        .gte("days_left", 0)
+        .lte("days_left", 7),
+      supabase
+        .from("deadline_item")
+        .select("id", { count: "exact", head: true })
+        .eq("source", "credential")
+        .gte("days_left", 0)
+        .lte("days_left", 30),
+      supabase
+        .from("task")
+        .select("id", { count: "exact", head: true })
+        .neq("stage", "result"),
+      supabase
+        .from("deadline_item")
+        .select("*")
+        .lt("days_left", 0)
+        .order("due_date", { ascending: true })
+        .limit(1),
+      supabase
+        .from("deadline_item")
+        .select("*")
+        .gte("days_left", 0)
+        .order("due_date", { ascending: true })
+        .limit(1),
+    ]);
+
+  const firstError =
+    companyCount.error ??
+    due7.error ??
+    expire30.error ??
+    activeTasks.error ??
+    overdueTop.error ??
+    urgentTop.error;
+  if (firstError) {
+    throw new Error(`대시보드 KPI를 불러오지 못했습니다: ${firstError.message}`);
+  }
+
+  return {
+    demo: false,
+    kpi: {
+      companyCount: companyCount.count ?? 0,
+      due7: due7.count ?? 0,
+      expire30: expire30.count ?? 0,
+      activeTasks: activeTasks.count ?? 0,
+    },
+    mostOverdue: normalizeDeadlineItems(overdueTop.data ?? [])[0] ?? null,
+    mostUrgent: normalizeDeadlineItems(urgentTop.data ?? [])[0] ?? null,
+  };
+}
+
+/** 마감 패널 — 다가오는(필터 반영) + 기한 지남 */
+export async function getDashboardDeadlines(
+  filter: DeadlineFilter = null,
+): Promise<DashboardDeadlinesResult> {
+  const supabase = await createClient();
+  if (!supabase) {
+    const demo = DEMO_DASHBOARD(filter);
+    return { deadlines: demo.deadlines, overdue: filter ? [] : demo.overdue };
+  }
 
   // 필터별 마감 패널 쿼리 — KPI 카운트와 동일한 조건으로 목록을 맞춘다 (GWJ-009)
   let deadlineQuery = supabase
@@ -207,41 +297,41 @@ export async function getDashboardData(
     deadlineQuery = deadlineQuery.limit(8);
   }
 
-  const [
-    companyCount,
-    due7,
-    expire30,
-    activeTasks,
-    deadlines,
-    overdue,
-    notifications,
-    documents,
-    unread,
-  ] = await Promise.all([
-    supabase.from("company").select("id", { count: "exact", head: true }),
-    supabase
-      .from("deadline_item")
-      .select("id", { count: "exact", head: true })
-      .gte("days_left", 0)
-      .lte("days_left", 7),
-    supabase
-      .from("deadline_item")
-      .select("id", { count: "exact", head: true })
-      .eq("source", "credential")
-      .gte("days_left", 0)
-      .lte("days_left", 30),
-    supabase
-      .from("task")
-      .select("id", { count: "exact", head: true })
-      .neq("stage", "result"),
+  const [deadlines, overdue] = await Promise.all([
     deadlineQuery,
     // 기한 지남 — 가장 오래된 것 먼저(가장 시급). 보드의 result 단계는 뷰에서 이미 제외됨.
-    supabase
-      .from("deadline_item")
-      .select("*")
-      .lt("days_left", 0)
-      .order("due_date", { ascending: true })
-      .limit(8),
+    // 필터 적용 시엔 해당 조건 목록만 보여주므로 overdue는 비운다.
+    filter
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("deadline_item")
+          .select("*")
+          .lt("days_left", 0)
+          .order("due_date", { ascending: true })
+          .limit(8),
+  ]);
+
+  const firstError = deadlines.error ?? overdue.error;
+  if (firstError) {
+    throw new Error(`마감 목록을 불러오지 못했습니다: ${firstError.message}`);
+  }
+
+  return {
+    deadlines: normalizeDeadlineItems(deadlines.data ?? []),
+    overdue: normalizeDeadlineItems(overdue.data ?? []),
+  };
+}
+
+/** 우측 위젯 — 최근 알림 + 최근 자료 */
+export async function getDashboardActivity(): Promise<DashboardActivityResult> {
+  const supabase = await createClient();
+  if (!supabase) {
+    const demo = DEMO_DASHBOARD();
+    return { alerts: demo.alerts, files: demo.files };
+  }
+
+  const now = new Date();
+  const [notifications, documents] = await Promise.all([
     supabase
       .from("notification")
       .select("*")
@@ -252,24 +342,11 @@ export async function getDashboardData(
       .select("*")
       .order("created_at", { ascending: false })
       .limit(2),
-    supabase
-      .from("notification")
-      .select("id", { count: "exact", head: true })
-      .eq("is_read", false),
   ]);
 
-  const firstError =
-    companyCount.error ??
-    due7.error ??
-    expire30.error ??
-    activeTasks.error ??
-    deadlines.error ??
-    overdue.error ??
-    notifications.error ??
-    documents.error ??
-    unread.error;
+  const firstError = notifications.error ?? documents.error;
   if (firstError) {
-    throw new Error(`대시보드 데이터를 불러오지 못했습니다: ${firstError.message}`);
+    throw new Error(`대시보드 활동을 불러오지 못했습니다: ${firstError.message}`);
   }
 
   // 문서의 기업명은 별도 1회 조회로 매핑 (deadline_item과 달리 뷰가 없음)
@@ -285,15 +362,6 @@ export async function getDashboardData(
   }
 
   return {
-    demo: false,
-    kpi: {
-      companyCount: companyCount.count ?? 0,
-      due7: due7.count ?? 0,
-      expire30: expire30.count ?? 0,
-      activeTasks: activeTasks.count ?? 0,
-    },
-    deadlines: normalizeDeadlineItems(deadlines.data ?? []),
-    overdue: normalizeDeadlineItems(overdue.data ?? []),
     alerts: (notifications.data ?? []).map((n) => ({
       id: n.id,
       type: n.type,
@@ -313,6 +381,5 @@ export async function getDashboardData(
       companyName: companyNames.get(d.company_id) ?? "—",
       when: formatTimeAgo(d.created_at, now),
     })),
-    unreadCount: unread.count ?? 0,
   };
 }
