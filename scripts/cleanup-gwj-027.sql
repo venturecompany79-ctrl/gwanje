@@ -24,6 +24,33 @@
 
 begin;
 
+-- 0-1) 사전 guard — 대상 ID가 기대한 레코드인지 확인(ID 재사용으로 인한 오삭제/오병합 방지).
+--      대상이 이미 정리돼 없으면 통과(멱등). 이름이 다르면 즉시 중단(rollback).
+do $guard$
+declare
+  v_task_title  text;
+  v_keeper_name text;
+  v_loser_name  text;
+begin
+  select title into v_task_title from task
+    where id = 'ebbbd37d-ee65-45ed-86be-c523ca3419e2';
+  select name into v_keeper_name from company
+    where id = 'f9d46b10-d33c-439e-9cd2-1da63639a1a1';
+  select name into v_loser_name from company
+    where id = 'cb447982-1a77-46b7-95f4-ebb0ac55bd75';
+
+  if v_task_title is not null and v_task_title <> '테스트' then
+    raise exception 'GWJ-027 guard: 삭제 대상 과제 이름 불일치(%) — 중단', v_task_title;
+  end if;
+  if v_keeper_name is not null and v_keeper_name <> '유니콘 파트너스' then
+    raise exception 'GWJ-027 guard: keeper 이름 불일치(%) — 중단', v_keeper_name;
+  end if;
+  if v_loser_name is not null and v_loser_name <> '유니콘파트너스' then
+    raise exception 'GWJ-027 guard: loser 이름 불일치(%) — 중단', v_loser_name;
+  end if;
+end
+$guard$;
+
 -- 1) 테스트 과제 삭제
 delete from task
 where id = 'ebbbd37d-ee65-45ed-86be-c523ca3419e2';
