@@ -29,7 +29,12 @@ export async function getBoardData(): Promise<BoardData> {
   if (!supabase) return DEMO_BOARD();
 
   const [tasks, companies, categories, profiles] = await Promise.all([
-    supabase.from("task").select("*"),
+    // 보드 카드에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019 ③)
+    supabase
+      .from("task")
+      .select(
+        "id, title, category_id, stage, due_date, assignee_id, memo, company_id",
+      ),
     supabase.from("company").select("id, name").order("name"),
     supabase.from("category").select("id, name").order("sort_order"),
     supabase.from("profile").select("id, name"),

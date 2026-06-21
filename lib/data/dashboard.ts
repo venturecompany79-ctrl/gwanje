@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { shiftDateString, todayKstDate } from "@/lib/datetime";
 import type {
   CredentialStatus,
   DeadlineItem,
@@ -214,20 +215,26 @@ export async function getDashboardKpi(): Promise<DashboardKpiResult> {
     };
   }
 
+  // days_left(뷰 계산 컬럼) 대신 due_date 범위로 필터 → 인덱스 활용 (GWJ-019 ②).
+  // KST today/경계는 deadline_item 뷰의 (now() at time zone 'Asia/Seoul')::date 와 동일 규칙.
+  const today = todayKstDate();
+  const plus7 = shiftDateString(today, 7);
+  const plus30 = shiftDateString(today, 30);
+
   const [companyCount, due7, expire30, activeTasks, overdueTop, urgentTop] =
     await Promise.all([
       supabase.from("company").select("id", { count: "exact", head: true }),
       supabase
         .from("deadline_item")
         .select("id", { count: "exact", head: true })
-        .gte("days_left", 0)
-        .lte("days_left", 7),
+        .gte("due_date", today)
+        .lte("due_date", plus7),
       supabase
         .from("deadline_item")
         .select("id", { count: "exact", head: true })
         .eq("source", "credential")
-        .gte("days_left", 0)
-        .lte("days_left", 30),
+        .gte("due_date", today)
+        .lte("due_date", plus30),
       supabase
         .from("task")
         .select("id", { count: "exact", head: true })
@@ -235,13 +242,13 @@ export async function getDashboardKpi(): Promise<DashboardKpiResult> {
       supabase
         .from("deadline_item")
         .select("*")
-        .lt("days_left", 0)
+        .lt("due_date", today)
         .order("due_date", { ascending: true })
         .limit(1),
       supabase
         .from("deadline_item")
         .select("*")
-        .gte("days_left", 0)
+        .gte("due_date", today)
         .order("due_date", { ascending: true })
         .limit(1),
     ]);
@@ -280,18 +287,23 @@ export async function getDashboardDeadlines(
     return { deadlines: demo.deadlines, overdue: filter ? [] : demo.overdue };
   }
 
+  // days_left 대신 due_date 범위 필터 → 인덱스 활용 (GWJ-019 ②). KST 경계는 뷰와 동일.
+  const today = todayKstDate();
+  const plus7 = shiftDateString(today, 7);
+  const plus30 = shiftDateString(today, 30);
+
   // 필터별 마감 패널 쿼리 — KPI 카운트와 동일한 조건으로 목록을 맞춘다 (GWJ-009)
   let deadlineQuery = supabase
     .from("deadline_item")
     .select("*")
-    .gte("days_left", 0)
+    .gte("due_date", today)
     .order("due_date", { ascending: true });
   if (filter === "due7") {
-    deadlineQuery = deadlineQuery.lte("days_left", 7).limit(50);
+    deadlineQuery = deadlineQuery.lte("due_date", plus7).limit(50);
   } else if (filter === "expire30") {
     deadlineQuery = deadlineQuery
       .eq("source", "credential")
-      .lte("days_left", 30)
+      .lte("due_date", plus30)
       .limit(50);
   } else {
     deadlineQuery = deadlineQuery.limit(8);
@@ -306,7 +318,7 @@ export async function getDashboardDeadlines(
       : supabase
           .from("deadline_item")
           .select("*")
-          .lt("days_left", 0)
+          .lt("due_date", today)
           .order("due_date", { ascending: true })
           .limit(8),
   ]);
