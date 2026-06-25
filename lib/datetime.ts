@@ -85,6 +85,15 @@ export function todayKstDate(): string {
   return `${t.year}-${pad(t.month)}-${pad(t.day)}`;
 }
 
+/** 두 "YYYY-MM-DD" 날짜 문자열의 달력 일수 차 (a - b). 같은 날=0, a가 하루 뒤=1 */
+export function dayDiffString(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return Math.round(
+    (Date.UTC(ay, am - 1, ad) - Date.UTC(by, bm - 1, bd)) / 86_400_000,
+  );
+}
+
 /** "YYYY-MM-DD" 날짜 문자열을 UTC 달력 기준으로 days만큼 이동 */
 export function shiftDateString(dateStr: string, days: number): string {
   const [year, month, day] = dateStr.split("-").map(Number);

@@ -2621,6 +2621,76 @@ table.dlist .name {
   height: 18px;
   stroke: var(--color-stone);
 }
+.todo-empty--action {
+  width: 100%;
+  border: 1px dashed var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  padding: 0 12px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.todo-empty--action:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+}
+.todo-empty--action:hover svg {
+  stroke: var(--color-primary-deep);
+}
+.todo-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.todo-add-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  background: var(--color-canvas);
+  color: var(--color-ink-deep);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.todo-add-note:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+}
+.todo-add-note svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+}
+.todo-draft-date {
+  flex: none;
+  height: 34px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-deep);
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.todo-draft-date:focus {
+  outline: none;
+  border-color: var(--color-fb-blue);
+  box-shadow: 0 0 0 2px rgba(24, 118, 242, 0.18);
+}
 .task-file-upload {
   position: relative;
   min-height: 48px;
@@ -5339,6 +5409,16 @@ body {
   .todo-row-action {
     width: 30px;
     height: 30px;
+  }
+
+  .todo-draft-date {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .todo-add-note {
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .todo-tag-menu {

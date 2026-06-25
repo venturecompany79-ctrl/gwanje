@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { todayKstDate } from "@/lib/datetime";
-import { isTodoTag, type TodoTag } from "@/lib/todos";
+import { daysFromToday, todayKstDate } from "@/lib/datetime";
+import { TODO_BOARD_DAY_COUNT, isTodoTag, type TodoTag } from "@/lib/todos";
 import {
   DEMO_ERROR,
   getTenantContext,
@@ -30,8 +30,25 @@ function cleanContent(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 노트 작성 가능한 날짜인지 검증한다.
+ * - "YYYY-MM-DD" 형식
+ * - 미래 금지(오늘 이하)
+ * - 보드가 보여주는 최근 TODO_BOARD_DAY_COUNT일 범위 이내
+ */
+function resolveNoteDate(value: string | undefined): string | null {
+  if (value === undefined) return todayKstDate();
+  if (!DATE_PATTERN.test(value)) return null;
+  const offset = daysFromToday(value);
+  if (offset > 0 || offset < -(TODO_BOARD_DAY_COUNT - 1)) return null;
+  return value;
+}
+
 export async function createTodoNotes(
   drafts: TodoDraftInput[],
+  noteDate?: string,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
@@ -39,7 +56,11 @@ export async function createTodoNotes(
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const today = todayKstDate();
+  const targetDate = resolveNoteDate(noteDate);
+  if (!targetDate) {
+    return { ok: false, error: "작성할 수 없는 날짜입니다." };
+  }
+
   const cleaned = drafts
     .map((draft) => ({
       content: cleanContent(draft.content),
@@ -52,7 +73,7 @@ export async function createTodoNotes(
   const { data: lastNote, error: lastError } = await supabase
     .from("todo_note")
     .select("sort_order")
-    .eq("note_date", today)
+    .eq("note_date", targetDate)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -67,7 +88,7 @@ export async function createTodoNotes(
     cleaned.map((draft, index) => ({
       tenant_id: ctx.tenantId,
       user_id: ctx.userId,
-      note_date: today,
+      note_date: targetDate,
       content: draft.content,
       tag: draft.tag,
       sort_order: baseOrder + index,

@@ -15,6 +15,7 @@ import {
   IconCalendar,
   IconCheck,
   IconList,
+  IconPlus,
   IconTag,
   IconX,
 } from "@/components/ui/icons";
@@ -23,7 +24,11 @@ import {
   deleteTodoNote,
   updateTodoNote,
 } from "@/lib/actions/todos";
-import { formatDotDateString, shiftDateString } from "@/lib/datetime";
+import {
+  dayDiffString,
+  formatDotDateString,
+  shiftDateString,
+} from "@/lib/datetime";
 import {
   TODO_BOARD_DAY_COUNT,
   TODO_TAGS,
@@ -36,6 +41,7 @@ interface TodoDraft {
   id: string;
   content: string;
   tag: TodoTag | null;
+  date: string;
 }
 
 interface TodoDateGroup {
@@ -133,16 +139,29 @@ export function TodoBoard({
   const handledAddRequestRef = useRef(addRequest);
   const composingTargetsRef = useRef<Set<string>>(new Set());
 
-  const addDraft = useCallback((afterId?: string) => {
-    const next: TodoDraft = { id: makeDraftId(), content: "", tag: null };
-    setDrafts((prev) => {
-      if (!afterId) return [...prev, next];
-      const index = prev.findIndex((draft) => draft.id === afterId);
-      if (index === -1) return [...prev, next];
-      return [...prev.slice(0, index + 1), next, ...prev.slice(index + 1)];
-    });
-    setFocusDraftId(next.id);
-  }, []);
+  const minDate = useMemo(
+    () => shiftDateString(data.today, -(TODO_BOARD_DAY_COUNT - 1)),
+    [data.today],
+  );
+
+  const addDraft = useCallback(
+    (date: string, afterId?: string) => {
+      const next: TodoDraft = {
+        id: makeDraftId(),
+        content: "",
+        tag: null,
+        date,
+      };
+      setDrafts((prev) => {
+        if (!afterId) return [...prev, next];
+        const index = prev.findIndex((draft) => draft.id === afterId);
+        if (index === -1) return [...prev, next];
+        return [...prev.slice(0, index + 1), next, ...prev.slice(index + 1)];
+      });
+      setFocusDraftId(next.id);
+    },
+    [],
+  );
 
   useEffect(() => {
     setNotes(data.notes);
@@ -151,8 +170,8 @@ export function TodoBoard({
   useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
     handledAddRequestRef.current = addRequest;
-    addDraft();
-  }, [addDraft, addRequest]);
+    addDraft(data.today);
+  }, [addDraft, addRequest, data.today]);
 
   useEffect(() => {
     if (!focusDraftId) return;
@@ -168,20 +187,24 @@ export function TodoBoard({
       byDate.set(note.noteDate, list);
     });
 
-    return Array.from({ length: TODO_BOARD_DAY_COUNT }, (_, offset) => {
-      const date = shiftDateString(data.today, -offset);
-      return {
+    // 30일을 미리 깔지 않는다. 오늘(앵커) + 노트가 있는 날 + 작성 중인 날만 카드로.
+    const dates = new Set<string>([data.today]);
+    notes.forEach((note) => dates.add(note.noteDate));
+    drafts.forEach((draft) => dates.add(draft.date));
+
+    return Array.from(dates)
+      .sort((a, b) => b.localeCompare(a))
+      .map((date) => ({
         date,
-        label: groupLabel(offset),
-        isToday: offset === 0,
+        label: groupLabel(dayDiffString(data.today, date)),
+        isToday: date === data.today,
         notes: (byDate.get(date) ?? []).sort(
           (a, b) =>
             a.sortOrder - b.sortOrder ||
             a.createdAt.localeCompare(b.createdAt),
         ),
-      };
-    });
-  }, [data.today, notes]);
+      }));
+  }, [data.today, notes, drafts]);
 
   function removeDraft(id: string) {
     setDrafts((prev) => prev.filter((draft) => draft.id !== id));
@@ -261,10 +284,19 @@ export function TodoBoard({
     setTagMenuIndex(0);
   }
 
-  function saveDrafts() {
-    const filled = drafts.filter((draft) => draft.content.trim().length > 0);
+  function changeDraftDate(id: string, date: string) {
+    updateDraft(id, { date });
+  }
+
+  function saveDrafts(date: string) {
+    const filled = drafts.filter(
+      (draft) => draft.date === date && draft.content.trim().length > 0,
+    );
+    const clearDate = () =>
+      setDrafts((prev) => prev.filter((draft) => draft.date !== date));
+
     if (filled.length === 0) {
-      setDrafts([]);
+      clearDate();
       setTagMenu(null);
       return;
     }
@@ -275,12 +307,13 @@ export function TodoBoard({
           content: draft.content,
           tag: draft.tag,
         })),
+        date,
       );
       if (!result.ok) {
         showToast(result.error ?? "노트 저장에 실패했습니다.");
         return;
       }
-      setDrafts([]);
+      clearDate();
       setTagMenu(null);
       showToast("노트가 저장되었습니다");
       router.refresh();
@@ -450,6 +483,17 @@ export function TodoBoard({
         <span className="todo-check todo-check--draft" aria-hidden="true" />
         <div className="todo-item-body">
           <div className="todo-edit-row">
+            <input
+              type="date"
+              className="todo-draft-date"
+              value={draft.date}
+              min={minDate}
+              max={data.today}
+              onChange={(e) => {
+                if (e.target.value) changeDraftDate(draft.id, e.target.value);
+              }}
+              aria-label="노트 날짜"
+            />
             <button
               type="button"
               className={`todo-tag${draft.tag ? "" : " is-empty"}${tagToneClass(draft.tag)}`}
@@ -488,7 +532,7 @@ export function TodoBoard({
                     removeDraft(draft.id);
                     return;
                   }
-                  addDraft(draft.id);
+                  addDraft(draft.date, draft.id);
                 }
               }}
               placeholder="빠르게 기록할 일을 입력"
@@ -520,8 +564,10 @@ export function TodoBoard({
   return (
     <div className="todo-board">
       {dateGroups.map((group) => {
-        const itemCount =
-          group.notes.length + (group.isToday ? drafts.length : 0);
+        const groupDrafts = drafts.filter(
+          (draft) => draft.date === group.date,
+        );
+        const itemCount = group.notes.length + groupDrafts.length;
         return (
           <section
             key={group.date}
@@ -544,31 +590,45 @@ export function TodoBoard({
                       : "기록 없음"}
                 </p>
               </div>
-              {group.isToday && drafts.length > 0 ? (
-                <Button
-                  variant="cta"
-                  size="sm"
-                  type="button"
-                  onClick={saveDrafts}
-                  disabled={pending}
-                >
-                  {pending ? "저장 중…" : "저장"}
-                </Button>
-              ) : null}
+              <div className="todo-group-actions">
+                {groupDrafts.length > 0 ? (
+                  <Button
+                    variant="cta"
+                    size="sm"
+                    type="button"
+                    onClick={() => saveDrafts(group.date)}
+                    disabled={pending}
+                  >
+                    {pending ? "저장 중…" : "저장"}
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    className="todo-add-note"
+                    onClick={() => addDraft(group.date)}
+                  >
+                    <IconPlus /> 노트 추가
+                  </button>
+                )}
+              </div>
             </div>
 
             <div
               className={`todo-list${group.isToday ? "" : " todo-list--past"}`}
             >
               {group.notes.map(renderNote)}
-              {group.isToday ? drafts.map(renderDraft) : null}
+              {groupDrafts.map(renderDraft)}
               {itemCount === 0 ? (
-                <div className="todo-empty">
+                <button
+                  type="button"
+                  className="todo-empty todo-empty--action"
+                  onClick={() => addDraft(group.date)}
+                >
                   <IconList />
                   {group.isToday
-                    ? "오늘 남긴 노트가 없습니다."
-                    : "이 날짜의 기록이 없습니다."}
-                </div>
+                    ? "오늘 남길 노트를 추가하세요."
+                    : "이 날짜에 노트를 추가하세요."}
+                </button>
               ) : null}
             </div>
           </section>
