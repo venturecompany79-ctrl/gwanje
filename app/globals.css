@@ -1426,10 +1426,10 @@ table.dlist .date {
   font-size: 13px;
   line-height: 1.5;
 }
-.intake-section .form-grid2 + .form-grid2,
-.intake-section .form-grid2 + .field,
-.intake-section .field + .form-grid2,
-.intake-section .field + .field {
+.intake-section > .form-grid2 + .form-grid2,
+.intake-section > .form-grid2 + .field,
+.intake-section > .field + .form-grid2,
+.intake-section > .field + .field {
   margin-top: 14px;
 }
 .license-drop {
@@ -1488,7 +1488,8 @@ table.dlist .date {
   color: var(--color-critical-strong);
 }
 .field--date {
-  max-width: 220px;
+  width: 100%;
+  max-width: none;
 }
 .input--date {
   min-width: 0;
@@ -1678,8 +1679,9 @@ table.dlist .date {
 }
 .form-grid2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  align-items: start;
 }
 .form-hint {
   display: flex;
