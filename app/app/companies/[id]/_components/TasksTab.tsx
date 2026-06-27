@@ -34,11 +34,11 @@ export function TasksTab({
     <>
       <Panel>
         <PanelHead
-          title="과제"
+          title="Task"
           count={tasks.length > 0 ? `${tasks.length}건` : undefined}
         >
           <Button variant="cta" size="sm" onClick={() => setAdding(true)}>
-            <IconPlus /> 과제 추가
+            <IconPlus /> Task 추가
           </Button>
         </PanelHead>
 
@@ -46,11 +46,11 @@ export function TasksTab({
           <EmptyState
             bare
             icon={<IconTarget />}
-            title="등록된 과제가 없습니다"
-            description="인증 갱신, 정부지원 과제 신청 같은 과제를 등록하면 단계와 마감이 한눈에 추적됩니다."
+            title="등록된 Task가 없습니다"
+            description="인증 갱신, 정부지원사업 신청 같은 Task를 등록하면 단계와 마감이 한눈에 추적됩니다."
             action={
               <Button variant="cta" onClick={() => setAdding(true)}>
-                <IconPlus /> 과제 추가
+                <IconPlus /> Task 추가
               </Button>
             }
           />

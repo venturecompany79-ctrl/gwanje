@@ -15,7 +15,7 @@ type TabKey = "overview" | "cert" | "tasks" | "schedule" | "files";
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "개요/프로파일" },
   { key: "cert", label: "자격·인증" },
-  { key: "tasks", label: "과제" },
+  { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
 ];

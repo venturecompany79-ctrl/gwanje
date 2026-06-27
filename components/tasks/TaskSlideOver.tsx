@@ -88,7 +88,7 @@ export function TaskSlideOver({
         className="slideover"
         role="dialog"
         aria-modal="true"
-        aria-label="과제 상세"
+        aria-label="Task 상세"
       >
         <div className="slideover-head">
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -239,9 +239,9 @@ export function AddTaskSlideOver({
   return (
     <div className="slideover-root">
       <div className="slideover-backdrop" onClick={onClose} />
-      <aside className="slideover" role="dialog" aria-modal="true" aria-label="과제 추가">
+      <aside className="slideover" role="dialog" aria-modal="true" aria-label="Task 추가">
         <div className="slideover-head">
-          <h2>과제 추가</h2>
+          <h2>Task 추가</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
             <IconX />
           </button>
@@ -280,7 +280,7 @@ export function AddTaskSlideOver({
               </div>
             ) : null}
             <InputField
-              label="과제명 *"
+              label="Task명 *"
               name="title"
               required
               placeholder="벤처기업확인 갱신"
