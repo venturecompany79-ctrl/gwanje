@@ -187,3 +187,19 @@ export async function addCategory(name: string): Promise<AddCategoryResult> {
   revalidatePath("/app", "layout");
   return { ok: true, error: null, categoryId: data.id };
 }
+
+export async function deleteCategory(id: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+  if (!id) return { ok: false, error: "분류를 찾을 수 없습니다." };
+
+  // 연결된 자격·과제의 category_id는 on delete set null로 끊기고 레코드는 보존됨
+  const { error } = await supabase.from("category").delete().eq("id", id);
+  if (error) {
+    console.error("[deleteCategory]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+
+  revalidatePath("/app", "layout");
+  return { ok: true, error: null };
+}
