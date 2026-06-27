@@ -6,6 +6,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
+import { CategorySelect } from "@/components/ui/CategorySelect";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
@@ -170,22 +171,12 @@ function CredentialSlideOver({
               defaultValue={credential?.type ?? ""}
               autoFocus
             />
-            <div className="field">
-              <label htmlFor="cred-category">분류</label>
-              <select
-                id="cred-category"
-                name="category_id"
-                className="input"
-                defaultValue={credential?.categoryId ?? ""}
-              >
-                <option value="">선택 안 함</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CategorySelect
+              name="category_id"
+              categories={categories}
+              defaultValue={credential?.categoryId ?? ""}
+              demo={demo}
+            />
             <div className="form-grid2">
               <InputField
                 label="발급일"

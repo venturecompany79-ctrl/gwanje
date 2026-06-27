@@ -524,6 +524,23 @@ h4 {
   font-size: 13px;
   color: var(--color-critical-strong);
 }
+/* 분류 셀렉트 + 인라인 새 분류 추가 (CategorySelect) */
+.cat-select-row,
+.cat-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.cat-select-row > select,
+.cat-add-row > input {
+  flex: 1;
+  min-width: 0;
+}
+.cat-select-row > .btn,
+.cat-add-row > .btn {
+  flex-shrink: 0;
+}
 .sr-only {
   position: absolute;
   width: 1px;

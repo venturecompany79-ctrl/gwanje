@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
+import { CategorySelect } from "@/components/ui/CategorySelect";
 import { InputField } from "@/components/ui/Input";
 import {
   IconAlert,
@@ -286,17 +287,7 @@ export function AddTaskSlideOver({
               autoFocus={!companies}
             />
             <div className="form-grid2">
-              <div className="field">
-                <label htmlFor="task-category">분류</label>
-                <select id="task-category" name="category_id" className="input" defaultValue="">
-                  <option value="">선택 안 함</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CategorySelect name="category_id" categories={categories} demo={demo} />
               <div className="field">
                 <label htmlFor="task-stage">단계</label>
                 <select id="task-stage" name="stage" className="input" defaultValue="diagnosis">

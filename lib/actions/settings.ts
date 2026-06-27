@@ -151,7 +151,9 @@ export async function renameCategory(
   return { ok: true, error: null };
 }
 
-export async function addCategory(name: string): Promise<ActionResult> {
+export type AddCategoryResult = ActionResult & { categoryId?: string };
+
+export async function addCategory(name: string): Promise<AddCategoryResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
@@ -168,16 +170,20 @@ export async function addCategory(name: string): Promise<ActionResult> {
     .limit(1)
     .maybeSingle();
 
-  const { error } = await supabase.from("category").insert({
-    tenant_id: context.tenantId,
-    name: trimmed,
-    sort_order: (last?.sort_order ?? 0) + 1,
-  });
+  const { data, error } = await supabase
+    .from("category")
+    .insert({
+      tenant_id: context.tenantId,
+      name: trimmed,
+      sort_order: (last?.sort_order ?? 0) + 1,
+    })
+    .select("id")
+    .single();
   if (error) {
     console.error("[addCategory]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
   revalidatePath("/app", "layout");
-  return { ok: true, error: null };
+  return { ok: true, error: null, categoryId: data.id };
 }
