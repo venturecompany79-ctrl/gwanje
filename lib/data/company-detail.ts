@@ -124,13 +124,34 @@ export async function getCompanyDetail(
 
   const [company, credentials, tasks, schedules, documents, categories, profiles] =
     await Promise.all([
-      supabase.from("company").select("*").eq("id", companyId).maybeSingle(),
-      supabase.from("credential").select("*").eq("company_id", companyId),
-      supabase.from("task").select("*").eq("company_id", companyId),
-      supabase.from("schedule").select("*").eq("company_id", companyId),
+      supabase
+        .from("company")
+        .select(
+          "id, name, biz_no, industry, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
+        )
+        .eq("id", companyId)
+        .maybeSingle(),
+      supabase
+        .from("credential")
+        .select(
+          "id, type, category_id, issued_date, expires_date, renew_lead_days, memo",
+        )
+        .eq("company_id", companyId),
+      supabase
+        .from("task")
+        .select(
+          "id, title, category_id, stage, due_date, assignee_id, memo, source_credential_id",
+        )
+        .eq("company_id", companyId),
+      supabase
+        .from("schedule")
+        .select("id, title, date, type, related_task_id")
+        .eq("company_id", companyId),
       supabase
         .from("document")
-        .select("*")
+        .select(
+          "id, name, doc_category, version, uploaded_by, storage_url, file_type, size_bytes, created_at",
+        )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase.from("category").select("id, name").order("sort_order"),

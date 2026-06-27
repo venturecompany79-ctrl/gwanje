@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANIES } from "@/lib/demo-data";
+import { todayKstDate } from "@/lib/datetime";
 
 export interface CompanyListRow {
   id: string;
@@ -32,21 +33,34 @@ export async function getCompaniesData(): Promise<CompaniesData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_COMPANIES();
 
-  const [companies, credentials, deadlines] = await Promise.all([
-    // 목록 표시에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019)
-    supabase
-      .from("company")
-      .select(
-        "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at",
-      )
-      .order("name"),
-    supabase.from("credential").select("company_id, type"),
-    supabase
-      .from("deadline_item")
-      .select("source, company_id, days_left, title"),
-  ]);
+  const today = todayKstDate();
+  const [companies, credentials, upcomingDeadlines, expiredCredentials] =
+    await Promise.all([
+      // 목록 표시에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019)
+      supabase
+        .from("company")
+        .select(
+          "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at",
+        )
+        .order("name"),
+      supabase.from("credential").select("company_id, type"),
+      supabase
+        .from("deadline_item")
+        .select("company_id, days_left, title")
+        .gte("due_date", today)
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("deadline_item")
+        .select("company_id")
+        .eq("source", "credential")
+        .lt("due_date", today),
+    ]);
 
-  const firstError = companies.error ?? credentials.error ?? deadlines.error;
+  const firstError =
+    companies.error ??
+    credentials.error ??
+    upcomingDeadlines.error ??
+    expiredCredentials.error;
   if (firstError) {
     throw new Error(`기업 목록을 불러오지 못했습니다: ${firstError.message}`);
   }
@@ -60,15 +74,15 @@ export async function getCompaniesData(): Promise<CompaniesData> {
 
   const upcomingItems = new Map<string, { title: string; daysLeft: number }[]>();
   const expired = new Map<string, number>();
-  for (const item of deadlines.data ?? []) {
+  for (const item of upcomingDeadlines.data ?? []) {
     if (!item.company_id || item.days_left === null) continue;
-    if (item.days_left >= 0) {
-      const list = upcomingItems.get(item.company_id) ?? [];
-      list.push({ title: item.title ?? "항목", daysLeft: item.days_left });
-      upcomingItems.set(item.company_id, list);
-    } else if (item.source === "credential") {
-      expired.set(item.company_id, (expired.get(item.company_id) ?? 0) + 1);
-    }
+    const list = upcomingItems.get(item.company_id) ?? [];
+    list.push({ title: item.title ?? "항목", daysLeft: item.days_left });
+    upcomingItems.set(item.company_id, list);
+  }
+  for (const item of expiredCredentials.data ?? []) {
+    if (!item.company_id) continue;
+    expired.set(item.company_id, (expired.get(item.company_id) ?? 0) + 1);
   }
   for (const list of upcomingItems.values()) {
     list.sort((a, b) => a.daysLeft - b.daysLeft);

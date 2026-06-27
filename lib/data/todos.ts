@@ -54,7 +54,9 @@ export async function getTodoBoardData(): Promise<TodoBoardData> {
   const cutoff = shiftDateString(today, -(TODO_BOARD_DAY_COUNT - 1));
   const { data, error } = await supabase
     .from("todo_note")
-    .select("*")
+    .select(
+      "id, note_date, content, tag, completed, sort_order, created_at, updated_at",
+    )
     .gte("note_date", cutoff)
     .lte("note_date", today)
     .order("note_date", { ascending: false })

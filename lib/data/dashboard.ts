@@ -110,6 +110,9 @@ const DEADLINE_STATUSES = [
   "etc",
 ] as const;
 
+const DEADLINE_SELECT =
+  "category_id, category_name, company_id, company_name, days_left, due_date, id, source, status, tenant_id, title";
+
 function isDeadlineSource(value: string | null): value is DeadlineItem["source"] {
   return DEADLINE_SOURCES.some((source) => source === value);
 }
@@ -241,13 +244,13 @@ export async function getDashboardKpi(): Promise<DashboardKpiResult> {
         .neq("stage", "result"),
       supabase
         .from("deadline_item")
-        .select("*")
+        .select(DEADLINE_SELECT)
         .lt("due_date", today)
         .order("due_date", { ascending: true })
         .limit(1),
       supabase
         .from("deadline_item")
-        .select("*")
+        .select(DEADLINE_SELECT)
         .gte("due_date", today)
         .order("due_date", { ascending: true })
         .limit(1),
@@ -295,7 +298,7 @@ export async function getDashboardDeadlines(
   // 필터별 마감 패널 쿼리 — KPI 카운트와 동일한 조건으로 목록을 맞춘다 (GWJ-009)
   let deadlineQuery = supabase
     .from("deadline_item")
-    .select("*")
+    .select(DEADLINE_SELECT)
     .gte("due_date", today)
     .order("due_date", { ascending: true });
   if (filter === "due7") {
@@ -317,7 +320,7 @@ export async function getDashboardDeadlines(
       ? Promise.resolve({ data: [], error: null })
       : supabase
           .from("deadline_item")
-          .select("*")
+          .select(DEADLINE_SELECT)
           .lt("due_date", today)
           .order("due_date", { ascending: true })
           .limit(8),
@@ -346,12 +349,14 @@ export async function getDashboardActivity(): Promise<DashboardActivityResult> {
   const [notifications, documents] = await Promise.all([
     supabase
       .from("notification")
-      .select("*")
+      .select(
+        "id, type, is_urgent, title, body, created_at, company_id, ref_table, ref_id",
+      )
       .order("created_at", { ascending: false })
       .limit(3),
     supabase
       .from("document")
-      .select("*")
+      .select("id, file_type, name, company_id, created_at")
       .order("created_at", { ascending: false })
       .limit(2),
   ]);

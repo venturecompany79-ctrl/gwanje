@@ -56,18 +56,17 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claims } = await supabase.auth.getClaims();
+  const isAuthenticated = Boolean(claims?.claims.sub);
 
   const isAuthEntry =
     pathname === "/" || pathname === "/login" || pathname === "/signup";
 
-  if (user && isAuthEntry) {
+  if (isAuthenticated && isAuthEntry) {
     return NextResponse.redirect(new URL("/app", request.url));
   }
 
-  if (!user && pathname.startsWith("/app")) {
+  if (!isAuthenticated && pathname.startsWith("/app")) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);

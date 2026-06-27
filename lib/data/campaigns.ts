@@ -9,6 +9,7 @@ import {
   summarizeSegment,
   type SegmentCompany,
 } from "@/lib/segments";
+import { todayKstDate } from "@/lib/datetime";
 import type { CampaignChannel, CampaignStatus } from "@/lib/database.types";
 
 export interface CampaignListRow {
@@ -84,7 +85,7 @@ export async function getCampaignsData(): Promise<CampaignsData> {
   const [campaigns, recipients] = await Promise.all([
     supabase
       .from("campaign")
-      .select("*")
+      .select("id, title, status, segment, sent_at, scheduled_at")
       .order("created_at", { ascending: false }),
     supabase.from("campaign_recipient").select("campaign_id, responded"),
   ]);
@@ -131,10 +132,16 @@ export async function getCampaignDetail(
   if (!supabase) return DEMO_CAMPAIGN_DETAIL(campaignId);
 
   const [campaign, recipients] = await Promise.all([
-    supabase.from("campaign").select("*").eq("id", campaignId).maybeSingle(),
+    supabase
+      .from("campaign")
+      .select("id, title, body, channel, status, segment, sent_at, scheduled_at")
+      .eq("id", campaignId)
+      .maybeSingle(),
     supabase
       .from("campaign_recipient")
-      .select("*")
+      .select(
+        "id, company_id, delivered, responded, response_note, responded_at",
+      )
       .eq("campaign_id", campaignId),
   ]);
 
@@ -190,13 +197,17 @@ export async function getSegmentCompanies(): Promise<SegmentCompaniesData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_SEGMENT_COMPANIES();
 
+  const today = todayKstDate();
   const [companies, credentials, deadlines] = await Promise.all([
     supabase
       .from("company")
       .select("id, name, industry, revenue, condition_tags, contact_name")
       .order("name"),
     supabase.from("credential").select("company_id, type"),
-    supabase.from("deadline_item").select("company_id, days_left"),
+    supabase
+      .from("deadline_item")
+      .select("company_id, days_left")
+      .gte("due_date", today),
   ]);
 
   const firstError = companies.error ?? credentials.error ?? deadlines.error;

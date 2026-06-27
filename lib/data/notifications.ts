@@ -63,20 +63,38 @@ export async function getNotificationsData(): Promise<NotificationsData> {
     };
   }
 
-  const [notifications, companies, deadlines] = await Promise.all([
+  const [notifications, companies] = await Promise.all([
     supabase
       .from("notification")
-      .select("*")
+      .select(
+        "id, type, title, is_urgent, is_read, company_id, ref_table, ref_id, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(100),
     supabase.from("company").select("id, name").order("name"),
-    // D-day는 deadline_item 뷰 역참조 (자격+과제+일정 통합 — CLAUDE.md 7절)
-    supabase.from("deadline_item").select("source, id, days_left"),
   ]);
 
-  const firstError = notifications.error ?? companies.error ?? deadlines.error;
+  const firstError = notifications.error ?? companies.error;
   if (firstError) {
     throw new Error(`알림을 불러오지 못했습니다: ${firstError.message}`);
+  }
+
+  const refIds = [
+    ...new Set(
+      (notifications.data ?? [])
+        .map((n) => n.ref_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const deadlines =
+    refIds.length > 0
+      ? await supabase
+          .from("deadline_item")
+          .select("source, id, days_left")
+          .in("id", refIds)
+      : { data: [], error: null };
+  if (deadlines.error) {
+    throw new Error(`알림을 불러오지 못했습니다: ${deadlines.error.message}`);
   }
 
   const companyName = new Map(
