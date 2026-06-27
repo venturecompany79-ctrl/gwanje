@@ -188,11 +188,11 @@ export function TaskBoard({
       {data.tasks.length === 0 ? (
         <EmptyState
           icon={<IconKanban />}
-          title="첫 과제를 추가하세요"
-          description="관리 중인 기업의 과제를 등록하면 단계별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
+          title="첫 Task를 추가하세요"
+          description="관리 중인 기업의 Task를 등록하면 단계별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
           action={
             <Button variant="cta" onClick={() => setAdding(true)}>
-              <IconPlus /> 과제 추가
+              <IconPlus /> Task 추가
             </Button>
           }
         />
@@ -242,10 +242,10 @@ export function TaskBoard({
               <IconSearch />
               <input
                 type="search"
-                placeholder="과제 검색"
+                placeholder="Task 검색"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                aria-label="과제 검색"
+                aria-label="Task 검색"
               />
             </div>
           </div>
@@ -253,7 +253,7 @@ export function TaskBoard({
           {filtered.length === 0 ? (
             <div className="panel empty-w" style={{ padding: "56px 16px" }}>
               <IconSearch />
-              <p>조건에 맞는 과제가 없습니다</p>
+              <p>조건에 맞는 Task가 없습니다</p>
               {isFiltered ? (
                 <Button
                   variant="ghost"

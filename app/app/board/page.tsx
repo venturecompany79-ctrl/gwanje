@@ -4,7 +4,7 @@ import { getBoardData } from "@/lib/data/board";
 import { getTodoBoardData } from "@/lib/data/todos";
 import { BoardView, type BoardTab } from "./_components/BoardView";
 
-export const metadata: Metadata = { title: "과제 보드" };
+export const metadata: Metadata = { title: "Task 보드" };
 export const dynamic = "force-dynamic";
 
 function resolveTab(tab?: string): BoardTab {

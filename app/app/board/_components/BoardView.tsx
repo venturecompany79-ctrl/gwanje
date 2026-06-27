@@ -85,14 +85,14 @@ export function BoardView({
     activeTab === "todos"
       ? `오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${todoData?.notes.length ?? 0}건`
       : data?.tasks.length === 0
-        ? "첫 과제를 등록해 시작하세요"
+        ? "첫 Task를 등록해 시작하세요"
         : `전체 ${data?.tasks.length ?? 0}건`;
 
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>과제 보드</h1>
+          <h1>Task 보드</h1>
           <div className="sub">{pageSub}</div>
         </div>
         <div className="spacer" />
@@ -111,7 +111,7 @@ export function BoardView({
               size="sm"
               onClick={() => setTaskAddRequest((value) => value + 1)}
             >
-              <IconPlus /> 과제 추가
+              <IconPlus /> Task 추가
             </Button>
           )}
         </div>
@@ -132,7 +132,7 @@ export function BoardView({
           role="tab"
           aria-selected={activeTab === "tasks"}
         >
-          <IconKanban /> 과제 칸반
+          <IconKanban /> Task 보드
         </Link>
       </div>
 
@@ -159,7 +159,7 @@ export function BoardView({
       ) : (
         <EmptyState
           icon={<IconKanban />}
-          title="과제 칸반을 불러오지 못했습니다"
+          title="Task 보드를 불러오지 못했습니다"
           description="잠시 후 다시 시도해주세요."
         />
       )}
