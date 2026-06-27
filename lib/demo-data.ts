@@ -218,6 +218,7 @@ function demoCredential(
           : daysLeft <= renewLeadDays
             ? "expiring"
             : "valid",
+    memo: null,
     hasRenewalTask,
   };
 }

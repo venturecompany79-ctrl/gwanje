@@ -20,7 +20,12 @@ import {
 } from "@/components/ui/icons";
 import { CREDENTIAL_STATUS_LABEL } from "@/lib/labels";
 import type { CategoryOption, CredentialRow } from "@/lib/data/company-detail";
-import { addCredential, createRenewalTask } from "../actions";
+import {
+  addCredential,
+  createRenewalTask,
+  deleteCredential,
+  updateCredential,
+} from "../actions";
 
 const STATUS_TONE = {
   valid: "soft-valid",
@@ -75,14 +80,17 @@ function RenewalTaskButton({
   );
 }
 
-function AddCredentialSlideOver({
+function CredentialSlideOver({
   companyId,
+  credential,
   categories,
   demo,
   showToast,
   onClose,
 }: {
   companyId: string;
+  /** 주어지면 수정 모드, 없으면 추가 모드 */
+  credential: CredentialRow | null;
   categories: CategoryOption[];
   demo: boolean;
   showToast: (message: string) => void;
@@ -91,12 +99,16 @@ function AddCredentialSlideOver({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const isEdit = credential !== null;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await addCredential(companyId, formData);
+      const result = isEdit
+        ? await updateCredential(companyId, credential.id, formData)
+        : await addCredential(companyId, formData);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -107,12 +119,32 @@ function AddCredentialSlideOver({
     });
   }
 
+  function handleDelete() {
+    if (!credential) return;
+    startTransition(async () => {
+      const result = await deleteCredential(companyId, credential.id);
+      if (!result.ok) {
+        setError(result.error);
+        setConfirmingDelete(false);
+        return;
+      }
+      onClose();
+      showToast("삭제되었습니다");
+      router.refresh();
+    });
+  }
+
   return (
     <div className="slideover-root">
       <div className="slideover-backdrop" onClick={onClose} />
-      <aside className="slideover" role="dialog" aria-modal="true" aria-label="자격 추가">
+      <aside
+        className="slideover"
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? "자격 수정" : "자격 추가"}
+      >
         <div className="slideover-head">
-          <h2>자격 추가</h2>
+          <h2>{isEdit ? "자격 수정" : "자격 추가"}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
             <IconX />
           </button>
@@ -135,11 +167,17 @@ function AddCredentialSlideOver({
               name="type"
               required
               placeholder="벤처기업확인"
+              defaultValue={credential?.type ?? ""}
               autoFocus
             />
             <div className="field">
               <label htmlFor="cred-category">분류</label>
-              <select id="cred-category" name="category_id" className="input" defaultValue="">
+              <select
+                id="cred-category"
+                name="category_id"
+                className="input"
+                defaultValue={credential?.categoryId ?? ""}
+              >
                 <option value="">선택 안 함</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -149,15 +187,25 @@ function AddCredentialSlideOver({
               </select>
             </div>
             <div className="form-grid2">
-              <InputField label="발급일" name="issued_date" type="date" />
-              <InputField label="만료일" name="expires_date" type="date" />
+              <InputField
+                label="발급일"
+                name="issued_date"
+                type="date"
+                defaultValue={credential?.issuedDate ?? ""}
+              />
+              <InputField
+                label="만료일"
+                name="expires_date"
+                type="date"
+                defaultValue={credential?.expiresDate ?? ""}
+              />
             </div>
             <InputField
               label="갱신 준비 기간 (일)"
               name="renew_lead_days"
               type="number"
               min={0}
-              defaultValue={60}
+              defaultValue={credential?.renewLeadDays ?? 60}
             />
             <p className="form-hint">
               <IconInfo /> 만료일까지 남은 일수가 이 기간 이내면
@@ -170,6 +218,7 @@ function AddCredentialSlideOver({
                 name="memo"
                 className="memo-input"
                 placeholder="갱신 조건, 담당 기관 등"
+                defaultValue={credential?.memo ?? ""}
               />
             </div>
           </div>
@@ -180,6 +229,40 @@ function AddCredentialSlideOver({
             <Button variant="ghost" type="button" onClick={onClose}>
               닫기
             </Button>
+            {isEdit ? (
+              <div className="slideover-foot-end">
+                {confirmingDelete ? (
+                  <>
+                    <span className="form-hint">삭제할까요?</span>
+                    <Button
+                      variant="danger"
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={pending}
+                    >
+                      {pending ? "삭제 중…" : "삭제 확인"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      onClick={() => setConfirmingDelete(false)}
+                      disabled={pending}
+                    >
+                      취소
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="ghost-danger"
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={pending}
+                  >
+                    삭제
+                  </Button>
+                )}
+              </div>
+            ) : null}
           </div>
         </form>
       </aside>
@@ -201,6 +284,7 @@ export function CertsTab({
   showToast: (message: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<CredentialRow | null>(null);
 
   return (
     <>
@@ -243,13 +327,23 @@ export function CertsTab({
               {credentials.map((c) => (
                 <tr
                   key={c.id}
-                  className={
+                  className={`row-link${
                     c.status === "expiring"
-                      ? "row-soon"
+                      ? " row-soon"
                       : c.status === "expired"
-                        ? "row-expired"
+                        ? " row-expired"
                         : ""
-                  }
+                  }`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${c.type} 수정`}
+                  onClick={() => setEditing(c)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setEditing(c);
+                    }
+                  }}
                 >
                   <td className="name">{c.type}</td>
                   <td>
@@ -277,7 +371,11 @@ export function CertsTab({
                       <span className="cell-muted">—</span>
                     )}
                   </td>
-                  <td className="r">
+                  <td
+                    className="r"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     {c.status === "expiring" ? (
                       <RenewalTaskButton
                         companyId={companyId}
@@ -293,13 +391,18 @@ export function CertsTab({
         )}
       </Panel>
 
-      {adding ? (
-        <AddCredentialSlideOver
+      {adding || editing ? (
+        <CredentialSlideOver
+          key={editing?.id ?? "new"}
           companyId={companyId}
+          credential={editing}
           categories={categories}
           demo={demo}
           showToast={showToast}
-          onClose={() => setAdding(false)}
+          onClose={() => {
+            setAdding(false);
+            setEditing(null);
+          }}
         />
       ) : null}
     </>

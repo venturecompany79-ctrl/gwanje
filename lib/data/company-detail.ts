@@ -39,6 +39,7 @@ export interface CredentialRow {
   daysLeft: number | null;
   /** 만료일 없으면 null — deadline_item 뷰와 동일한 파생 규칙 */
   status: CredentialStatus | null;
+  memo: string | null;
   /** 이 자격을 출처로 한 갱신 과제 존재 여부 */
   hasRenewalTask: boolean;
 }
@@ -186,6 +187,7 @@ export async function getCompanyDetail(
         renewLeadDays: c.renew_lead_days,
         daysLeft,
         status: deriveCredentialStatus(daysLeft, c.renew_lead_days),
+        memo: c.memo,
         hasRenewalTask: renewalSources.has(c.id),
       };
     })

@@ -1,13 +1,21 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type ButtonVariant = "primary" | "cta" | "secondary" | "ghost";
+type ButtonVariant =
+  | "primary"
+  | "cta"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "ghost-danger";
 
 interface ButtonBaseProps {
   /**
    * primary: 검정 pill — 랜딩/마케팅 1차 CTA 전용
    * cta: cobalt pill — 앱 내부 1차 액션
    * secondary / ghost: 아웃라인
+   * danger: critical 솔리드 — 삭제 확정
+   * ghost-danger: critical 텍스트 고스트 — 삭제 트리거
    */
   variant?: ButtonVariant;
   size?: "md" | "sm";

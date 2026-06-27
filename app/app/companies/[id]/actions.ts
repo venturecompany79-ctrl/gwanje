@@ -209,6 +209,71 @@ export async function addCredential(
   return { ok: true, error: null };
 }
 
+/** 기존 자격 수정 — 나중에 만료일·발급일 등을 채워 넣을 때 사용 (자격·인증 탭 액션) */
+export async function updateCredential(
+  companyId: string,
+  credentialId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const type = String(formData.get("type") ?? "").trim();
+  if (!type) return { ok: false, error: "자격종류를 입력해 주세요." };
+
+  const leadText = optionalText(formData, "renew_lead_days");
+  const renewLeadDays = leadText === null ? 60 : Number.parseInt(leadText, 10);
+  if (!Number.isFinite(renewLeadDays) || renewLeadDays < 0) {
+    return { ok: false, error: "갱신 준비 기간은 0 이상의 숫자(일)로 입력해 주세요." };
+  }
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const { error } = await supabase
+    .from("credential")
+    .update({
+      type,
+      category_id: optionalText(formData, "category_id"),
+      issued_date: optionalText(formData, "issued_date"),
+      expires_date: optionalText(formData, "expires_date"),
+      renew_lead_days: renewLeadDays,
+      memo: optionalText(formData, "memo"),
+    })
+    .eq("id", credentialId)
+    .eq("company_id", companyId);
+  if (error) {
+    console.error("[updateCredential]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+/** 자격 삭제 — 잘못 등록한 자격 제거 (연결된 갱신 과제의 출처는 on delete set null로 끊김) */
+export async function deleteCredential(
+  companyId: string,
+  credentialId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+  if (!credentialId) return { ok: false, error: "자격을 찾을 수 없습니다." };
+
+  const { error } = await supabase
+    .from("credential")
+    .delete()
+    .eq("id", credentialId)
+    .eq("company_id", companyId);
+  if (error) {
+    console.error("[deleteCredential]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
 /** 임박 자격 → 갱신 과제 자동 생성 (자격·인증 탭 액션) */
 export async function createRenewalTask(
   companyId: string,

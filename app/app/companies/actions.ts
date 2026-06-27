@@ -175,11 +175,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
     "추가 기술",
     optionalText(formData, "technology_keywords"),
   );
-  appendLine(
-    matchingProfileLines,
-    "기업인증정보",
-    optionalList(formData, "certifications").join(", "),
-  );
+  // 기업인증정보는 아래에서 credential(자격·인증) 레코드로 생성하므로 메모에는 중복 기재하지 않음
   appendLine(
     matchingProfileLines,
     "관심사업분야",
@@ -227,7 +223,26 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
-  let warning: string | undefined;
+  const warnings: string[] = [];
+
+  // 선택한 기업인증정보 → 자격·인증(credential) 레코드 생성 (만료일은 미입력 상태)
+  const certifications = optionalList(formData, "certifications");
+  if (certifications.length > 0) {
+    const { error: certError } = await supabase.from("credential").insert(
+      certifications.map((type) => ({
+        tenant_id: ctx.tenantId,
+        company_id: data.id,
+        type,
+      })),
+    );
+    if (certError) {
+      console.error("[addCompany:certifications]", certError.code, certError.message);
+      warnings.push(
+        `기업 정보는 저장됐지만 기업인증정보 자격 생성에 실패했습니다: ${certError.message}`,
+      );
+    }
+  }
+
   if (businessLicenseFile) {
     const saved = await saveBusinessLicenseDocument({
       supabase,
@@ -236,9 +251,13 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
       file: businessLicenseFile,
     });
     if (!saved.ok) {
-      warning = `기업 정보는 저장됐지만 사업자등록증 파일 저장에 실패했습니다: ${saved.error}`;
+      warnings.push(
+        `기업 정보는 저장됐지만 사업자등록증 파일 저장에 실패했습니다: ${saved.error}`,
+      );
     }
   }
+
+  const warning = warnings.length > 0 ? warnings.join("\n") : undefined;
 
   revalidatePath("/app/companies");
   revalidatePath(`/app/companies/${data.id}`);
