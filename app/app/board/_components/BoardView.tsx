@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Toast, useToast } from "@/components/ui/Toast";
@@ -62,17 +61,39 @@ function TaskBoardFallback() {
 }
 
 export function BoardView({
-  activeTab,
+  initialActiveTab,
   data,
   todoData,
 }: {
-  activeTab: BoardTab;
-  data: BoardData | null;
-  todoData: TodoBoardData | null;
+  initialActiveTab: BoardTab;
+  data: BoardData;
+  todoData: TodoBoardData;
 }) {
   const { toast, showToast } = useToast();
+  const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [todoAddRequest, setTodoAddRequest] = useState(0);
   const [taskAddRequest, setTaskAddRequest] = useState(0);
+
+  useEffect(() => {
+    void import("./TaskBoard");
+  }, []);
+
+  useEffect(() => {
+    function handlePopState() {
+      const params = new URLSearchParams(window.location.search);
+      setActiveTab(params.get("tab") === "tasks" ? "tasks" : "todos");
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function selectTab(tab: BoardTab) {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    const href = tab === "tasks" ? "/app/board?tab=tasks" : "/app/board";
+    window.history.pushState(null, "", href);
+  }
 
   const todayTodoCount = useMemo(
     () =>
@@ -118,22 +139,30 @@ export function BoardView({
       </div>
 
       <div className="board-tab-row" role="tablist" aria-label="보드 종류">
-        <Link
+        <a
           href="/app/board"
           className={`pill-tab${activeTab === "todos" ? " is-active" : ""}`}
           role="tab"
           aria-selected={activeTab === "todos"}
+          onClick={(e) => {
+            e.preventDefault();
+            selectTab("todos");
+          }}
         >
           <IconList /> 업무 노트
-        </Link>
-        <Link
+        </a>
+        <a
           href="/app/board?tab=tasks"
           className={`pill-tab${activeTab === "tasks" ? " is-active" : ""}`}
           role="tab"
           aria-selected={activeTab === "tasks"}
+          onClick={(e) => {
+            e.preventDefault();
+            selectTab("tasks");
+          }}
         >
           <IconKanban /> Task 보드
-        </Link>
+        </a>
       </div>
 
       {activeTab === "todos" ? (

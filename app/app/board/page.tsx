@@ -18,9 +18,11 @@ export default async function BoardPage({
 }) {
   const { tab } = await searchParams;
   const activeTab = resolveTab(tab);
-  const data = activeTab === "tasks" ? await getBoardData() : null;
-  const todoData = activeTab === "todos" ? await getTodoBoardData() : null;
-  const demo = (data?.demo ?? false) || (todoData?.demo ?? false);
+  const [data, todoData] = await Promise.all([
+    getBoardData(),
+    getTodoBoardData(),
+  ]);
+  const demo = data.demo || todoData.demo;
 
   return (
     <>
@@ -32,7 +34,11 @@ export default async function BoardPage({
         </div>
       ) : null}
 
-      <BoardView activeTab={activeTab} data={data} todoData={todoData} />
+      <BoardView
+        initialActiveTab={activeTab}
+        data={data}
+        todoData={todoData}
+      />
     </>
   );
 }

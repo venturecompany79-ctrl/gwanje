@@ -20,14 +20,19 @@ export async function getShellData(): Promise<ShellData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_SHELL;
 
-  const [{ data: profile }, unread, { data: tenant }] = await Promise.all([
-    supabase.from("profile").select("name, title, tenant_id").maybeSingle(),
+  const [{ data: profile }, unread] = await Promise.all([
+    supabase
+      .from("profile")
+      .select("name, title, tenant:tenant_id(name)")
+      .maybeSingle(),
     supabase
       .from("notification")
       .select("id", { count: "exact", head: true })
       .eq("is_read", false),
-    supabase.from("tenant").select("name").maybeSingle(),
   ]);
+  const tenant = Array.isArray(profile?.tenant)
+    ? profile?.tenant[0]
+    : profile?.tenant;
 
   return {
     demo: false,

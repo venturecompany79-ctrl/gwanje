@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   IconBell,
   IconBuilding,
@@ -30,6 +30,7 @@ export function Sidebar({
   unreadCount: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav className="shell-nav">
@@ -49,6 +50,8 @@ export function Sidebar({
             key={href}
             href={href}
             className={`nav-item${active ? " is-active" : ""}`}
+            onFocus={() => router.prefetch(href)}
+            onPointerEnter={() => router.prefetch(href)}
           >
             <Icon />
             <span>{label}</span>
