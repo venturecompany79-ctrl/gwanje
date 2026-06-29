@@ -87,7 +87,7 @@ export async function prepareDocumentUpload(
 export async function registerUploadedDocument(
   companyId: string,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult & { documentId?: string }> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
@@ -112,6 +112,22 @@ export async function registerUploadedDocument(
     return { ok: false, error: "파일 크기 정보가 올바르지 않습니다." };
   }
 
+  // 자격 첨부면 credential_id로 명시 연결한다. 해당 자격이 같은 기업 소속인지 검증.
+  const credentialId = optionalText(formData, "credential_id");
+  if (credentialId) {
+    const { data: cred, error: credError } = await supabase
+      .from("credential")
+      .select("id")
+      .eq("id", credentialId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (credError) {
+      console.error("[registerUploadedDocument:credential]", credError.code, credError.message);
+      return { ok: false, error: `자격 확인에 실패했습니다: ${credError.message}` };
+    }
+    if (!cred) return { ok: false, error: "연결할 자격을 찾을 수 없습니다." };
+  }
+
   const { data: latest, error: latestError } = await supabase
     .from("document")
     .select("version")
@@ -133,6 +149,7 @@ export async function registerUploadedDocument(
     .insert({
       tenant_id: ctx.tenantId,
       company_id: companyId,
+      credential_id: credentialId,
       name,
       doc_category: optionalText(formData, "doc_category"),
       version,
@@ -167,7 +184,7 @@ export async function registerUploadedDocument(
   }
 
   revalidateCompany(companyId);
-  return { ok: true, error: null };
+  return { ok: true, error: null, documentId: inserted.id };
 }
 
 export async function createDocumentDownloadUrl(

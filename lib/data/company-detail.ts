@@ -30,6 +30,14 @@ export interface CompanyProfile {
   memo: string | null;
 }
 
+/** 자격에 명시 연결(credential_id)된 첨부 자료 — 기업 '자료' 탭의 document와 동일 행 */
+export interface CredentialAttachment {
+  id: string;
+  name: string;
+  fileType: string | null;
+  sizeBytes: number | null;
+}
+
 export interface CredentialRow {
   id: string;
   type: string;
@@ -45,6 +53,8 @@ export interface CredentialRow {
   memo: string | null;
   /** 이 자격을 출처로 한 갱신 과제 존재 여부 */
   hasRenewalTask: boolean;
+  /** 이 자격에 연결된 첨부 자료(최신순) */
+  attachments: CredentialAttachment[];
 }
 
 export interface TaskRow {
@@ -168,7 +178,7 @@ export async function getCompanyDetail(
       supabase
         .from("document")
         .select(
-          "id, name, doc_category, version, uploaded_by, storage_url, file_type, size_bytes, created_at",
+          "id, name, doc_category, version, uploaded_by, storage_url, file_type, size_bytes, created_at, credential_id",
         )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
@@ -231,6 +241,19 @@ export async function getCompanyDetail(
     profileData.map((p) => [p.id, p.name]),
   );
   const taskTitle = new Map(taskData.map((t) => [t.id, t.title]));
+  // 자격별 첨부 자료 — documentData는 created_at desc 정렬이라 최신순으로 쌓인다.
+  const attachmentsByCredential = new Map<string, CredentialAttachment[]>();
+  for (const d of documentData) {
+    if (!d.credential_id) continue;
+    const list = attachmentsByCredential.get(d.credential_id) ?? [];
+    list.push({
+      id: d.id,
+      name: d.name,
+      fileType: d.file_type,
+      sizeBytes: d.size_bytes,
+    });
+    attachmentsByCredential.set(d.credential_id, list);
+  }
   const renewalSources = new Set(
     taskData
       .map((t) => t.source_credential_id)
@@ -254,6 +277,7 @@ export async function getCompanyDetail(
         status: deriveCredentialStatus(daysLeft, c.renew_lead_days),
         memo: c.memo,
         hasRenewalTask: renewalSources.has(c.id),
+        attachments: attachmentsByCredential.get(c.id) ?? [],
       };
     })
     // 임박한 것 먼저, 만료일 없는 것 마지막

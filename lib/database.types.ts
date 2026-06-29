@@ -364,6 +364,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          credential_id: string | null
           doc_category: string | null
           file_type: string | null
           id: string
@@ -377,6 +378,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          credential_id?: string | null
           doc_category?: string | null
           file_type?: string | null
           id?: string
@@ -390,6 +392,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          credential_id?: string | null
           doc_category?: string | null
           file_type?: string | null
           id?: string
@@ -406,6 +409,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "credential"
             referencedColumns: ["id"]
           },
           {

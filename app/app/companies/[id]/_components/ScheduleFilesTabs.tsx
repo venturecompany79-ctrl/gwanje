@@ -15,65 +15,12 @@ import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
 import type { DocumentRow, ScheduleRow } from "@/lib/data/company-detail";
-import { createClient } from "@/lib/supabase/client";
-import {
-  addSchedule,
-  createDocumentDownloadUrl,
-  deleteDocument,
-  prepareDocumentUpload,
-  registerUploadedDocument,
-} from "../actions";
+import { addSchedule, createDocumentDownloadUrl, deleteDocument } from "../actions";
+import { uploadDocumentVersion } from "./document-upload";
 import { retryDriveSync } from "@/lib/actions/google-drive";
 
 const DOCUMENT_ACCEPT =
   ".pdf,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.hwp,.hwpx";
-
-/**
- * 파일 1건을 Storage에 올리고 document 레코드로 등록한다.
- * displayName이 기존 자료명과 같으면 registerUploadedDocument가 version+1로 처리(= 업데이트).
- */
-async function uploadDocumentVersion(
-  companyId: string,
-  file: File,
-  displayName: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabase = createClient();
-  if (!supabase) {
-    return { ok: false, error: "데모 모드에서는 파일을 업로드할 수 없습니다." };
-  }
-
-  const prepared = await prepareDocumentUpload(companyId, {
-    name: file.name,
-    size: file.size,
-  });
-  if (!prepared.ok || !prepared.bucket || !prepared.path) {
-    return { ok: false, error: prepared.error ?? "업로드 준비에 실패했습니다." };
-  }
-
-  const { error: uploadError } = await supabase.storage
-    .from(prepared.bucket)
-    .upload(prepared.path, file, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-  if (uploadError) {
-    return { ok: false, error: `파일 업로드에 실패했습니다: ${uploadError.message}` };
-  }
-
-  const formData = new FormData();
-  formData.set("name", displayName);
-  formData.set("path", prepared.path);
-  formData.set("size_bytes", String(file.size));
-  formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
-  formData.set("mime_type", file.type || "application/octet-stream");
-
-  const result = await registerUploadedDocument(companyId, formData);
-  if (!result.ok) {
-    await supabase.storage.from(prepared.bucket).remove([prepared.path]);
-    return { ok: false, error: result.error ?? "자료 저장에 실패했습니다." };
-  }
-  return { ok: true };
-}
 
 function AddScheduleSlideOver({
   companyId,

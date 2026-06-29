@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import {
+  useRef,
+  useState,
+  useTransition,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
@@ -14,25 +20,252 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import {
   IconAlert,
   IconAward,
+  IconDownload,
+  IconFile,
   IconInfo,
   IconPlus,
   IconRefresh,
+  IconTrash,
   IconX,
 } from "@/components/ui/icons";
 import { CREDENTIAL_STATUS_LABEL } from "@/lib/labels";
-import type { CategoryOption, CredentialRow } from "@/lib/data/company-detail";
+import { formatBytes } from "@/lib/format";
+import type {
+  CategoryOption,
+  CredentialAttachment,
+  CredentialRow,
+} from "@/lib/data/company-detail";
 import {
   addCredential,
+  createDocumentDownloadUrl,
   createRenewalTask,
   deleteCredential,
+  deleteDocument,
   updateCredential,
 } from "../actions";
+import { uploadDocumentVersion } from "./document-upload";
 
 const STATUS_TONE = {
   valid: "soft-valid",
   expiring: "soft-soon",
   expired: "soft-expired",
 } as const;
+
+/** 자격·인증에서 올린 첨부는 기업 '자료' 탭에 이 분류로 연동된다. */
+const CREDENTIAL_DOC_CATEGORY = "인증";
+
+const CREDENTIAL_DOC_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.hwp,.hwpx";
+
+/**
+ * 자격 슬라이드오버 안의 첨부 자료 — 자격에 1:N으로 명시 연결(document.credential_id).
+ * 선택 즉시 Storage 업로드 + document 등록(분류 "인증" + credential_id)하여 기업 '자료' 탭과 연동한다.
+ * 자료명은 자격종류를 따르므로, 같은 자격에 같은 이름으로 다시 올리면 자료가 새 버전으로 갱신된다.
+ * 자격이 저장되기 전(추가 모드)에는 연결 대상이 없어 안내만 노출한다.
+ */
+function CredentialAttachments({
+  companyId,
+  credentialId,
+  docName,
+  initialAttachments,
+  demo,
+  showToast,
+}: {
+  companyId: string;
+  /** 저장된 자격 id — null이면 아직 추가 모드라 첨부 불가 */
+  credentialId: string | null;
+  /** 현재 입력된 자격종류 — 자료명으로 사용(없으면 파일명) */
+  docName: string;
+  initialAttachments: CredentialAttachment[];
+  demo: boolean;
+  showToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attachments, setAttachments] =
+    useState<CredentialAttachment[]>(initialAttachments);
+
+  async function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !credentialId) return;
+
+    setPending(true);
+    setError(null);
+    const displayName = docName.trim() || file.name;
+    const result = await uploadDocumentVersion(companyId, file, displayName, {
+      docCategory: CREDENTIAL_DOC_CATEGORY,
+      credentialId,
+    });
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setAttachments((prev) => [
+      {
+        id: result.documentId ?? `tmp-${prev.length}`,
+        name: displayName,
+        fileType: file.name.split(".").pop()?.toLowerCase() ?? null,
+        sizeBytes: file.size,
+      },
+      ...prev,
+    ]);
+    showToast("자료에 등록했습니다");
+    // 자료 탭으로 전환 시 최신 목록이 보이도록 캐시 갱신
+    router.refresh();
+  }
+
+  if (!credentialId) {
+    return (
+      <div className="field">
+        <label>첨부 자료</label>
+        <p className="form-hint">
+          <IconInfo /> 자격을 먼저 저장하면 인증서·서류 파일을 첨부할 수
+          있습니다. 첨부한 파일은 기업의 &lsquo;자료&rsquo; 탭에도 연동됩니다.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="field">
+      <label>첨부 자료</label>
+      {attachments.length > 0 ? (
+        <ul className="cred-attach-list">
+          {attachments.map((a) => (
+            <CredentialAttachmentRow
+              key={a.id}
+              companyId={companyId}
+              attachment={a}
+              showToast={showToast}
+              onDeleted={() =>
+                setAttachments((prev) =>
+                  prev.filter((x) => x.id !== a.id),
+                )
+              }
+            />
+          ))}
+        </ul>
+      ) : null}
+      <input
+        ref={inputRef}
+        className="sr-only"
+        type="file"
+        accept={CREDENTIAL_DOC_ACCEPT}
+        onChange={handleChange}
+        aria-label="자격 첨부 파일 선택"
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => inputRef.current?.click()}
+        disabled={pending || demo}
+      >
+        <IconFile /> {pending ? "업로드 중…" : "파일 업로드"}
+      </Button>
+      <p className="form-hint">
+        <IconInfo /> 업로드한 파일은 이 자격에 연결되고, 기업의
+        &lsquo;자료&rsquo; 탭(분류: 인증)에도 자동으로 연동됩니다.
+      </p>
+      {error ? (
+        <div className="inline-error">
+          <IconAlert /> {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** 첨부 1건 — 열기(다운로드)·삭제 */
+function CredentialAttachmentRow({
+  companyId,
+  attachment,
+  showToast,
+  onDeleted,
+}: {
+  companyId: string;
+  attachment: CredentialAttachment;
+  showToast: (message: string) => void;
+  onDeleted: () => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
+  async function handleDownload() {
+    const result = await createDocumentDownloadUrl(attachment.id);
+    if (!result.ok || !result.url) {
+      showToast(result.error ?? "다운로드에 실패했습니다.");
+      return;
+    }
+    window.open(result.url, "_blank", "noopener,noreferrer");
+  }
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteDocument(companyId, attachment.id);
+      if (!result.ok) {
+        showToast(result.error ?? "삭제에 실패했습니다.");
+        setConfirming(false);
+        return;
+      }
+      onDeleted();
+      showToast("첨부를 삭제했습니다");
+      router.refresh();
+    });
+  }
+
+  return (
+    <li>
+      <IconFile />
+      <span className="cred-attach-name">{attachment.name}</span>
+      <span className="cred-attach-size">{formatBytes(attachment.sizeBytes)}</span>
+      <span className="cred-attach-actions">
+        <button
+          type="button"
+          className="link-btn"
+          onClick={handleDownload}
+          aria-label={`${attachment.name} 열기`}
+        >
+          <IconDownload /> 열기
+        </button>
+        {confirming ? (
+          <>
+            <button
+              type="button"
+              className="link-btn link-btn--danger"
+              onClick={handleDelete}
+              disabled={pending}
+            >
+              {pending ? "삭제 중…" : "삭제 확인"}
+            </button>
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setConfirming(false)}
+              disabled={pending}
+            >
+              취소
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="link-btn link-btn--danger"
+            onClick={() => setConfirming(true)}
+            aria-label={`${attachment.name} 삭제`}
+          >
+            <IconTrash /> 삭제
+          </button>
+        )}
+      </span>
+    </li>
+  );
+}
 
 function RenewalTaskButton({
   companyId,
@@ -101,6 +334,7 @@ function CredentialSlideOver({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [type, setType] = useState(credential?.type ?? "");
   const isEdit = credential !== null;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -168,7 +402,8 @@ function CredentialSlideOver({
               name="type"
               required
               placeholder="벤처기업확인"
-              defaultValue={credential?.type ?? ""}
+              value={type}
+              onChange={(e) => setType(e.target.value)}
               autoFocus
             />
             <CategorySelect
@@ -212,6 +447,14 @@ function CredentialSlideOver({
                 defaultValue={credential?.memo ?? ""}
               />
             </div>
+            <CredentialAttachments
+              companyId={companyId}
+              credentialId={credential?.id ?? null}
+              docName={type}
+              initialAttachments={credential?.attachments ?? []}
+              demo={demo}
+              showToast={showToast}
+            />
           </div>
           <div className="slideover-foot">
             <Button variant="cta" type="submit" disabled={pending}>
@@ -336,7 +579,17 @@ export function CertsTab({
                     }
                   }}
                 >
-                  <td className="name">{c.type}</td>
+                  <td className="name">
+                    {c.type}
+                    {c.attachments.length > 0 ? (
+                      <span
+                        className="cred-attach-count"
+                        title={`첨부 ${c.attachments.length}건`}
+                      >
+                        <IconFile /> {c.attachments.length}
+                      </span>
+                    ) : null}
+                  </td>
                   <td>
                     {c.categoryName ? (
                       <CategoryChip name={c.categoryName} />

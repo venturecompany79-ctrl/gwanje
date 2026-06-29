@@ -220,6 +220,7 @@ function demoCredential(
             : "valid",
     memo: null,
     hasRenewalTask,
+    attachments: [],
   };
 }
 

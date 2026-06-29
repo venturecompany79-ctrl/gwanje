@@ -137,17 +137,18 @@ create table schedule (
 -- 7. document — 자료 (파일 본체는 Cloudinary)
 -- -------------------------------------------------------------
 create table document (
-  id           uuid primary key default gen_random_uuid(),
-  tenant_id    uuid not null references tenant (id) on delete cascade,
-  company_id   uuid not null references company (id) on delete cascade,
-  name         text not null,
-  doc_category text,                          -- 재무 / 인증 / 계약 등
-  version      int not null default 1,
-  uploaded_by  document_uploader not null default 'consultant',
-  storage_url  text,
-  file_type    text,                          -- pdf / xlsx ...
-  size_bytes   bigint,
-  created_at   timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  tenant_id     uuid not null references tenant (id) on delete cascade,
+  company_id    uuid not null references company (id) on delete cascade,
+  credential_id uuid references credential (id) on delete set null,  -- 자격 첨부면 연결, 일반 자료는 null
+  name          text not null,
+  doc_category  text,                          -- 재무 / 인증 / 계약 등
+  version       int not null default 1,
+  uploaded_by   document_uploader not null default 'consultant',
+  storage_url   text,
+  file_type     text,                          -- pdf / xlsx ...
+  size_bytes    bigint,
+  created_at    timestamptz not null default now()
 );
 
 -- -------------------------------------------------------------
@@ -465,6 +466,7 @@ create index idx_task_due on task (tenant_id, due_date);
 create index idx_task_stage on task (tenant_id, stage);
 create index idx_schedule_date on schedule (tenant_id, date);
 create index idx_document_company on document (company_id);
+create index idx_document_credential on document (credential_id);
 create index idx_campaign_tenant on campaign (tenant_id);
 create index idx_recipient_campaign on campaign_recipient (campaign_id);
 create index idx_notification_unread on notification (tenant_id, is_read, created_at desc);
