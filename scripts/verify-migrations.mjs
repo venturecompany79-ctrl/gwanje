@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 
 const USER_A = "11111111-1111-1111-1111-111111111111";
 const USER_B = "22222222-2222-2222-2222-222222222222";
+const USER_C = "33333333-3333-3333-3333-333333333333";
 const db = new PGlite();
 let failures = 0;
 
@@ -95,6 +96,9 @@ await step("migration: 20260615000000_company_document_storage", read("migration
 await step("migration: 20260615000001_company_document_mime_types", read("migrations/20260615000001_company_document_mime_types.sql"));
 await step("migration: 20260616000000_board_todos_task_files", read("migrations/20260616000000_board_todos_task_files.sql"));
 await step("migration: 20260617000000_todo_note_30_day_window", read("migrations/20260617000000_todo_note_30_day_window.sql"));
+await step("migration: 20260628000000_google_drive_sync", read("migrations/20260628000000_google_drive_sync.sql"));
+await step("migration: 20260629000000_billing_subscription", read("migrations/20260629000000_billing_subscription.sql"));
+await step("migration: 20260630000000_team_permissions", read("migrations/20260630000000_team_permissions.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
@@ -204,6 +208,87 @@ try {
 }
 assert((isolation[0]?.leaked ?? 1) === 0, "사용자 A 세션에서 tenant B의 기업이 보이지 않음(RLS 격리)");
 assert((isolation[0]?.visible ?? 0) >= 6, "사용자 A는 자기 tenant 기업은 정상 조회");
+
+// ── 9. 팀 권한 + 업무일지 개인/owner 조회 ───────────────────────────────
+await step(
+  "테스트: tenant A 팀원 C + owner/팀원 업무일지 추가",
+  `insert into auth.users (id, email) values ('${USER_C}','member@test.dev');
+   insert into profile (id, tenant_id, name, email, role, permissions, status)
+   select '${USER_C}', tenant_id, 'C팀원', 'member@test.dev', 'member',
+          array['companies.read','tasks.read','tasks.write','notifications.read']::text[],
+          'active'
+   from profile where id='${USER_A}';
+   insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
+   select tenant_id, '${USER_A}', (now() at time zone 'Asia/Seoul')::date, 'owner private note', '업무', 10
+   from profile where id='${USER_A}';
+   insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
+   select tenant_id, '${USER_C}', (now() at time zone 'Asia/Seoul')::date, 'member private note', '기록', 11
+   from profile where id='${USER_A}';`,
+);
+
+let memberTodo = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_C}'`);
+  const r = await db.query(
+    `select
+       (select count(*)::int from todo_note where user_id='${USER_C}') as own_notes,
+       (select count(*)::int from todo_note where user_id='${USER_A}') as owner_notes`,
+  );
+  memberTodo = r.rows;
+  console.log(`→ RLS(팀원 C 업무일지): ${JSON.stringify(memberTodo)}`);
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ 팀원 업무일지 RLS 테스트 실행 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert((memberTodo[0]?.own_notes ?? 0) >= 1, "팀원은 본인 업무일지를 조회할 수 있음");
+assert((memberTodo[0]?.owner_notes ?? 1) === 0, "팀원은 owner 업무일지를 조회할 수 없음");
+
+let ownerTodo = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const r = await db.query(
+    `select count(*)::int as member_notes from todo_note where user_id='${USER_C}'`,
+  );
+  ownerTodo = r.rows;
+  console.log(`→ RLS(owner 업무일지): ${JSON.stringify(ownerTodo)}`);
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ owner 업무일지 RLS 테스트 실행 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert((ownerTodo[0]?.member_notes ?? 0) >= 1, "owner는 팀원 업무일지를 조회할 수 있음");
+
+await step(
+  "테스트: 팀원 C 비활성화",
+  `update profile set status='disabled', disabled_at=now() where id='${USER_C}';`,
+);
+let disabledAccess = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_C}'`);
+  const r = await db.query(
+    `select
+       (select count(*)::int from company) as companies,
+       (select count(*)::int from todo_note) as notes`,
+  );
+  disabledAccess = r.rows;
+  console.log(`→ RLS(비활성 팀원 C): ${JSON.stringify(disabledAccess)}`);
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ 비활성 팀원 RLS 테스트 실행 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert((disabledAccess[0]?.companies ?? 1) === 0, "비활성 팀원은 tenant 기업을 조회할 수 없음");
+assert((disabledAccess[0]?.notes ?? 1) === 0, "비활성 팀원은 업무일지도 조회할 수 없음");
 
 // ── 결과 ─────────────────────────────────────────────────────────────────
 console.log(`\n${"=".repeat(56)}`);

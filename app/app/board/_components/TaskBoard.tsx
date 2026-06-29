@@ -41,6 +41,7 @@ function BoardCard({
   task,
   stage,
   dragging,
+  canWrite,
   onDragStart,
   onDragEnd,
   onOpen,
@@ -48,6 +49,7 @@ function BoardCard({
   task: BoardTask;
   stage: TaskStage;
   dragging: boolean;
+  canWrite: boolean;
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onOpen: () => void;
@@ -57,7 +59,7 @@ function BoardCard({
       role="button"
       tabIndex={0}
       className={`kcard${dragging ? " is-dragging" : ""}`}
-      draggable
+      draggable={canWrite}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onOpen}
@@ -114,8 +116,9 @@ export function TaskBoard({
   useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
     handledAddRequestRef.current = addRequest;
+    if (!data.canWriteTasks) return;
     setAdding(true);
-  }, [addRequest]);
+  }, [addRequest, data.canWriteTasks]);
 
   const effectiveStage = (t: BoardTask): TaskStage =>
     stageOverride[t.id] ?? t.stage;
@@ -189,11 +192,17 @@ export function TaskBoard({
         <EmptyState
           icon={<IconKanban />}
           title="첫 Task를 추가하세요"
-          description="관리 중인 기업의 Task를 등록하면 단계별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
+          description={
+            data.canWriteTasks
+              ? "관리 중인 기업의 Task를 등록하면 단계별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
+              : "조회할 Task가 아직 없습니다."
+          }
           action={
-            <Button variant="cta" onClick={() => setAdding(true)}>
-              <IconPlus /> Task 추가
-            </Button>
+            data.canWriteTasks ? (
+              <Button variant="cta" onClick={() => setAdding(true)}>
+                <IconPlus /> Task 추가
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -281,6 +290,7 @@ export function TaskBoard({
                     className={`kcol${overStage === stage ? " is-over" : ""}`}
                     aria-label={`${TASK_STAGE_LABEL[stage]} 컬럼`}
                     onDragOver={(e) => {
+                      if (!data.canWriteTasks) return;
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "move";
                       if (overStage !== stage) setOverStage(stage);
@@ -291,6 +301,7 @@ export function TaskBoard({
                       }
                     }}
                     onDrop={(e) => {
+                      if (!data.canWriteTasks) return;
                       e.preventDefault();
                       handleDrop(stage);
                     }}
@@ -307,7 +318,9 @@ export function TaskBoard({
                           task={t}
                           stage={effectiveStage(t)}
                           dragging={draggingId === t.id}
+                          canWrite={data.canWriteTasks}
                           onDragStart={(e) => {
+                            if (!data.canWriteTasks) return;
                             setDraggingId(t.id);
                             e.dataTransfer.effectAllowed = "move";
                             e.dataTransfer.setData("text/plain", t.id);
@@ -335,12 +348,13 @@ export function TaskBoard({
           companyName={selected.companyName}
           task={{ ...selected, stage: effectiveStage(selected) }}
           demo={data.demo}
+          canEdit={data.canWriteTasks}
           showToast={showToast}
           onClose={() => setSelectedId(null)}
         />
       ) : null}
 
-      {adding ? (
+      {adding && data.canWriteTasks ? (
         <AddTaskSlideOver
           companies={data.companies}
           categories={data.categories}

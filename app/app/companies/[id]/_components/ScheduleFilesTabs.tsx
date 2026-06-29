@@ -10,7 +10,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
-import { IconAlert, IconCalendar, IconDownload, IconFile, IconPlus, IconX } from "@/components/ui/icons";
+import { IconAlert, IconCalendar, IconDownload, IconFile, IconLink, IconPlus, IconX } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
@@ -22,6 +22,7 @@ import {
   prepareDocumentUpload,
   registerUploadedDocument,
 } from "../actions";
+import { retryDriveSync } from "@/lib/actions/google-drive";
 
 function AddScheduleSlideOver({
   companyId,
@@ -253,6 +254,8 @@ function UploadDocumentButton({ companyId }: { companyId: string }) {
     formData.set("path", prepared.path);
     formData.set("size_bytes", String(file.size));
     formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
+    // Google Drive 동기화 시 정확한 MIME으로 업로드하기 위해 전달
+    formData.set("mime_type", file.type || "application/octet-stream");
 
     const result = await registerUploadedDocument(companyId, formData);
     if (!result.ok) {
@@ -330,13 +333,98 @@ function DocumentDownloadButton({ document }: { document: DocumentRow }) {
   );
 }
 
+/** 자료 행의 Drive 동기화 상태 배지 (driveConnected일 때만 노출) */
+function DriveSyncBadge({ sync }: { sync: DocumentRow["driveSync"] }) {
+  if (!sync) return <span className="cell-muted">—</span>;
+  if (sync.status === "succeeded") {
+    const badge = <Badge tone="success">백업됨</Badge>;
+    return sync.webViewLink ? (
+      <a
+        className="drive-sync-link"
+        href={sync.webViewLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="구글 드라이브에서 열기"
+      >
+        {badge}
+      </a>
+    ) : (
+      badge
+    );
+  }
+  if (sync.status === "failed") return <Badge tone="critical">실패</Badge>;
+  return <Badge tone="neutral">동기화 중…</Badge>;
+}
+
+/** 상태 배지 + (실패 시) 다시 시도 버튼 */
+function DriveSyncCell({
+  companyId,
+  document,
+  showToast,
+}: {
+  companyId: string;
+  document: DocumentRow;
+  showToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function retry() {
+    startTransition(async () => {
+      const result = await retryDriveSync(companyId, document.id);
+      if (!result.ok) {
+        showToast(result.error ?? "다시 시도에 실패했습니다.");
+        return;
+      }
+      showToast("동기화를 다시 시도합니다");
+      router.refresh();
+    });
+  }
+
+  if (document.driveSync?.status === "failed") {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <Badge tone="critical">실패</Badge>
+        <Button variant="ghost" size="sm" onClick={retry} disabled={pending}>
+          {pending ? "재시도 중…" : "다시 시도"}
+        </Button>
+      </span>
+    );
+  }
+  return <DriveSyncBadge sync={document.driveSync} />;
+}
+
+/** 미연결 사용자에게 본인 Drive 자동 백업을 권하는 한 줄 배너 */
+function DriveConnectPrompt() {
+  return (
+    <div className="drive-connect-prompt">
+      <IconLink />
+      <div className="dcp-body">
+        <b>구글 드라이브에 자동 백업</b> — 연결해 두면 이 회사에 올린 자료가 본인 구글
+        드라이브에도 자동으로 저장됩니다. 한 번만 연결하면 됩니다.
+      </div>
+      <a className="btn btn--secondary btn--sm" href="/app/settings?section=drive">
+        연결하기
+      </a>
+    </div>
+  );
+}
+
 export function FilesTab({
   companyId,
   documents,
+  driveConnected,
+  driveConfigured,
+  showToast,
 }: {
   companyId: string;
   documents: DocumentRow[];
+  driveConnected: boolean;
+  driveConfigured: boolean;
+  showToast: (message: string) => void;
 }) {
+  // 연결 가능(환경변수 OK)하지만 아직 미연결일 때만 유도 배너 노출
+  const showPrompt = driveConfigured && !driveConnected;
   return (
     <Panel>
       <PanelHead
@@ -345,6 +433,7 @@ export function FilesTab({
       >
         <UploadDocumentButton companyId={companyId} />
       </PanelHead>
+      {showPrompt ? <DriveConnectPrompt /> : null}
       {documents.length === 0 ? (
         <EmptyState
           bare
@@ -363,6 +452,7 @@ export function FilesTab({
               <th>업로더</th>
               <th className="r">크기</th>
               <th>등록일</th>
+              {driveConnected ? <th>드라이브</th> : null}
               <th className="r">파일</th>
             </tr>
           </thead>
@@ -388,6 +478,15 @@ export function FilesTab({
                 <td>{DOCUMENT_UPLOADER_LABEL[d.uploadedBy]}</td>
                 <td className="r num">{formatBytes(d.sizeBytes)}</td>
                 <td className="date num">{formatKstDate(d.createdAt)}</td>
+                {driveConnected ? (
+                  <td>
+                    <DriveSyncCell
+                      companyId={companyId}
+                      document={d}
+                      showToast={showToast}
+                    />
+                  </td>
+                ) : null}
                 <td className="r">
                   <DocumentDownloadButton document={d} />
                 </td>

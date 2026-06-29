@@ -278,6 +278,7 @@ export function DEMO_BOARD(): BoardData {
       name: co.name,
     })),
     categories: DEMO_CATEGORIES,
+    canWriteTasks: true,
   };
 }
 
@@ -330,6 +331,8 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       schedules: [],
       documents: [],
       categories: DEMO_CATEGORIES,
+      driveConfigured: false,
+      driveConnected: false,
     };
   }
 
@@ -379,6 +382,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
         fileType: "pdf",
         sizeBytes: 1_258_291,
         createdAt: dateAfter(-1),
+        driveSync: null,
       },
       {
         id: "00000000-0000-0000-0000-0000000000g2",
@@ -389,6 +393,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
         fileType: "xlsx",
         sizeBytes: 482_304,
         createdAt: dateAfter(-3),
+        driveSync: null,
       },
       {
         id: "00000000-0000-0000-0000-0000000000g3",
@@ -399,9 +404,12 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
         fileType: "pdf",
         sizeBytes: 210_835,
         createdAt: dateAfter(-120),
+        driveSync: null,
       },
     ],
     categories: DEMO_CATEGORIES,
+    driveConfigured: false,
+    driveConnected: false,
   };
 }
 
@@ -633,5 +641,93 @@ export function DEMO_SETTINGS(): SettingsData {
       color: null,
       sortOrder: i + 1,
     })),
+    drive: { configured: false, connection: null, failedCount: 0 },
+    currentMember: {
+      id: "00000000-0000-0000-0000-0000000000u1",
+      role: "owner",
+      permissions: [
+        "companies.read",
+        "companies.write",
+        "tasks.read",
+        "tasks.write",
+        "campaigns.read",
+        "campaigns.write",
+        "notifications.read",
+        "settings.categories.write",
+        "settings.rules.write",
+        "settings.drive.write",
+        "billing.manage",
+      ],
+      status: "active",
+      canManageTeam: true,
+    },
+    teamMembers: [
+      {
+        id: "00000000-0000-0000-0000-0000000000u1",
+        name: "김컨설턴트",
+        title: "대표 컨설턴트",
+        email: "kim@growthpartners.co.kr",
+        role: "owner",
+        permissions: [
+          "companies.read",
+          "companies.write",
+          "tasks.read",
+          "tasks.write",
+          "campaigns.read",
+          "campaigns.write",
+          "notifications.read",
+          "settings.categories.write",
+          "settings.rules.write",
+          "settings.drive.write",
+          "billing.manage",
+        ],
+        status: "active",
+        invitedAt: dateTimeAfter(-20, "09:00"),
+        acceptedAt: dateTimeAfter(-20, "09:10"),
+        disabledAt: null,
+        isCurrentUser: true,
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000u2",
+        name: "박매니저",
+        title: "선임 컨설턴트",
+        email: "manager@growthpartners.co.kr",
+        role: "manager",
+        permissions: [
+          "companies.read",
+          "companies.write",
+          "tasks.read",
+          "tasks.write",
+          "campaigns.read",
+          "campaigns.write",
+          "notifications.read",
+          "settings.categories.write",
+          "settings.rules.write",
+        ],
+        status: "active",
+        invitedAt: dateTimeAfter(-8, "11:00"),
+        acceptedAt: dateTimeAfter(-8, "11:20"),
+        disabledAt: null,
+        isCurrentUser: false,
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000u3",
+        name: "이팀원",
+        title: "주니어 컨설턴트",
+        email: "member@growthpartners.co.kr",
+        role: "member",
+        permissions: [
+          "companies.read",
+          "tasks.read",
+          "tasks.write",
+          "notifications.read",
+        ],
+        status: "invited",
+        invitedAt: dateTimeAfter(-1, "15:00"),
+        acceptedAt: null,
+        disabledAt: null,
+        isCurrentUser: false,
+      },
+    ],
   };
 }

@@ -1,17 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField, MaskedInputField } from "@/components/ui/Input";
 import { Toast, useToast } from "@/components/ui/Toast";
 import {
+  IconAlert,
   IconBell,
   IconCard,
   IconCheck,
   IconEdit,
+  IconLink,
   IconPalette,
   IconPlus,
   IconTag,
@@ -19,32 +21,65 @@ import {
   IconUser,
   IconX,
 } from "@/components/ui/icons";
+import { formatKstDate } from "@/lib/datetime";
 import {
   addCategory,
+  disableTeamMember,
+  inviteTeamMember,
   renameCategory,
+  updateTeamMember,
   updateNotifyRules,
   updateProfile,
 } from "@/lib/actions/settings";
 import type {
   SettingsCategory,
   SettingsData,
+  SettingsDrive,
   SettingsProfile,
+  SettingsTeamMember,
 } from "@/lib/data/settings";
+import {
+  MEMBER_ROLES,
+  PERMISSION_GROUPS,
+  PERMISSION_LABEL,
+  ROLE_LABEL,
+  ROLE_PRESETS,
+  STATUS_LABEL,
+  hasPermission,
+  normalizePermissions,
+  type MemberRole,
+  type PermissionKey,
+} from "@/lib/permissions";
 
-type SectionKey = "profile" | "rules" | "cats";
+type SectionKey = "profile" | "rules" | "cats" | "drive" | "team";
 
 const SECTIONS: {
   key: SectionKey | "sub" | "team";
   label: string;
   icon: React.ReactNode;
   soon?: boolean;
+  ownerOnly?: boolean;
+  permission?: PermissionKey;
 }[] = [
   { key: "profile", label: "프로필", icon: <IconUser /> },
-  { key: "rules", label: "알림 규칙", icon: <IconBell /> },
-  { key: "cats", label: "분류 카테고리", icon: <IconTag /> },
+  { key: "rules", label: "알림 규칙", icon: <IconBell />, permission: "settings.rules.write" },
+  { key: "cats", label: "분류 카테고리", icon: <IconTag />, permission: "settings.categories.write" },
+  { key: "drive", label: "Google Drive 연결", icon: <IconLink />, permission: "settings.drive.write" },
   { key: "sub", label: "구독", icon: <IconCard />, soon: true },
-  { key: "team", label: "팀·회원", icon: <IconTeam />, soon: true },
+  { key: "team", label: "팀·회원", icon: <IconTeam />, ownerOnly: true },
 ];
+
+// 콜백 redirect의 ?drive= 상태 → 사용자 메시지
+const DRIVE_STATUS_MESSAGES: Record<string, string> = {
+  connected: "Google Drive가 연결되었습니다. 이후 업로드한 자료가 자동 동기화됩니다.",
+  denied: "Google Drive 연결이 취소되었습니다.",
+  permission_denied: "Google Drive 연결을 관리할 권한이 없습니다.",
+  no_refresh_token:
+    "연결에 실패했습니다. Google 계정 권한을 해제한 뒤 다시 시도해 주세요(갱신 토큰 미수신).",
+  state_mismatch: "보안 검증에 실패했습니다. 다시 시도해 주세요.",
+  unconfigured: "서버에 Google Drive 환경변수가 설정되지 않았습니다.",
+  error: "Google Drive 연결 중 오류가 발생했습니다.",
+};
 
 /** 저장 결과 공통 처리 — 성공 시 토스트+refresh, 실패 시 에러 토스트 */
 type OnSaved = (ok: boolean, error: string | null) => void;
@@ -557,10 +592,432 @@ function CatsSection({
   );
 }
 
+function DriveSection({
+  drive,
+  showToast,
+}: {
+  drive: SettingsDrive;
+  showToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const connection = drive.connection;
+
+  function disconnect() {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/google-drive/disconnect", {
+          method: "POST",
+        });
+        const body = (await res.json()) as { ok: boolean; error?: string };
+        if (!res.ok || !body.ok) {
+          showToast(body.error ?? "연결 해제에 실패했습니다.");
+          return;
+        }
+        showToast("Google Drive 연결을 해제했습니다.");
+        router.refresh();
+      } catch {
+        showToast("연결 해제 중 오류가 발생했습니다.");
+      }
+    });
+  }
+
+  return (
+    <div className="panel">
+      <div className="sp-head">
+        <h2>Google Drive 연결</h2>
+        <p>
+          연결하면 이후 기업 상세 &gt; 자료에 업로드한 파일이 Supabase에 저장된 뒤
+          내 Google Drive에도 자동 복제됩니다. 원본은 계속 Supabase에 보관됩니다.
+        </p>
+      </div>
+      <div className="sp-body">
+        {!drive.configured ? (
+          <div className="auth-notice">
+            <IconAlert /> 서버에 Google Drive 환경변수가 설정되지 않아 연결할 수
+            없습니다. 관리자에게 문의해 주세요.
+          </div>
+        ) : connection ? (
+          <>
+            <div className="setrow">
+              <div className="sr-body">
+                <div className="sr-t">
+                  연결됨
+                  {connection.googleEmail ? ` · ${connection.googleEmail}` : ""}
+                </div>
+                <div className="sr-s">
+                  {connection.rootFolderName
+                    ? `“${connection.rootFolderName}” 폴더 아래 기업별 폴더로 동기화 · `
+                    : ""}
+                  {formatKstDate(connection.connectedAt)} 연결
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={disconnect}
+                disabled={pending}
+              >
+                {pending ? "해제 중…" : "연결 해제"}
+              </Button>
+            </div>
+            {drive.failedCount > 0 ? (
+              <div className="auth-error" style={{ marginTop: 12 }}>
+                <IconAlert /> 동기화하지 못한 파일이 {drive.failedCount}건 있습니다.
+                구글 권한이 만료되었을 수 있어요.{" "}
+                <a className="drive-relink" href="/api/google-drive/connect">
+                  다시 연결하기
+                </a>
+              </div>
+            ) : null}
+            <p className="sr-s" style={{ marginTop: 12 }}>
+              동기화는 백그라운드에서 처리되며, 일시적 실패 시 자동으로 재시도됩니다.
+            </p>
+          </>
+        ) : (
+          <div className="drive-connect-guide">
+            <div className="dcg-head">
+              <IconLink />
+              <div>
+                <div className="sr-t">아직 연결되지 않았습니다</div>
+                <div className="sr-s">
+                  구글 계정으로 <b>한 번만</b> 연결하면, 이후 올린 자료가 자동으로 내
+                  드라이브에 저장됩니다.
+                </div>
+              </div>
+            </div>
+            <ol className="drive-steps">
+              <li>
+                아래 <b>[Google Drive 연결]</b> 버튼을 누릅니다.
+              </li>
+              <li>
+                본인 <b>구글 계정</b>을 선택합니다.
+              </li>
+              <li>
+                <b>[허용]</b>을 누르면 끝납니다.
+              </li>
+            </ol>
+            <p className="sr-s">
+              관제는 <b>이 앱에서 올린 파일만</b> 접근하며, 구글 비밀번호는 저장하지
+              않습니다(최소 권한 <code>drive.file</code>).
+            </p>
+            <a className="btn btn--cta" href="/api/google-drive/connect">
+              <IconLink /> Google Drive 연결
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function togglePermission(
+  permissions: PermissionKey[],
+  permission: PermissionKey,
+): PermissionKey[] {
+  return permissions.includes(permission)
+    ? permissions.filter((item) => item !== permission)
+    : [...permissions, permission];
+}
+
+function PermissionChecklist({
+  role,
+  permissions,
+  onChange,
+  disabled,
+}: {
+  role: MemberRole;
+  permissions: PermissionKey[];
+  onChange: (permissions: PermissionKey[]) => void;
+  disabled?: boolean;
+}) {
+  const effective = normalizePermissions(role, permissions);
+  const isOwner = role === "owner";
+
+  return (
+    <div className="perm-grid">
+      {PERMISSION_GROUPS.map((group) => (
+        <div key={group.title} className="perm-group">
+          <div className="perm-group-title">{group.title}</div>
+          {group.keys.map((key) => (
+            <label key={key} className="perm-check">
+              <input
+                type="checkbox"
+                checked={effective.includes(key)}
+                disabled={disabled || isOwner}
+                onChange={() => onChange(togglePermission(effective, key))}
+              />
+              <span>{PERMISSION_LABEL[key]}</span>
+            </label>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RoleSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: MemberRole;
+  onChange: (role: MemberRole) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      className="selbox"
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value as MemberRole)}
+      aria-label="역할"
+    >
+      {MEMBER_ROLES.map((role) => (
+        <option key={role} value={role}>
+          {ROLE_LABEL[role]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function TeamMemberRow({
+  member,
+  onSaved,
+}: {
+  member: SettingsTeamMember;
+  onSaved: OnSaved;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [role, setRole] = useState<MemberRole>(member.role);
+  const [permissions, setPermissions] = useState<PermissionKey[]>(
+    member.permissions,
+  );
+  const disabled = member.status === "disabled";
+  const locked = member.isCurrentUser || disabled;
+
+  function changeRole(next: MemberRole) {
+    setRole(next);
+    setPermissions([...ROLE_PRESETS[next]]);
+  }
+
+  function save() {
+    startTransition(async () => {
+      const result = await updateTeamMember({
+        memberId: member.id,
+        role,
+        permissions: normalizePermissions(role, permissions),
+      });
+      onSaved(result.ok, result.error);
+    });
+  }
+
+  function disable() {
+    startTransition(async () => {
+      const result = await disableTeamMember(member.id);
+      onSaved(result.ok, result.error);
+    });
+  }
+
+  return (
+    <div className={`team-row${disabled ? " is-disabled" : ""}`}>
+      <div className="team-row-main">
+        <div className="avatar">{member.name.slice(0, 1)}</div>
+        <div className="team-ident">
+          <div>
+            <b>{member.name}</b>
+            {member.isCurrentUser ? <span className="mini-badge">본인</span> : null}
+            <span className={`status-badge status-badge--${member.status}`}>
+              {STATUS_LABEL[member.status]}
+            </span>
+          </div>
+          <p>
+            {member.title || "직함 미입력"}
+            {member.email ? ` · ${member.email}` : ""}
+          </p>
+        </div>
+        <div className="spacer" />
+        <RoleSelect value={role} onChange={changeRole} disabled={locked} />
+      </div>
+      <PermissionChecklist
+        role={role}
+        permissions={permissions}
+        onChange={setPermissions}
+        disabled={locked}
+      />
+      <div className="team-actions">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={save}
+          disabled={pending || locked}
+        >
+          {pending ? "저장 중…" : "권한 저장"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={disable}
+          disabled={pending || locked}
+        >
+          {disabled ? "비활성화됨" : "비활성화"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TeamSection({
+  data,
+  onSaved,
+}: {
+  data: SettingsData;
+  onSaved: OnSaved;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [form, setForm] = useState({
+    name: "",
+    title: "",
+    email: "",
+  });
+  const [role, setRole] = useState<MemberRole>("member");
+  const [permissions, setPermissions] = useState<PermissionKey[]>([
+    ...ROLE_PRESETS.member,
+  ]);
+
+  function set(key: keyof typeof form) {
+    return (e: ChangeEvent<HTMLInputElement>) =>
+      setForm((value) => ({ ...value, [key]: e.target.value }));
+  }
+
+  function changeRole(next: MemberRole) {
+    setRole(next);
+    setPermissions([...ROLE_PRESETS[next]]);
+  }
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    startTransition(async () => {
+      const result = await inviteTeamMember({
+        name: form.name,
+        title: form.title || null,
+        email: form.email,
+        role,
+        permissions: normalizePermissions(role, permissions),
+      });
+      if (result.ok) {
+        setForm({ name: "", title: "", email: "" });
+        setRole("member");
+        setPermissions([...ROLE_PRESETS.member]);
+      }
+      onSaved(result.ok, result.error);
+    });
+  }
+
+  if (!data.currentMember.canManageTeam) {
+    return (
+      <div className="panel">
+        <div className="sp-head">
+          <h2>팀·회원</h2>
+          <p>팀원 초대와 권한 관리는 최고관리자만 사용할 수 있습니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="team-stack">
+      <form className="panel" onSubmit={submit}>
+        <div className="sp-head">
+          <h2>팀원 초대</h2>
+          <p>메일 초대 링크를 보내고, 역할 프리셋과 기능별 권한을 지정합니다.</p>
+        </div>
+        <div className="sp-body">
+          <div className="field-grid">
+            <InputField
+              label="이름"
+              value={form.name}
+              onChange={set("name")}
+              required
+            />
+            <InputField
+              label="직함"
+              value={form.title}
+              onChange={set("title")}
+              placeholder="예: 선임 컨설턴트"
+            />
+            <InputField
+              label="이메일"
+              type="email"
+              value={form.email}
+              onChange={set("email")}
+              required
+            />
+            <div className="field">
+              <label>역할</label>
+              <RoleSelect value={role} onChange={changeRole} />
+            </div>
+          </div>
+          <div className="grp-label mt">기능 권한</div>
+          <PermissionChecklist
+            role={role}
+            permissions={permissions}
+            onChange={setPermissions}
+          />
+        </div>
+        <div className="sp-foot">
+          <Button type="submit" disabled={pending}>
+            {pending ? "초대 중…" : "초대 보내기"}
+          </Button>
+        </div>
+      </form>
+
+      <div className="panel">
+        <div className="sp-head">
+          <h2>팀원 목록</h2>
+          <p>비활성화된 팀원은 로그인과 데이터 접근이 차단되며, 기존 기록은 보존됩니다.</p>
+        </div>
+        <div className="sp-body team-list">
+          {data.teamMembers.map((member) => (
+            <TeamMemberRow
+              key={member.id}
+              member={member}
+              onSaved={onSaved}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsView({ data }: { data: SettingsData }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast, showToast } = useToast();
   const [section, setSection] = useState<SectionKey>("profile");
+
+  // (1) OAuth 콜백 redirect(?drive=) → 메시지 + Drive 섹션, (2) 딥링크(?section=drive)
+  // → 해당 섹션으로 이동(자료 탭 "연결하기" 배너에서 진입).
+  useEffect(() => {
+    const status = searchParams.get("drive");
+    const sectionParam = searchParams.get("section");
+    if (!status && !sectionParam) return;
+    if (status || sectionParam === "drive") setSection("drive");
+    else if (sectionParam) setSection(sectionParam as SectionKey);
+    if (status) {
+      showToast(
+        DRIVE_STATUS_MESSAGES[status] ?? "Google Drive 상태가 갱신되었습니다.",
+      );
+    }
+    // 쿼리 정리 — 새로고침 시 메시지/이동 반복 방지
+    router.replace("/app/settings");
+    // searchParams는 안정적이지 않으므로 status/section 변화에만 반응
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const onSaved: OnSaved = (ok, error) => {
     if (ok) {
@@ -575,21 +1032,31 @@ export function SettingsView({ data }: { data: SettingsData }) {
     <>
       <div className="set-grid">
         <nav className="set-nav" aria-label="설정 섹션">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              className={`sn${section === s.key ? " is-active" : ""}`}
-              disabled={s.soon}
-              onClick={() => {
-                if (!s.soon) setSection(s.key as SectionKey);
-              }}
-            >
-              {s.icon}
-              <span>{s.label}</span>
-              {s.soon ? <span className="cs-badge">Coming soon</span> : null}
-            </button>
-          ))}
+          {SECTIONS.map((s) => {
+            const missingOwner = s.ownerOnly && !data.currentMember.canManageTeam;
+            const missingPermission =
+              s.permission &&
+              !hasPermission(data.currentMember, s.permission);
+            const disabled = s.soon || missingOwner || missingPermission;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                className={`sn${section === s.key ? " is-active" : ""}`}
+                disabled={disabled}
+                onClick={() => {
+                  if (!disabled) setSection(s.key as SectionKey);
+                }}
+              >
+                {s.icon}
+                <span>{s.label}</span>
+                {s.soon ? <span className="cs-badge">Coming soon</span> : null}
+                {missingOwner || missingPermission ? (
+                  <span className="cs-badge">권한 없음</span>
+                ) : null}
+              </button>
+            );
+          })}
         </nav>
 
         <div>
@@ -601,6 +1068,12 @@ export function SettingsView({ data }: { data: SettingsData }) {
           ) : null}
           {section === "cats" ? (
             <CatsSection categories={data.categories} onSaved={onSaved} />
+          ) : null}
+          {section === "drive" ? (
+            <DriveSection drive={data.drive} showToast={showToast} />
+          ) : null}
+          {section === "team" ? (
+            <TeamSection data={data} onSaved={onSaved} />
           ) : null}
         </div>
       </div>

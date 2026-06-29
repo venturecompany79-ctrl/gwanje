@@ -33,6 +33,10 @@ export function LoginForm() {
 
   const supabase = createClient();
   const demo = !supabase;
+  const statusMessage =
+    searchParams.get("status") === "inactive"
+      ? "비활성화되었거나 초대 수락 전인 계정입니다. 최고관리자에게 문의해 주세요."
+      : null;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -79,6 +83,13 @@ export function LoginForm() {
         <div className="auth-error" role="alert">
           <IconAlert />
           {authError}
+        </div>
+      ) : null}
+
+      {statusMessage ? (
+        <div className="auth-error" role="alert">
+          <IconAlert />
+          {statusMessage}
         </div>
       ) : null}
 

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_BOARD } from "@/lib/demo-data";
+import { hasPermission, isMemberRole, normalizePermissions } from "@/lib/permissions";
 import {
   daysFromToday,
   type CategoryOption,
@@ -22,13 +23,15 @@ export interface BoardData {
   tasks: BoardTask[];
   companies: CompanyOption[];
   categories: CategoryOption[];
+  canWriteTasks: boolean;
 }
 
 export async function getBoardData(): Promise<BoardData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_BOARD();
 
-  const [tasks, companies, categories, profiles] = await Promise.all([
+  const { data: auth } = await supabase.auth.getUser();
+  const [tasks, companies, categories, profiles, currentProfile] = await Promise.all([
     // 보드 카드에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019 ③)
     supabase
       .from("task")
@@ -38,10 +41,21 @@ export async function getBoardData(): Promise<BoardData> {
     supabase.from("company").select("id, name").order("name"),
     supabase.from("category").select("id, name").order("sort_order"),
     supabase.from("profile").select("id, name"),
+    auth.user
+      ? supabase
+          .from("profile")
+          .select("role, permissions, status")
+          .eq("id", auth.user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const firstError =
-    tasks.error ?? companies.error ?? categories.error ?? profiles.error;
+    tasks.error ??
+    companies.error ??
+    categories.error ??
+    profiles.error ??
+    currentProfile.error;
   if (firstError) {
     throw new Error(`관리포인트를 불러오지 못했습니다: ${firstError.message}`);
   }
@@ -51,9 +65,21 @@ export async function getBoardData(): Promise<BoardData> {
     (categories.data ?? []).map((c) => [c.id, c.name]),
   );
   const profileName = new Map((profiles.data ?? []).map((p) => [p.id, p.name]));
+  const role =
+    currentProfile.data?.role && isMemberRole(currentProfile.data.role)
+      ? currentProfile.data.role
+      : "viewer";
+  const permissions = normalizePermissions(
+    role,
+    currentProfile.data?.permissions ?? [],
+  );
 
   return {
     demo: false,
+    canWriteTasks: hasPermission(
+      { role, permissions, status: currentProfile.data?.status === "active" ? "active" : "disabled" },
+      "tasks.write",
+    ),
     tasks: (tasks.data ?? [])
       .map((t) => ({
         id: t.id,

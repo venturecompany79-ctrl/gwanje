@@ -83,11 +83,16 @@ const STEPS = [
   },
 ];
 
-const TIERS = [
-  { name: "Starter", desc: "소규모로 시작", featured: false },
-  { name: "Pro", desc: "성장하는 1인 컨설턴트", featured: true },
-  { name: "Agency", desc: "팀·다중 워크스페이스", featured: false },
-];
+const PLAN = {
+  name: "관제 베이직",
+  priceLabel: "49,000원",
+  features: [
+    "관리 기업 수 제한 없음",
+    "만료·마감 통합 관제 + 사전 알림",
+    "관리포인트 추천 · 조건별 일괄안내",
+    "국내 카드 자동결제 · 언제든 해지",
+  ],
+};
 
 function Logo() {
   return (
@@ -126,7 +131,7 @@ export default function LandingPage() {
               </LinkButton>
             </div>
             <div className="lp-hero-trust">
-              신용카드 없이 시작 · 1분 설정 · 데스크톱 최적화
+              1분 설정 · 안전한 국내 카드 결제 · 데스크톱 최적화
             </div>
           </div>
           <Image
@@ -264,32 +269,34 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 요금 3티어 — 준비 중 */}
+      {/* 요금 — 월간 단일 플랜 */}
       <section className="lp-section" id="pricing">
         <div className="lp-wrap">
           <div className="lp-sec-head">
             <div className="lp-kicker">요금</div>
-            <h2>지금은 도입 문의로 시작하세요</h2>
-            <p>
-              요금 티어는 준비 중입니다. 우선 사용 목적을 알려주시면 맞춤으로
-              안내드립니다.
-            </p>
+            <h2>간단한 단일 요금제</h2>
+            <p>관리 기업 수 제한 없이, 모든 기능을 하나의 월정액으로.</p>
           </div>
           <div className="lp-price-grid">
-            {TIERS.map((t) => (
-              <div
-                key={t.name}
-                className={"lp-tier" + (t.featured ? " is-featured" : "")}
-              >
-                <div className="tn">{t.name}</div>
-                <div className="tp">{t.desc}</div>
-                <div className="soon">준비 중</div>
+            <div className="lp-tier is-featured">
+              <div className="tn">{PLAN.name}</div>
+              <div className="tp">
+                <b className="num">{PLAN.priceLabel}</b>
+                <span> / 월 (VAT 별도)</span>
               </div>
-            ))}
+              <ul className="lp-plan-feats">
+                {PLAN.features.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div className="lp-price-note">
-            <a className="btn btn--primary" href={`mailto:${CONTACT_EMAIL}`}>
-              도입 문의하기
+            <a className="btn btn--primary" href="/login">
+              지금 시작하기
+            </a>
+            <a className="lp-price-contact" href={`mailto:${CONTACT_EMAIL}`}>
+              도입 문의
             </a>
           </div>
         </div>

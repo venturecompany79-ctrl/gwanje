@@ -5,18 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   IconBell,
   IconBuilding,
+  IconCard,
   IconGear,
   IconGrid,
   IconKanban,
   IconSend,
 } from "@/components/ui/icons";
+import { hasPermission, type MemberRole, type PermissionKey } from "@/lib/permissions";
 
 const NAV_ITEMS = [
   { href: "/app", label: "대시보드", icon: IconGrid },
-  { href: "/app/companies", label: "기업", icon: IconBuilding },
-  { href: "/app/board", label: "Task 보드", icon: IconKanban },
-  { href: "/app/campaigns", label: "일괄안내", icon: IconSend },
-  { href: "/app/notifications", label: "알림", icon: IconBell },
+  { href: "/app/companies", label: "기업", icon: IconBuilding, permission: "companies.read" },
+  { href: "/app/board", label: "Task 보드", icon: IconKanban, permission: "tasks.read" },
+  { href: "/app/campaigns", label: "일괄안내", icon: IconSend, permission: "campaigns.read" },
+  { href: "/app/notifications", label: "알림", icon: IconBell, permission: "notifications.read" },
+  { href: "/app/billing", label: "결제", icon: IconCard, permission: "billing.manage" },
   { href: "/app/settings", label: "설정", icon: IconGear },
 ] as const;
 
@@ -24,10 +27,14 @@ export function Sidebar({
   consultantName,
   orgName,
   unreadCount,
+  role,
+  permissions,
 }: {
   consultantName: string;
   orgName: string;
   unreadCount: number;
+  role: MemberRole;
+  permissions: PermissionKey[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -42,7 +49,11 @@ export function Sidebar({
         </div>
       </div>
       <div className="nav-sec">메뉴</div>
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {NAV_ITEMS.filter((item) =>
+        "permission" in item
+          ? hasPermission({ role, permissions, status: "active" }, item.permission)
+          : true,
+      ).map(({ href, label, icon: Icon }) => {
         const active =
           href === "/app" ? pathname === "/app" : pathname.startsWith(href);
         return (

@@ -11,6 +11,7 @@ import {
   optionalText,
   parseEokToWon,
   parseNonNegativeInt,
+  requirePermission,
   type ActionResult,
 } from "@/lib/actions/shared";
 import {
@@ -20,6 +21,11 @@ import {
   parseCompanyDocumentStorageUrl,
   storageUrlFromPath,
 } from "@/lib/storage";
+import {
+  enqueueSyncJob,
+  getActiveConnection,
+} from "@/lib/google-drive/connections";
+import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 
 function revalidateCompany(companyId: string) {
   revalidatePath(`/app/companies/${companyId}`);
@@ -54,6 +60,9 @@ export async function prepareDocumentUpload(
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
@@ -81,6 +90,9 @@ export async function registerUploadedDocument(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
@@ -116,20 +128,42 @@ export async function registerUploadedDocument(
   const fileType =
     optionalText(formData, "file_type") ?? getFileExtension(name) ?? "file";
 
-  const { error } = await supabase.from("document").insert({
-    tenant_id: ctx.tenantId,
-    company_id: companyId,
-    name,
-    doc_category: optionalText(formData, "doc_category"),
-    version,
-    uploaded_by: "consultant",
-    storage_url: storageUrlFromPath(path),
-    file_type: fileType,
-    size_bytes: sizeBytes,
-  });
+  const { data: inserted, error } = await supabase
+    .from("document")
+    .insert({
+      tenant_id: ctx.tenantId,
+      company_id: companyId,
+      name,
+      doc_category: optionalText(formData, "doc_category"),
+      version,
+      uploaded_by: "consultant",
+      storage_url: storageUrlFromPath(path),
+      file_type: fileType,
+      size_bytes: sizeBytes,
+    })
+    .select("id")
+    .single();
   if (error) {
     console.error("[registerUploadedDocument]", error.code, error.message);
     return { ok: false, error: `자료 저장에 실패했습니다: ${error.message}` };
+  }
+
+  // Supabase 저장 성공이 1차 완료 — 이 사용자가 Drive를 연결했다면 동기화 잡을 적재한다.
+  // 적재 실패는 자료 저장 결과에 영향을 주지 않는다(보조 기능).
+  const connection = await getActiveConnection(supabase, ctx.userId);
+  if (connection) {
+    const enqueued = await enqueueSyncJob(supabase, {
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      documentId: inserted.id,
+      storageBucket: COMPANY_DOCUMENTS_BUCKET,
+      storagePath: path,
+      fileName: name,
+      mimeType: optionalText(formData, "mime_type"),
+      sizeBytes,
+    });
+    // 즉시 트리거(B안) — 응답 후 백그라운드로 동기화 1회 실행해 체감 지연을 없앤다.
+    if (enqueued) triggerDriveSyncAfterResponse();
   }
 
   revalidateCompany(companyId);
@@ -141,6 +175,9 @@ export async function createDocumentDownloadUrl(
 ): Promise<ActionResult & { url?: string }> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.read");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
@@ -177,6 +214,9 @@ export async function addCredential(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const type = String(formData.get("type") ?? "").trim();
   if (!type) return { ok: false, error: "자격종류를 입력해 주세요." };
@@ -217,6 +257,9 @@ export async function updateCredential(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const type = String(formData.get("type") ?? "").trim();
   if (!type) return { ok: false, error: "자격종류를 입력해 주세요." };
@@ -260,6 +303,9 @@ export async function deleteCredential(
   if (!supabase) return { ok: false, error: DEMO_ERROR };
   if (!credentialId) return { ok: false, error: "자격을 찾을 수 없습니다." };
 
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
   const { error } = await supabase
     .from("credential")
     .delete()
@@ -281,6 +327,9 @@ export async function createRenewalTask(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
@@ -346,6 +395,9 @@ export async function addSchedule(
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "일정명을 입력해 주세요." };
 
@@ -384,6 +436,9 @@ export async function updateCompany(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "기업명을 입력해 주세요." };

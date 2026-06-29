@@ -104,7 +104,7 @@ export function BoardView({
 
   const pageSub =
     activeTab === "todos"
-      ? `오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${todoData?.notes.length ?? 0}건`
+      ? `${todoData?.selectedLabel ?? "업무일지"} · 오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${todoData?.notes.length ?? 0}건`
       : data?.tasks.length === 0
         ? "첫 Task를 등록해 시작하세요"
         : `전체 ${data?.tasks.length ?? 0}건`;
@@ -118,7 +118,7 @@ export function BoardView({
         </div>
         <div className="spacer" />
         <div className="head-actions">
-          {activeTab === "todos" ? (
+          {activeTab === "todos" && todoData?.canCreate ? (
             <Button
               variant="cta"
               size="sm"
@@ -126,7 +126,7 @@ export function BoardView({
             >
               <IconPlus /> 노트 추가
             </Button>
-          ) : (
+          ) : activeTab === "tasks" && data?.canWriteTasks ? (
             <Button
               variant="cta"
               size="sm"
@@ -134,7 +134,7 @@ export function BoardView({
             >
               <IconPlus /> Task 추가
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export function BoardView({
             selectTab("todos");
           }}
         >
-          <IconList /> 업무 노트
+          <IconList /> 업무일지
         </a>
         <a
           href="/app/board?tab=tasks"

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
 import { daysFromToday } from "@/lib/datetime";
+import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import type {
   CredentialStatus,
   DocumentUploader,
@@ -65,6 +66,15 @@ export interface ScheduleRow {
   relatedTaskTitle: string | null;
 }
 
+/** Google Drive 동기화 상태 — google_drive_sync_jobs.status (잡 없으면 null) */
+export type DriveSyncStatus = "pending" | "processing" | "succeeded" | "failed";
+
+export interface DocumentDriveSync {
+  status: DriveSyncStatus;
+  /** 동기화 완료 시 Drive 파일 링크 */
+  webViewLink: string | null;
+}
+
 export interface DocumentRow {
   id: string;
   name: string;
@@ -75,6 +85,8 @@ export interface DocumentRow {
   fileType: string | null;
   sizeBytes: number | null;
   createdAt: string;
+  /** 본인 Drive 연결 시 이 문서의 동기화 상태(잡 없으면 null — 연결 전 업로드분 등) */
+  driveSync: DocumentDriveSync | null;
 }
 
 export interface CategoryOption {
@@ -91,6 +103,10 @@ export interface CompanyDetailData {
   schedules: ScheduleRow[];
   documents: DocumentRow[];
   categories: CategoryOption[];
+  /** 서버에 Google OAuth 환경변수가 갖춰졌는지 — false면 연결 유도 배너 숨김 */
+  driveConfigured: boolean;
+  /** 현재 사용자가 본인 Drive를 연결했는지 — 동기화 컬럼/배너 노출 분기 */
+  driveConnected: boolean;
 }
 
 /** deadline_item 뷰와 동일한 자격 상태 파생 규칙 */
@@ -122,7 +138,7 @@ export async function getCompanyDetail(
   const supabase = await createClient();
   if (!supabase) return DEMO_COMPANY_DETAIL(companyId);
 
-  const [company, credentials, tasks, schedules, documents, categories, profiles] =
+  const [company, credentials, tasks, schedules, documents, categories, profiles, connection] =
     await Promise.all([
       supabase
         .from("company")
@@ -156,6 +172,12 @@ export async function getCompanyDetail(
         .order("created_at", { ascending: false }),
       supabase.from("category").select("id, name").order("sort_order"),
       supabase.from("profile").select("id, name"),
+      // 본인 활성 Drive 연결 — RLS가 본인 행으로 한정하므로 user_id 필터 없이 조회(auth.getUser 호출 절약)
+      supabase
+        .from("google_drive_connections")
+        .select("id")
+        .is("revoked_at", null)
+        .maybeSingle(),
     ]);
 
   // 잘못된 uuid 형식(22P02)은 '없는 기업'으로 처리 → 404
@@ -179,6 +201,26 @@ export async function getCompanyDetail(
   const documentData = documents.error ? [] : (documents.data ?? []);
   const categoryData = categories.error ? [] : (categories.data ?? []);
   const profileData = profiles.error ? [] : (profiles.data ?? []);
+
+  // 본인 Drive 연결 시, 이 회사 문서들의 동기화 잡 상태를 문서별로 매핑(RLS로 본인 잡만).
+  const driveConnected = Boolean(connection.data);
+  const driveSyncByDoc = new Map<string, DocumentDriveSync>();
+  if (driveConnected && documentData.length > 0) {
+    const { data: jobs, error: jobsError } = await supabase
+      .from("google_drive_sync_jobs")
+      .select("document_id, status, google_drive_web_view_link")
+      .in(
+        "document_id",
+        documentData.map((d) => d.id),
+      );
+    logRelatedQueryError("drive_sync_jobs", jobsError);
+    for (const job of jobs ?? []) {
+      driveSyncByDoc.set(job.document_id, {
+        status: job.status as DriveSyncStatus,
+        webViewLink: job.google_drive_web_view_link,
+      });
+    }
+  }
 
   const categoryName = new Map(
     categoryData.map((c) => [c.id, c.name]),
@@ -290,7 +332,10 @@ export async function getCompanyDetail(
       fileType: d.file_type,
       sizeBytes: d.size_bytes,
       createdAt: d.created_at,
+      driveSync: driveSyncByDoc.get(d.id) ?? null,
     })),
     categories: categoryData,
+    driveConfigured: isGoogleDriveConfigured(),
+    driveConnected,
   };
 }

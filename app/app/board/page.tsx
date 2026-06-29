@@ -14,13 +14,13 @@ function resolveTab(tab?: string): BoardTab {
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; journal?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, journal } = await searchParams;
   const activeTab = resolveTab(tab);
   const [data, todoData] = await Promise.all([
     getBoardData(),
-    getTodoBoardData(),
+    getTodoBoardData(journal),
   ]);
   const demo = data.demo || todoData.demo;
 

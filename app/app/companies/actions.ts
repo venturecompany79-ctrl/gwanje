@@ -9,6 +9,7 @@ import {
   optionalText,
   parseEokToWon,
   parseNonNegativeInt,
+  requirePermission,
   type ActionResult,
 } from "@/lib/actions/shared";
 import {
@@ -17,6 +18,11 @@ import {
   getFileExtension,
   storageUrlFromPath,
 } from "@/lib/storage";
+import {
+  enqueueSyncJob,
+  getActiveConnection,
+} from "@/lib/google-drive/connections";
+import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
@@ -65,17 +71,20 @@ function getBusinessLicenseFile(formData: FormData): File | null {
 async function saveBusinessLicenseDocument({
   supabase,
   tenantId,
+  userId,
   companyId,
   file,
 }: {
   supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>;
   tenantId: string;
+  userId: string;
   companyId: string;
   file: File;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const extension = getFileExtension(file.name);
   const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
   const path = `${tenantId}/${companyId}/${objectName}`;
+  const name = file.name.trim() || "사업자등록증";
 
   const { error: uploadError } = await supabase.storage
     .from(COMPANY_DOCUMENTS_BUCKET)
@@ -88,17 +97,21 @@ async function saveBusinessLicenseDocument({
     return { ok: false, error: uploadError.message };
   }
 
-  const { error: documentError } = await supabase.from("document").insert({
-    tenant_id: tenantId,
-    company_id: companyId,
-    name: file.name.trim() || "사업자등록증",
-    doc_category: "기본서류",
-    version: 1,
-    uploaded_by: "consultant",
-    storage_url: storageUrlFromPath(path),
-    file_type: (extension ?? file.type) || "file",
-    size_bytes: file.size,
-  });
+  const { data: inserted, error: documentError } = await supabase
+    .from("document")
+    .insert({
+      tenant_id: tenantId,
+      company_id: companyId,
+      name,
+      doc_category: "기본서류",
+      version: 1,
+      uploaded_by: "consultant",
+      storage_url: storageUrlFromPath(path),
+      file_type: (extension ?? file.type) || "file",
+      size_bytes: file.size,
+    })
+    .select("id")
+    .single();
   if (documentError) {
     console.error(
       "[addCompany:businessLicenseDocument]",
@@ -108,12 +121,32 @@ async function saveBusinessLicenseDocument({
     return { ok: false, error: documentError.message };
   }
 
+  // Drive 연결 시 동기화 잡 적재(보조 — 실패해도 자료 저장에는 영향 없음)
+  const connection = await getActiveConnection(supabase, userId);
+  if (connection) {
+    const enqueued = await enqueueSyncJob(supabase, {
+      tenantId,
+      userId,
+      documentId: inserted.id,
+      storageBucket: COMPANY_DOCUMENTS_BUCKET,
+      storagePath: path,
+      fileName: name,
+      mimeType: file.type || null,
+      sizeBytes: file.size,
+    });
+    // 즉시 트리거(B안) — 응답 후 백그라운드 동기화
+    if (enqueued) triggerDriveSyncAfterResponse();
+  }
+
   return { ok: true };
 }
 
 export async function addCompany(formData: FormData): Promise<AddCompanyResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "기업명을 입력해 주세요." };
@@ -247,6 +280,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
     const saved = await saveBusinessLicenseDocument({
       supabase,
       tenantId: ctx.tenantId,
+      userId: ctx.userId,
       companyId: data.id,
       file: businessLicenseFile,
     });

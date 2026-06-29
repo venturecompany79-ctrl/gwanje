@@ -3,7 +3,7 @@
 // 일괄안내(캠페인) 서버 액션 — 마법사 [발송]/[예약 발송]
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_ERROR, getTenantContext } from "@/lib/actions/shared";
+import { DEMO_ERROR, getTenantContext, requirePermission } from "@/lib/actions/shared";
 import { segmentToJson, type Segment } from "@/lib/segments";
 import type { CampaignChannel } from "@/lib/database.types";
 
@@ -32,6 +32,9 @@ export async function createCampaign(
 ): Promise<CreateCampaignResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR, id: null };
+
+  const allowed = await requirePermission(supabase, "campaigns.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error, id: null };
 
   const title = input.title.trim();
   const body = input.body.trim();

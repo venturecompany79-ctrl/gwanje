@@ -12,6 +12,7 @@ import type { TaskStage } from "@/lib/database.types";
 import {
   DEMO_ERROR,
   getTenantContext,
+  requirePermission,
   type Supabase,
   optionalText,
   type ActionResult,
@@ -149,6 +150,9 @@ export async function addTask(
 
   if (!companyId) return { ok: false, error: "기업을 선택해 주세요." };
 
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
 
@@ -205,6 +209,9 @@ export async function updateTask(
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
   const stage = String(formData.get("stage") ?? "") as TaskStage;
   if (!TASK_STAGES.includes(stage)) {
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
@@ -235,6 +242,9 @@ export async function updateTaskStage(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   if (!TASK_STAGES.includes(stage)) {
     return { ok: false, error: "단계 값이 올바르지 않습니다." };

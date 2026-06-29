@@ -50,6 +50,7 @@ export function TaskSlideOver({
   companyName,
   task,
   demo,
+  canEdit = true,
   showToast,
   onClose,
 }: {
@@ -58,6 +59,7 @@ export function TaskSlideOver({
   companyName?: string;
   task: TaskRow;
   demo: boolean;
+  canEdit?: boolean;
   showToast: (message: string) => void;
   onClose: () => void;
 }) {
@@ -68,6 +70,7 @@ export function TaskSlideOver({
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!canEdit) return;
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await updateTask(companyId, task.id, formData);
@@ -114,6 +117,11 @@ export function TaskSlideOver({
                 <b>데모 모드</b> — 변경 내용은 저장되지 않습니다.
               </div>
             ) : null}
+            {!canEdit ? (
+              <div className="auth-notice">
+                보기 권한만 있어 Task를 수정할 수 없습니다.
+              </div>
+            ) : null}
             {error ? (
               <div className="auth-error">
                 <IconAlert /> {error}
@@ -133,6 +141,7 @@ export function TaskSlideOver({
                       name="stage"
                       value={s}
                       checked={stage === s}
+                      disabled={!canEdit}
                       onChange={() => setStage(s)}
                     />
                     <span className="ring" />
@@ -150,6 +159,7 @@ export function TaskSlideOver({
                 className="memo-input"
                 defaultValue={task.memo ?? ""}
                 placeholder="진행 상황, 준비 서류 등"
+                disabled={!canEdit}
                 aria-label="메모"
               />
             </div>
@@ -166,7 +176,7 @@ export function TaskSlideOver({
             </div>
           </div>
           <div className="slideover-foot">
-            <Button variant="cta" type="submit" full disabled={pending}>
+            <Button variant="cta" type="submit" full disabled={pending || !canEdit}>
               {pending ? "저장 중…" : "변경 저장"}
             </Button>
             <Button variant="ghost" type="button" onClick={onClose}>

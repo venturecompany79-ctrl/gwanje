@@ -5,6 +5,8 @@ export type TodoTag = (typeof TODO_TAGS)[number];
 
 export interface TodoNoteRow {
   id: string;
+  userId: string;
+  userName: string;
   noteDate: string;
   content: string;
   tag: TodoTag | null;
@@ -12,11 +14,23 @@ export interface TodoNoteRow {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  editable: boolean;
+}
+
+export interface TodoMemberOption {
+  id: string;
+  name: string;
 }
 
 export interface TodoBoardData {
   demo: boolean;
   today: string;
+  currentUserId: string;
+  selectedUserId: string;
+  selectedLabel: string;
+  canViewTeam: boolean;
+  canCreate: boolean;
+  members: TodoMemberOption[];
   notes: TodoNoteRow[];
 }
 

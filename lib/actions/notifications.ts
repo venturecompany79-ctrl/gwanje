@@ -3,11 +3,14 @@
 // 알림 읽음 처리 액션 — 알림 센터 + 셸(사이드바·상단바) 안읽음 배지 갱신
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_ERROR, type ActionResult } from "@/lib/actions/shared";
+import { DEMO_ERROR, requirePermission, type ActionResult } from "@/lib/actions/shared";
 
 export async function markNotificationRead(id: string): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "notifications.read");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const { error } = await supabase
     .from("notification")
@@ -26,6 +29,9 @@ export async function markNotificationRead(id: string): Promise<ActionResult> {
 export async function markAllNotificationsRead(): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "notifications.read");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
 
   const { error } = await supabase
     .from("notification")

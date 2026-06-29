@@ -74,6 +74,7 @@ export async function createTodoNotes(
     .from("todo_note")
     .select("sort_order")
     .eq("note_date", targetDate)
+    .eq("user_id", ctx.userId)
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();

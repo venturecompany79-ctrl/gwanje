@@ -170,8 +170,9 @@ export function TodoBoard({
   useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
     handledAddRequestRef.current = addRequest;
+    if (!data.canCreate) return;
     addDraft(data.today);
-  }, [addDraft, addRequest, data.today]);
+  }, [addDraft, addRequest, data.canCreate, data.today]);
 
   useEffect(() => {
     if (!focusDraftId) return;
@@ -407,22 +408,29 @@ export function TodoBoard({
     return (
       <div
         key={note.id}
-        className={`todo-item${note.completed ? " is-completed" : ""}`}
+        className={`todo-item${note.completed ? " is-completed" : ""}${note.editable ? "" : " is-readonly"}`}
       >
         <button
           type="button"
           className={`todo-check${note.completed ? " is-on" : ""}`}
           onClick={() => toggleNote(note)}
+          disabled={!note.editable}
           aria-label={note.completed ? "완료 해제" : "완료 처리"}
         >
           {note.completed ? <IconCheck /> : null}
         </button>
         <div className="todo-item-body">
           <div className="todo-edit-row">
+            {data.canViewTeam ? (
+              <span className="todo-author">{note.userName}</span>
+            ) : null}
             <button
               type="button"
               className={`todo-tag${note.tag ? "" : " is-empty"}${tagToneClass(note.tag)}`}
-              onClick={() => openTagMenu(target)}
+              onClick={() => {
+                if (note.editable) openTagMenu(target);
+              }}
+              disabled={!note.editable}
             >
               {note.tag ? `[${note.tag}]` : "태그"}
             </button>
@@ -430,15 +438,20 @@ export function TodoBoard({
               className="todo-text-input"
               value={note.content}
               onChange={(e) => {
+                if (!note.editable) return;
                 applyNoteLocal(note.id, { content: e.target.value });
                 markNoteDirty(note.id);
               }}
               onBlur={(e) =>
-                saveNoteContent({ ...note, content: e.currentTarget.value })
+                note.editable
+                  ? saveNoteContent({ ...note, content: e.currentTarget.value })
+                  : undefined
               }
+              readOnly={!note.editable}
               onCompositionStart={() => handleCompositionStart(target)}
               onCompositionEnd={() => handleCompositionEnd(target)}
               onKeyDown={(e) => {
+                if (!note.editable) return;
                 const handled = handleTagMenuKeys(e, target, (tag) =>
                   updateNoteTag(note, tag),
                 );
@@ -460,12 +473,13 @@ export function TodoBoard({
               type="button"
               className="todo-row-action"
               onClick={() => removeNote(note)}
+              disabled={!note.editable}
               aria-label="노트 삭제"
             >
               <IconX />
             </button>
           </div>
-          {isTarget(tagMenu, target) ? (
+          {note.editable && isTarget(tagMenu, target) ? (
             <TagCommandMenu
               activeIndex={tagMenuIndex}
               onSelect={(tag) => updateNoteTag(note, tag)}
@@ -563,6 +577,34 @@ export function TodoBoard({
 
   return (
     <div className="todo-board">
+      {data.canViewTeam ? (
+        <div className="journal-filter">
+          <label htmlFor="journal-filter">업무일지 보기</label>
+          <select
+            id="journal-filter"
+            className="select-pill"
+            value={data.selectedUserId}
+            onChange={(e) => {
+              const value = e.target.value;
+              const href =
+                value === "me"
+                  ? "/app/board"
+                  : `/app/board?journal=${encodeURIComponent(value)}`;
+              router.push(href);
+            }}
+          >
+            <option value="me">내 업무일지</option>
+            <option value="all">전체 팀원</option>
+            {data.members
+              .filter((member) => member.id !== data.currentUserId)
+              .map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      ) : null}
       {dateGroups.map((group) => {
         const groupDrafts = drafts.filter(
           (draft) => draft.date === group.date,
@@ -601,7 +643,7 @@ export function TodoBoard({
                   >
                     {pending ? "저장 중…" : "저장"}
                   </Button>
-                ) : (
+                ) : data.canCreate ? (
                   <button
                     type="button"
                     className="todo-add-note"
@@ -609,7 +651,7 @@ export function TodoBoard({
                   >
                     <IconPlus /> 노트 추가
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -622,10 +664,15 @@ export function TodoBoard({
                 <button
                   type="button"
                   className="todo-empty todo-empty--action"
-                  onClick={() => addDraft(group.date)}
+                  onClick={() => {
+                    if (data.canCreate) addDraft(group.date);
+                  }}
+                  disabled={!data.canCreate}
                 >
                   <IconList />
-                  {group.isToday
+                  {!data.canCreate
+                    ? "선택한 팀원의 업무일지가 없습니다."
+                    : group.isToday
                     ? "오늘 남길 노트를 추가하세요."
                     : "이 날짜에 노트를 추가하세요."}
                 </button>

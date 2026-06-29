@@ -4,6 +4,7 @@ import {
   isSupabaseConfigured,
   isSupabaseDemoAllowed,
 } from "@/lib/supabase/env";
+import { isBillingEnabled } from "@/lib/billing/config";
 
 // 라우팅 규칙 (CLAUDE.md 4절):
 // - 세션 있음 + `/`·`/login`·`/signup` → `/app`
@@ -59,10 +60,21 @@ export async function middleware(request: NextRequest) {
   const { data: claims } = await supabase.auth.getClaims();
   const isAuthenticated = Boolean(claims?.claims.sub);
 
+  let profileStatus: string | null = null;
+  if (isAuthenticated) {
+    const { data: profile } = await supabase
+      .from("profile")
+      .select("status")
+      .eq("id", claims?.claims.sub)
+      .maybeSingle();
+    profileStatus = profile?.status ?? null;
+  }
+
+  const isActiveMember = profileStatus === "active";
   const isAuthEntry =
     pathname === "/" || pathname === "/login" || pathname === "/signup";
 
-  if (isAuthenticated && isAuthEntry) {
+  if (isAuthenticated && isAuthEntry && isActiveMember) {
     return NextResponse.redirect(new URL("/app", request.url));
   }
 
@@ -70,6 +82,31 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (isAuthenticated && pathname.startsWith("/app") && !isActiveMember) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("status", "inactive");
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 구독 접근 제어(피처 플래그 ON일 때만 — OFF면 쿼리 없이 기존 동작).
+  // expired/미구독이면 /app/billing로 유도. 단 결제·설정 화면은 항상 허용.
+  if (
+    isAuthenticated &&
+    isBillingEnabled() &&
+    pathname.startsWith("/app") &&
+    !pathname.startsWith("/app/billing") &&
+    !pathname.startsWith("/app/settings")
+  ) {
+    const { data: sub } = await supabase
+      .from("tenant_subscription")
+      .select("status")
+      .maybeSingle();
+    const status = sub?.status ?? null;
+    if (status === null || status === "expired") {
+      return NextResponse.redirect(new URL("/app/billing", request.url));
+    }
   }
 
   return response;

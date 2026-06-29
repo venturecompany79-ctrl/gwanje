@@ -39,6 +39,333 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_customer: {
+        Row: {
+          billing_email: string | null
+          billing_name: string | null
+          created_at: string
+          id: string
+          tenant_id: string
+          toss_customer_key: string
+          updated_at: string
+        }
+        Insert: {
+          billing_email?: string | null
+          billing_name?: string | null
+          created_at?: string
+          id?: string
+          tenant_id: string
+          toss_customer_key: string
+          updated_at?: string
+        }
+        Update: {
+          billing_email?: string | null
+          billing_name?: string | null
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          toss_customer_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_customer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_plan: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string
+          currency: string
+          id: string
+          interval: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          code: string
+          created_at?: string
+          currency?: string
+          id?: string
+          interval?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          interval?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_method: {
+        Row: {
+          billing_customer_id: string
+          card_company: string | null
+          card_number_masked: string | null
+          card_type: string | null
+          created_at: string
+          encrypted_billing_key: string
+          id: string
+          is_default: boolean
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_customer_id: string
+          card_company?: string | null
+          card_number_masked?: string | null
+          card_type?: string | null
+          created_at?: string
+          encrypted_billing_key: string
+          id?: string
+          is_default?: boolean
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_customer_id?: string
+          card_company?: string | null
+          card_number_masked?: string | null
+          card_type?: string | null
+          created_at?: string
+          encrypted_billing_key?: string
+          id?: string
+          is_default?: boolean
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_billing_customer_id_fkey"
+            columns: ["billing_customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transaction: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          currency: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          kind: Database["public"]["Enums"]["payment_kind"]
+          order_id: string
+          order_name: string | null
+          payment_method_id: string | null
+          raw_response: Json | null
+          status: Database["public"]["Enums"]["payment_status"]
+          subscription_id: string | null
+          tenant_id: string
+          toss_payment_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["payment_kind"]
+          order_id: string
+          order_name?: string | null
+          payment_method_id?: string | null
+          raw_response?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          tenant_id: string
+          toss_payment_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["payment_kind"]
+          order_id?: string
+          order_name?: string | null
+          payment_method_id?: string | null
+          raw_response?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          tenant_id?: string
+          toss_payment_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transaction_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_method"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transaction_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transaction_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_subscription: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          grace_until: string | null
+          id: string
+          payment_method_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          id?: string
+          payment_method_id?: string | null
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          id?: string
+          payment_method_id?: string | null
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id?: string
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscription_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_method"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscription_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "billing_plan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscription_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_event: {
+        Row: {
+          created_at: string
+          event_key: string
+          event_type: string | null
+          id: string
+          order_id: string | null
+          payload: Json | null
+          payment_key: string | null
+          processed_at: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          event_type?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          payment_key?: string | null
+          processed_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          event_type?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          payment_key?: string | null
+          processed_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign: {
         Row: {
           body: string | null
@@ -362,6 +689,131 @@ export type Database = {
           },
         ]
       }
+      google_drive_connections: {
+        Row: {
+          connected_at: string
+          created_at: string
+          encrypted_refresh_token: string
+          google_email: string | null
+          id: string
+          revoked_at: string | null
+          root_folder_id: string | null
+          root_folder_name: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string
+          created_at?: string
+          encrypted_refresh_token: string
+          google_email?: string | null
+          id?: string
+          revoked_at?: string | null
+          root_folder_id?: string | null
+          root_folder_name?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_at?: string
+          created_at?: string
+          encrypted_refresh_token?: string
+          google_email?: string | null
+          id?: string
+          revoked_at?: string | null
+          root_folder_id?: string | null
+          root_folder_name?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_drive_sync_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          document_id: string
+          file_name: string
+          google_drive_file_id: string | null
+          google_drive_web_view_link: string | null
+          id: string
+          last_error: string | null
+          mime_type: string | null
+          next_run_at: string
+          size_bytes: number | null
+          status: string
+          storage_bucket: string
+          storage_path: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          document_id: string
+          file_name: string
+          google_drive_file_id?: string | null
+          google_drive_web_view_link?: string | null
+          id?: string
+          last_error?: string | null
+          mime_type?: string | null
+          next_run_at?: string
+          size_bytes?: number | null
+          status?: string
+          storage_bucket: string
+          storage_path: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          document_id?: string
+          file_name?: string
+          google_drive_file_id?: string | null
+          google_drive_web_view_link?: string | null
+          id?: string
+          last_error?: string | null
+          mime_type?: string | null
+          next_run_at?: string
+          size_bytes?: number | null
+          status?: string
+          storage_bucket?: string
+          storage_path?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_sync_jobs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "document"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_drive_sync_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification: {
         Row: {
           body: string | null
@@ -423,49 +875,77 @@ export type Database = {
         Row: {
           created_at: string
           daily_summary_at: string | null
+          accepted_at: string | null
+          disabled_at: string | null
           email: string | null
           id: string
+          invited_at: string | null
+          invited_by: string | null
           name: string
           notify_channels: string[]
           notify_lead_days: number[]
           notify_match: boolean
+          permissions: string[]
           phone: string | null
+          role: string
           sender_name: string | null
           sender_phone: string | null
+          status: string
           tenant_id: string
           title: string | null
         }
         Insert: {
           created_at?: string
           daily_summary_at?: string | null
+          accepted_at?: string | null
+          disabled_at?: string | null
           email?: string | null
           id: string
+          invited_at?: string | null
+          invited_by?: string | null
           name: string
           notify_channels?: string[]
           notify_lead_days?: number[]
           notify_match?: boolean
+          permissions?: string[]
           phone?: string | null
+          role?: string
           sender_name?: string | null
           sender_phone?: string | null
+          status?: string
           tenant_id: string
           title?: string | null
         }
         Update: {
           created_at?: string
           daily_summary_at?: string | null
+          accepted_at?: string | null
+          disabled_at?: string | null
           email?: string | null
           id?: string
+          invited_at?: string | null
+          invited_by?: string | null
           name?: string
           notify_channels?: string[]
           notify_lead_days?: number[]
           notify_match?: boolean
+          permissions?: string[]
           phone?: string | null
+          role?: string
           sender_name?: string | null
           sender_phone?: string | null
+          status?: string
           tenant_id?: string
           title?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profile_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profile_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -799,6 +1279,10 @@ export type Database = {
       }
     }
     Functions: {
+      app_permission_keys: { Args: never; Returns: string[] }
+      auth_has_permission: { Args: { permission_key: string }; Returns: boolean }
+      auth_is_owner: { Args: never; Returns: boolean }
+      auth_member_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: string }
       cleanup_old_todo_notes: { Args: never; Returns: number }
       generate_due_notifications: { Args: never; Returns: number }
@@ -808,7 +1292,15 @@ export type Database = {
       campaign_status: "draft" | "scheduled" | "sending" | "sent"
       document_uploader: "consultant" | "client"
       notification_type: "expiry" | "deadline" | "program_match"
+      payment_kind: "initial" | "recurring" | "refund"
+      payment_status: "pending" | "succeeded" | "failed" | "canceled"
       schedule_type: "expiry" | "deadline" | "meeting" | "renewal" | "etc"
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "expired"
       task_stage: "diagnosis" | "proposal" | "application" | "result"
     }
     CompositeTypes: {

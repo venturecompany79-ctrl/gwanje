@@ -155,7 +155,13 @@ export function CompanyDetailView({
         />
       ) : null}
       {tab === "files" ? (
-        <FilesTab companyId={company.id} documents={data.documents} />
+        <FilesTab
+          companyId={company.id}
+          documents={data.documents}
+          driveConnected={data.driveConnected}
+          driveConfigured={data.driveConfigured}
+          showToast={showToast}
+        />
       ) : null}
 
       <Toast message={toast} />
