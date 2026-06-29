@@ -6127,6 +6127,8 @@ body {
 }
 .drive-connect-prompt > svg {
   flex-shrink: 0;
+  width: 20px;
+  height: 20px;
   color: var(--color-steel);
 }
 .drive-sync-link {
@@ -6146,8 +6148,14 @@ body {
 }
 .drive-connect-guide .dcg-head > svg {
   flex-shrink: 0;
-  margin-top: 2px;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
   color: var(--color-steel);
+}
+/* 텍스트 컬럼이 플렉스에서 줄바꿈되도록(아이콘 옆 좁은 칸에서도 세로로 깨지지 않게) */
+.drive-connect-guide .dcg-head > div {
+  min-width: 0;
 }
 .drive-steps {
   margin: 0;
