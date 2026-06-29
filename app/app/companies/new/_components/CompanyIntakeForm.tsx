@@ -289,6 +289,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
   const [licenseTone, setLicenseTone] = useState<LicenseParseTone>("idle");
   const [licenseStatus, setLicenseStatus] = useState("");
   const [licenseSummary, setLicenseSummary] = useState("");
+  const [rawOcrText, setRawOcrText] = useState("");
   const [autofillFields, setAutofillFields] =
     useState<CompanyAutofillFields>(EMPTY_AUTOFILL_FIELDS);
   const [dupWarning, setDupWarning] = useState<string | null>(null);
@@ -309,6 +310,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
     parseRunRef.current = runId;
     setFileName(file?.name ?? "");
     setLicenseSummary("");
+    setRawOcrText("");
     setError(null);
 
     if (!file) {
@@ -327,6 +329,7 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
       });
       if (parseRunRef.current !== runId) return;
 
+      setRawOcrText(extracted.text);
       const parsed = parseBusinessLicenseText(extracted.text);
       const filledCount = countParsedFields(parsed);
       const summary = businessLicenseFieldsSummary(parsed);
@@ -447,6 +450,12 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           <p className={`license-status license-status--${licenseTone}`}>
             {licenseStatus}
           </p>
+        ) : null}
+        {rawOcrText ? (
+          <details className="license-ocr-raw">
+            <summary>OCR 인식 원문 보기 (자동 입력이 빠졌다면 확인용)</summary>
+            <textarea readOnly value={rawOcrText} rows={12} />
+          </details>
         ) : null}
         <input
           type="hidden"

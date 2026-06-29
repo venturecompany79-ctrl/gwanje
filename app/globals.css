@@ -1693,6 +1693,29 @@ table.dlist .date {
 .license-status--error {
   color: var(--color-critical-strong);
 }
+.license-ocr-raw {
+  margin: -6px 0 16px;
+  font-size: 12px;
+}
+.license-ocr-raw > summary {
+  cursor: pointer;
+  color: var(--color-steel);
+  font-weight: 700;
+}
+.license-ocr-raw textarea {
+  margin-top: 8px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-lg);
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: var(--color-surface-soft);
+  white-space: pre;
+}
 .field--date {
   width: 100%;
   max-width: none;
