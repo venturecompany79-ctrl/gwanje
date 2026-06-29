@@ -16,6 +16,9 @@ import {
   type SourceAdapter,
 } from "@/lib/gov-programs/types";
 
+const PAGE_UNIT = 100;
+const MAX_PAGES = 5;
+
 function normalize(row: JsonRecord, index: number): NormalizedProgram | null {
   // TODO: verify field names with issued BIZINFO_API_KEY response before production rollout.
   const item = row;
@@ -78,15 +81,23 @@ export const bizinfoAdapter: SourceAdapter = {
     const key = getBizinfoApiKey();
     if (!key) return [];
 
-    const url = buildUrl("https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do", {
-      crtfcKey: key,
-      dataType: "json",
-      pageUnit: 100,
-      pageIndex: 1,
-    });
-    const payload = await fetchJson(url);
-    return extractItems(payload)
-      .map((row, index) => normalize(row, index))
-      .filter((program): program is NormalizedProgram => program !== null);
+    const programs: NormalizedProgram[] = [];
+    for (let pageIndex = 1; pageIndex <= MAX_PAGES; pageIndex += 1) {
+      const url = buildUrl("https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do", {
+        crtfcKey: key,
+        dataType: "json",
+        pageUnit: PAGE_UNIT,
+        pageIndex,
+      });
+      const payload = await fetchJson(url);
+      const rows = extractItems(payload);
+      programs.push(
+        ...rows
+          .map((row, index) => normalize(row, (pageIndex - 1) * PAGE_UNIT + index))
+          .filter((program): program is NormalizedProgram => program !== null),
+      );
+      if (rows.length < PAGE_UNIT) break;
+    }
+    return programs;
   },
 };
