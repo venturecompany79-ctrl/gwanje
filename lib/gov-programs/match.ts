@@ -14,6 +14,18 @@ export interface ProgramMatch {
   reasons: string[];
 }
 
+type AgeOperator = "lt" | "lte" | "gt" | "gte";
+
+interface AgeRequirement {
+  limit: number;
+  operator: AgeOperator;
+}
+
+interface ScaleAndAgeScore {
+  score: number;
+  disqualified: boolean;
+}
+
 const FIELD_KEYWORDS: Record<SupportField, string[]> = {
   금융: ["자금", "금융", "융자", "보증", "대출", "투자", "운전자금"],
   기술: ["제조", "r&d", "연구", "개발", "기술", "스마트공장", "ai", "ict"],
@@ -145,19 +157,100 @@ function companyAgeYears(company: CompanyProfile): number | null {
   return years;
 }
 
+const AGE_CONTEXT_PATTERN =
+  "(?:창업|업력|설립|개업|사업\\s*개시|초기기업|창업기업|스타트업)";
+const AGE_CONNECTOR_PATTERN =
+  "(?:\\s*(?:후|이후|한|지|일|일로|일로부터|기업|자|업체|대상|기준|부터))*";
+const AGE_YEAR_PATTERN = "년\\s*(?:차\\s*)?";
+const AGE_OPERATOR_PATTERN = "(미만|이하|이내|이상|초과)";
+
+function ageOperatorFromText(operator: string): AgeOperator {
+  if (operator === "미만") return "lt";
+  if (operator === "초과") return "gt";
+  if (operator === "이상") return "gte";
+  return "lte";
+}
+
+function ageRequirementKey(requirement: AgeRequirement): string {
+  return `${requirement.operator}:${requirement.limit}`;
+}
+
+function addAgeRequirement(
+  requirements: Map<string, AgeRequirement>,
+  limitText: string,
+  operatorText: string,
+) {
+  const limit = Number(limitText);
+  if (!Number.isFinite(limit) || limit < 0) return;
+  const requirement = {
+    limit,
+    operator: ageOperatorFromText(operatorText),
+  };
+  requirements.set(ageRequirementKey(requirement), requirement);
+}
+
+function extractAgeRequirements(text: string): AgeRequirement[] {
+  const requirements = new Map<string, AgeRequirement>();
+  const rangeBeforeContext = new RegExp(
+    `${AGE_CONTEXT_PATTERN}${AGE_CONNECTOR_PATTERN}\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}(이상|초과)\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}(미만|이하|이내)`,
+    "g",
+  );
+  const rangeAfterContext = new RegExp(
+    `(\\d+)\\s*${AGE_YEAR_PATTERN}(이상|초과)\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}(미만|이하|이내)(?:\\s*(?:의|인))*\\s*${AGE_CONTEXT_PATTERN}`,
+    "g",
+  );
+  const beforeContext = new RegExp(
+    `${AGE_CONTEXT_PATTERN}${AGE_CONNECTOR_PATTERN}\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}${AGE_OPERATOR_PATTERN}`,
+    "g",
+  );
+  const afterContext = new RegExp(
+    `(\\d+)\\s*${AGE_YEAR_PATTERN}${AGE_OPERATOR_PATTERN}(?:\\s*(?:의|인|이내의|이하의|미만의))*\\s*${AGE_CONTEXT_PATTERN}`,
+    "g",
+  );
+
+  for (const match of text.matchAll(rangeBeforeContext)) {
+    addAgeRequirement(requirements, match[1], match[2]);
+    addAgeRequirement(requirements, match[3], match[4]);
+  }
+  for (const match of text.matchAll(rangeAfterContext)) {
+    addAgeRequirement(requirements, match[1], match[2]);
+    addAgeRequirement(requirements, match[3], match[4]);
+  }
+  for (const match of text.matchAll(beforeContext)) {
+    addAgeRequirement(requirements, match[1], match[2]);
+  }
+  for (const match of text.matchAll(afterContext)) {
+    addAgeRequirement(requirements, match[1], match[2]);
+  }
+
+  return [...requirements.values()];
+}
+
+function meetsAgeRequirement(ageYears: number, requirement: AgeRequirement): boolean {
+  if (requirement.operator === "lt") return ageYears < requirement.limit;
+  if (requirement.operator === "lte") return ageYears <= requirement.limit;
+  if (requirement.operator === "gt") return ageYears > requirement.limit;
+  return ageYears >= requirement.limit;
+}
+
 function scoreScaleAndAge(
   company: CompanyProfile,
   text: string,
   reasons: string[],
-): number {
+): ScaleAndAgeScore {
   let score = 0;
   const ageYears = companyAgeYears(company);
-  const startupLimit = text.match(/창업\s*(\d+)\s*년\s*이내/);
-  if (startupLimit && ageYears !== null) {
-    const limit = Number(startupLimit[1]);
-    if (ageYears <= limit) {
+  const ageRequirements = extractAgeRequirements(text);
+  if (ageRequirements.length > 0 && ageYears !== null) {
+    const ageMatched = ageRequirements.every((requirement) =>
+      meetsAgeRequirement(ageYears, requirement),
+    );
+    if (ageMatched) {
       score += 8;
       reasons.push(`업력 ${ageYears}년 조건 부합`);
+    } else {
+      reasons.push(`업력 ${ageYears}년 조건 미충족`);
+      return { score: 0, disqualified: true };
     }
   } else if (ageYears !== null && text.includes("초기기업") && ageYears <= 7) {
     score += 6;
@@ -184,7 +277,7 @@ function scoreScaleAndAge(
     }
   }
 
-  return Math.min(score, 15);
+  return { score: Math.min(score, 15), disqualified: false };
 }
 
 export function scoreProgram(
@@ -193,11 +286,20 @@ export function scoreProgram(
 ): ProgramMatch {
   const reasons: string[] = [];
   const text = programText(program);
+  const scaleAndAge = scoreScaleAndAge(company, text, reasons);
+  if (scaleAndAge.disqualified) {
+    return {
+      program,
+      score: 0,
+      reasons: reasons.slice(0, 4),
+    };
+  }
+
   const score =
     scoreIndustryAndField(company, program, text, reasons) +
     scoreTags(company, program, text, reasons) +
     scoreDeadline(program, reasons) +
-    scoreScaleAndAge(company, text, reasons);
+    scaleAndAge.score;
 
   return {
     program,
