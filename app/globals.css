@@ -2420,6 +2420,18 @@ table.dlist .name {
 }
 
 /* 기업 상세 — 정부지원사업 추천 */
+.program-filter-bar {
+  padding: 16px 16px 0;
+  margin-bottom: 0;
+}
+.program-filter-bar .search-pill {
+  flex: 1 1 260px;
+  width: auto;
+  min-width: 220px;
+}
+.program-filter-bar .select-pill {
+  flex: 0 0 auto;
+}
 .program-list {
   display: grid;
   gap: 12px;
@@ -5684,6 +5696,11 @@ body {
   }
 
   .select-pill {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 150px;
+  }
+
+  .program-filter-bar .select-pill {
     flex: 1 1 calc(50% - 8px);
     min-width: 150px;
   }
