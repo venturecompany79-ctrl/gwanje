@@ -4,7 +4,10 @@ import type {
   GovProgramRow,
   SupportField,
 } from "@/lib/gov-programs/types";
-import { normalizeContentText } from "@/lib/gov-programs/types";
+import {
+  SUPPORT_FIELDS,
+  normalizeContentText,
+} from "@/lib/gov-programs/types";
 
 export const PROGRAM_MATCH_THRESHOLD = 30;
 
@@ -26,17 +29,6 @@ interface ScaleAndAgeScore {
   disqualified: boolean;
 }
 
-const FIELD_KEYWORDS: Record<SupportField, string[]> = {
-  금융: ["자금", "금융", "융자", "보증", "대출", "투자", "운전자금"],
-  기술: ["제조", "r&d", "연구", "개발", "기술", "스마트공장", "ai", "ict"],
-  인력: ["인력", "고용", "채용", "교육", "훈련"],
-  수출: ["수출", "해외", "글로벌", "무역"],
-  내수: ["판로", "마케팅", "브랜드", "유통", "내수"],
-  창업: ["창업", "스타트업", "초기기업", "예비창업"],
-  경영: ["경영", "컨설팅", "진단", "멘토링", "인증", "세액"],
-  기타: [],
-};
-
 function programText(program: GovProgramRow): string {
   return normalizeContentText(
     [
@@ -54,21 +46,8 @@ function normalizedTags(tags: string[]): string[] {
 }
 
 export function supportFieldsForCompany(company: CompanyProfile): SupportField[] {
-  const text = normalizeContentText(
-    [company.industry, ...company.conditionTags].filter(Boolean).join(" "),
-  );
-  const fields = new Set<SupportField>();
-  for (const [field, keywords] of Object.entries(FIELD_KEYWORDS) as [
-    SupportField,
-    string[],
-  ][]) {
-    if (field === "기타") continue;
-    if (keywords.some((keyword) => text.includes(normalizeContentText(keyword)))) {
-      fields.add(field);
-    }
-  }
-  if (fields.size === 0 && company.conditionTags.length > 0) fields.add("경영");
-  return [...fields];
+  void company;
+  return [...SUPPORT_FIELDS];
 }
 
 export function queryTextForCompany(company: CompanyProfile): string {
