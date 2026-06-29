@@ -91,9 +91,24 @@ export function EditCompanyButton({
                     placeholder="123-45-67890"
                   />
                   <InputField
-                    label="업종"
+                    label="대표 업종"
                     name="industry"
                     defaultValue={company.industry ?? ""}
+                    placeholder="예: 응용 소프트웨어 개발 (종목)"
+                  />
+                </div>
+                <div className="form-grid2">
+                  <InputField
+                    label="업태"
+                    name="business_condition"
+                    defaultValue={company.businessCondition ?? ""}
+                    placeholder="예: 정보통신업"
+                  />
+                  <InputField
+                    label="지역명"
+                    name="region"
+                    defaultValue={company.region ?? ""}
+                    placeholder="예: 서울특별시 강남구"
                   />
                 </div>
                 <InputField

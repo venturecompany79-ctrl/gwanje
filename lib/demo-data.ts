@@ -294,6 +294,8 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
     name: base.name,
     bizNo: isTechnova ? "123-45-67890" : null,
     industry: base.industry,
+    businessCondition: isTechnova ? "정보통신업" : null,
+    region: isTechnova ? "서울특별시 강남구" : null,
     foundedDate: base.foundedDate,
     revenue: base.revenue,
     headcount: base.headcount,

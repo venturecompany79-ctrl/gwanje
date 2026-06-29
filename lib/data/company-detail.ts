@@ -17,6 +17,8 @@ export interface CompanyProfile {
   name: string;
   bizNo: string | null;
   industry: string | null;
+  businessCondition: string | null;
+  region: string | null;
   foundedDate: string | null;
   revenue: number | null;
   headcount: number | null;
@@ -143,7 +145,7 @@ export async function getCompanyDetail(
       supabase
         .from("company")
         .select(
-          "id, name, biz_no, industry, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
+          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
         )
         .eq("id", companyId)
         .maybeSingle(),
@@ -309,6 +311,8 @@ export async function getCompanyDetail(
       name: company.data.name,
       bizNo: company.data.biz_no,
       industry: company.data.industry,
+      businessCondition: company.data.business_condition,
+      region: company.data.region,
       foundedDate: company.data.founded_date,
       revenue: company.data.revenue,
       headcount: company.data.headcount,

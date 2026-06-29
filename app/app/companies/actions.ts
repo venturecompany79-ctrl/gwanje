@@ -197,7 +197,6 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
   const conditionTags = [...new Set([growthStage, ...freeTags].filter(Boolean))] as string[];
 
   const matchingProfileLines: string[] = [];
-  appendLine(matchingProfileLines, "업종 경로", optionalText(formData, "industry_path"));
   appendLine(
     matchingProfileLines,
     "전략품목 및 기술",
@@ -239,6 +238,8 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
       name,
       biz_no: optionalText(formData, "biz_no"),
       industry: optionalText(formData, "industry"),
+      business_condition: optionalText(formData, "business_condition"),
+      region: optionalText(formData, "region"),
       founded_date: optionalText(formData, "founded_date"),
       revenue: revenue.value,
       headcount: headcount.value,

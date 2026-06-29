@@ -62,7 +62,7 @@ export async function getCompanyProgramMatches(
   const { data: company, error: companyError } = await supabase
     .from("company")
     .select(
-      "id, name, biz_no, industry, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
+      "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -82,6 +82,8 @@ export async function getCompanyProgramMatches(
     name: company.name,
     bizNo: company.biz_no,
     industry: company.industry,
+    businessCondition: company.business_condition,
+    region: company.region,
     foundedDate: company.founded_date,
     revenue: company.revenue,
     headcount: company.headcount,

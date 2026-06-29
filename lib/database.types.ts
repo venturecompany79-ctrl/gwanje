@@ -234,6 +234,7 @@ export type Database = {
       company: {
         Row: {
           biz_no: string | null
+          business_condition: string | null
           ceo_name: string | null
           condition_tags: string[]
           contact_email: string | null
@@ -246,11 +247,13 @@ export type Database = {
           industry: string | null
           memo: string | null
           name: string
+          region: string | null
           revenue: number | null
           tenant_id: string
         }
         Insert: {
           biz_no?: string | null
+          business_condition?: string | null
           ceo_name?: string | null
           condition_tags?: string[]
           contact_email?: string | null
@@ -263,11 +266,13 @@ export type Database = {
           industry?: string | null
           memo?: string | null
           name: string
+          region?: string | null
           revenue?: number | null
           tenant_id: string
         }
         Update: {
           biz_no?: string | null
+          business_condition?: string | null
           ceo_name?: string | null
           condition_tags?: string[]
           contact_email?: string | null
@@ -280,6 +285,7 @@ export type Database = {
           industry?: string | null
           memo?: string | null
           name?: string
+          region?: string | null
           revenue?: number | null
           tenant_id?: string
         }

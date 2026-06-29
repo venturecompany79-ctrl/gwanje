@@ -516,6 +516,8 @@ export async function updateCompany(
       name,
       biz_no: optionalText(formData, "biz_no"),
       industry: optionalText(formData, "industry"),
+      business_condition: optionalText(formData, "business_condition"),
+      region: optionalText(formData, "region"),
       founded_date: optionalText(formData, "founded_date"),
       revenue: revenue.value,
       headcount: headcount.value,

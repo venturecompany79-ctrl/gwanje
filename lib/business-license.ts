@@ -3,8 +3,12 @@ export interface BusinessLicenseFields {
   name: string | null;
   ceoName: string | null;
   foundedDate: string | null;
+  /** 종목(대표 업종) */
   industry: string | null;
-  industryPath: string | null;
+  /** 업태 */
+  businessCondition: string | null;
+  /** 지역명 — 사업장 소재지(시/도 + 시/군/구) */
+  region: string | null;
 }
 
 const STOP_LABELS = [
@@ -176,17 +180,39 @@ function parseCeoName(text: string): string | null {
   return findValueAfterLabel(text, ["대표자", "대표자 성명", "성명", "성 명"]);
 }
 
-function parseIndustry(text: string): { industry: string | null; industryPath: string | null } {
-  const businessType = findValueAfterLabel(text, ["업태", "업 태"]);
+function parseIndustry(text: string): {
+  industry: string | null;
+  businessCondition: string | null;
+} {
+  // 업태(사업 형태)와 종목(취급 품목)을 분리해 반환한다.
+  // 대표 업종(industry)은 종목을 우선 사용하고, 종목이 없으면 업태로 대체한다.
+  const businessCondition = findValueAfterLabel(text, ["업태", "업 태"]);
   const item = findValueAfterLabel(text, ["종목", "종 목"]);
-
-  const parts = [businessType, item].filter((value): value is string => Boolean(value));
-  if (parts.length === 0) return { industry: null, industryPath: null };
-  if (parts.length === 1) return { industry: parts[0], industryPath: parts[0] };
   return {
-    industry: parts.join(" / "),
-    industryPath: parts.join(" > "),
+    industry: item ?? businessCondition,
+    businessCondition,
   };
+}
+
+// "서울특별시 강남구 ..." → "서울특별시 강남구" 처럼 시/도 + 시/군/구만 추출
+function parseRegion(text: string): string | null {
+  const address = findValueAfterLabel(text, [
+    "사업장 소재지",
+    "사업장소재지",
+    "소재지",
+    "사업장",
+  ]);
+  if (!address) return null;
+
+  const tokens = address.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  const sido = tokens[0];
+  const sigungu = tokens[1];
+  if (sigungu && /(시|군|구)$/.test(sigungu)) {
+    return `${sido} ${sigungu}`;
+  }
+  return sido;
 }
 
 export function parseBusinessLicenseText(text: string): BusinessLicenseFields {
@@ -199,7 +225,8 @@ export function parseBusinessLicenseText(text: string): BusinessLicenseFields {
     ceoName: parseCeoName(normalized),
     foundedDate: parseFoundedDate(normalized),
     industry: industry.industry,
-    industryPath: industry.industryPath,
+    businessCondition: industry.businessCondition,
+    region: parseRegion(normalized),
   };
 }
 
@@ -211,7 +238,9 @@ export function businessLicenseFieldsSummary(
     fields.name ? `기업명 ${fields.name}` : null,
     fields.ceoName ? `대표자 ${fields.ceoName}` : null,
     fields.foundedDate ? `설립일 ${fields.foundedDate}` : null,
+    fields.businessCondition ? `업태 ${fields.businessCondition}` : null,
     fields.industry ? `업종 ${fields.industry}` : null,
+    fields.region ? `지역 ${fields.region}` : null,
   ].filter(Boolean);
 
   return summary.length > 0 ? summary.join(", ") : "자동 입력 항목 없음";

@@ -77,8 +77,9 @@ interface CompanyAutofillFields {
   biz_no: string;
   name: string;
   industry: string;
+  business_condition: string;
   founded_date: string;
-  industry_path: string;
+  region: string;
   ceo_name: string;
 }
 
@@ -91,10 +92,21 @@ const EMPTY_AUTOFILL_FIELDS: CompanyAutofillFields = {
   biz_no: "",
   name: "",
   industry: "",
+  business_condition: "",
   founded_date: "",
-  industry_path: "",
+  region: "",
   ceo_name: "",
 };
+
+/** 설립일 → "N년차" (설립 연도를 1년차로 계산). 유효한 날짜가 아니면 빈 문자열. */
+function yearsInBusinessLabel(foundedDate: string): string {
+  if (!foundedDate) return "";
+  const founded = new Date(foundedDate);
+  if (Number.isNaN(founded.getTime())) return "";
+  const years = new Date().getFullYear() - founded.getFullYear() + 1;
+  if (years < 1) return "";
+  return ` (${years}년차)`;
+}
 
 function countParsedFields(fields: BusinessLicenseFields): number {
   return [
@@ -113,8 +125,11 @@ function parsedFieldPatch(
     ...(fields.bizNo ? { biz_no: fields.bizNo } : {}),
     ...(fields.name ? { name: fields.name } : {}),
     ...(fields.industry ? { industry: fields.industry } : {}),
+    ...(fields.businessCondition
+      ? { business_condition: fields.businessCondition }
+      : {}),
     ...(fields.foundedDate ? { founded_date: fields.foundedDate } : {}),
-    ...(fields.industryPath ? { industry_path: fields.industryPath } : {}),
+    ...(fields.region ? { region: fields.region } : {}),
     ...(fields.ceoName ? { ceo_name: fields.ceoName } : {}),
   };
 }
@@ -477,12 +492,23 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
           <InputField
             label="대표 업종"
             name="industry"
-            placeholder="예: IT·소프트웨어"
+            placeholder="예: 응용 소프트웨어 개발 (종목)"
             value={autofillFields.industry}
             onChange={(e) => updateAutofillField("industry", e.target.value)}
           />
           <InputField
-            label="설립일"
+            label="업태"
+            name="business_condition"
+            placeholder="예: 정보통신업"
+            value={autofillFields.business_condition}
+            onChange={(e) =>
+              updateAutofillField("business_condition", e.target.value)
+            }
+          />
+        </div>
+        <div className="form-grid2">
+          <InputField
+            label={`설립일${yearsInBusinessLabel(autofillFields.founded_date)}`}
             name="founded_date"
             type="date"
             className="input--date"
@@ -492,14 +518,14 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
               updateAutofillField("founded_date", e.target.value)
             }
           />
+          <InputField
+            label="지역명"
+            name="region"
+            placeholder="예: 서울특별시 강남구"
+            value={autofillFields.region}
+            onChange={(e) => updateAutofillField("region", e.target.value)}
+          />
         </div>
-        <InputField
-          label="업종 경로"
-          name="industry_path"
-          placeholder="예: 정보통신업 > 소프트웨어 개발·공급업 > 응용 소프트웨어 개발"
-          value={autofillFields.industry_path}
-          onChange={(e) => updateAutofillField("industry_path", e.target.value)}
-        />
         <div className="form-grid2">
           <InputField
             label="연 매출 (억 원)"

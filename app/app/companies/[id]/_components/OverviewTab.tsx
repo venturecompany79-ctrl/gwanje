@@ -4,6 +4,15 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyProfile } from "@/lib/data/company-detail";
 
+/** 설립일 → "2020-03-01 (7년차)" (설립 연도를 1년차로 계산) */
+function foundedDateValue(foundedDate: string | null): string | null {
+  if (!foundedDate) return null;
+  const founded = new Date(foundedDate);
+  if (Number.isNaN(founded.getTime())) return foundedDate;
+  const years = new Date().getFullYear() - founded.getFullYear() + 1;
+  return years >= 1 ? `${foundedDate} (${years}년차)` : foundedDate;
+}
+
 function Item({
   label,
   value,
@@ -27,8 +36,10 @@ export function OverviewTab({ company }: { company: CompanyProfile }) {
       <PanelHead title="기업 프로파일" />
       <div className="profile-grid">
         <Item label="사업자등록번호" value={company.bizNo} />
-        <Item label="업종" value={company.industry} />
-        <Item label="설립일" value={company.foundedDate} />
+        <Item label="대표 업종" value={company.industry} />
+        <Item label="업태" value={company.businessCondition} />
+        <Item label="설립일" value={foundedDateValue(company.foundedDate)} />
+        <Item label="지역명" value={company.region} />
         <Item
           label="연 매출"
           value={company.revenue !== null ? formatRevenue(company.revenue) : null}
