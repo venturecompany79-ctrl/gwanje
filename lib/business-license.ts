@@ -180,14 +180,86 @@ function parseCeoName(text: string): string | null {
   return findValueAfterLabel(text, ["대표자", "대표자 성명", "성명", "성 명"]);
 }
 
+// 라벨 글자 자체가 값으로 잘못 잡힌 경우 걸러낸다(예: "업태 종목" 헤더에서 업태 값이 "종목"으로 잡힘).
+function isLabelish(value: string): boolean {
+  return /^(종\s*목|업\s*태|사업의?\s*종류|소재지|발급사유?)$/.test(value.trim());
+}
+
+// 표 데이터 행("정보통신업 소프트웨어 개발")을 업태/종목으로 분리.
+// 업태는 보통 '…업' 또는 '서비스'로 끝나므로 그 지점을 경계로 본다.
+function splitTypeItemRow(row: string): [string | null, string | null] {
+  const tokens = row.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return [null, null];
+  if (tokens.length === 1) return [tokens[0], null];
+
+  let cut = tokens.findIndex((token) => /(업|서비스)$/.test(token));
+  if (cut < 0 || cut === tokens.length - 1) cut = 0;
+
+  const first = tokens.slice(0, cut + 1).join(" ") || null;
+  const second = tokens.slice(cut + 1).join(" ") || null;
+  return [first, second];
+}
+
+// "업태 종목"만 있는 헤더 줄인지 판별("사업의 종류" 접두는 무시).
+function headerRowOrder(line: string): "tae-first" | "mok-first" | null {
+  const compact = line
+    .replace(/[:：|]/g, "")
+    .replace(/사업의?\s*종류/g, "")
+    .replace(/\s+/g, "");
+  if (compact === "업태종목") return "tae-first";
+  if (compact === "종목업태") return "mok-first";
+  return null;
+}
+
+// 헤더 행("업태 종목") 다음 줄에 값이 오는 표 양식을 분해한다.
+function parseTypeItemTable(text: string): {
+  businessCondition: string | null;
+  item: string | null;
+} {
+  const lines = linesFromText(text);
+  for (const [index, line] of lines.entries()) {
+    const order = headerRowOrder(line);
+    if (!order) continue;
+
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const dataRaw = lines[next].trim();
+      if (!dataRaw) continue;
+      if (
+        STOP_LABELS.some((stop) =>
+          new RegExp(`^${labelPattern(stop)}`).test(dataRaw),
+        )
+      ) {
+        break;
+      }
+      const cleaned = cleanValue(dataRaw);
+      if (!cleaned) continue;
+      const [first, second] = splitTypeItemRow(cleaned);
+      return order === "tae-first"
+        ? { businessCondition: first, item: second }
+        : { businessCondition: second, item: first };
+    }
+  }
+  return { businessCondition: null, item: null };
+}
+
 function parseIndustry(text: string): {
   industry: string | null;
   businessCondition: string | null;
 } {
   // 업태(사업 형태)와 종목(취급 품목)을 분리해 반환한다.
   // 대표 업종(industry)은 종목을 우선 사용하고, 종목이 없으면 업태로 대체한다.
-  const businessCondition = findValueAfterLabel(text, ["업태", "업 태"]);
-  const item = findValueAfterLabel(text, ["종목", "종 목"]);
+  let businessCondition = findValueAfterLabel(text, ["업태", "업 태"]);
+  let item = findValueAfterLabel(text, ["종목", "종 목"]);
+  if (businessCondition && isLabelish(businessCondition)) businessCondition = null;
+  if (item && isLabelish(item)) item = null;
+
+  // 인라인 추출이 비었거나(라벨만 잡힘) 한쪽이 비면 표 헤더 양식으로 재시도.
+  if (!businessCondition || !item) {
+    const table = parseTypeItemTable(text);
+    if (table.businessCondition) businessCondition = table.businessCondition;
+    if (table.item) item = table.item;
+  }
+
   return {
     industry: item ?? businessCondition,
     businessCondition,
