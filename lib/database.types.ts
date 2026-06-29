@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       billing_customer: {
@@ -112,259 +87,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      payment_method: {
-        Row: {
-          billing_customer_id: string
-          card_company: string | null
-          card_number_masked: string | null
-          card_type: string | null
-          created_at: string
-          encrypted_billing_key: string
-          id: string
-          is_default: boolean
-          status: string
-          tenant_id: string
-          updated_at: string
-        }
-        Insert: {
-          billing_customer_id: string
-          card_company?: string | null
-          card_number_masked?: string | null
-          card_type?: string | null
-          created_at?: string
-          encrypted_billing_key: string
-          id?: string
-          is_default?: boolean
-          status?: string
-          tenant_id: string
-          updated_at?: string
-        }
-        Update: {
-          billing_customer_id?: string
-          card_company?: string | null
-          card_number_masked?: string | null
-          card_type?: string | null
-          created_at?: string
-          encrypted_billing_key?: string
-          id?: string
-          is_default?: boolean
-          status?: string
-          tenant_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_method_billing_customer_id_fkey"
-            columns: ["billing_customer_id"]
-            isOneToOne: false
-            referencedRelation: "billing_customer"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_method_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_transaction: {
-        Row: {
-          amount: number
-          approved_at: string | null
-          created_at: string
-          currency: string
-          failure_code: string | null
-          failure_message: string | null
-          id: string
-          kind: Database["public"]["Enums"]["payment_kind"]
-          order_id: string
-          order_name: string | null
-          payment_method_id: string | null
-          raw_response: Json | null
-          status: Database["public"]["Enums"]["payment_status"]
-          subscription_id: string | null
-          tenant_id: string
-          toss_payment_key: string | null
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          approved_at?: string | null
-          created_at?: string
-          currency?: string
-          failure_code?: string | null
-          failure_message?: string | null
-          id?: string
-          kind?: Database["public"]["Enums"]["payment_kind"]
-          order_id: string
-          order_name?: string | null
-          payment_method_id?: string | null
-          raw_response?: Json | null
-          status?: Database["public"]["Enums"]["payment_status"]
-          subscription_id?: string | null
-          tenant_id: string
-          toss_payment_key?: string | null
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          approved_at?: string | null
-          created_at?: string
-          currency?: string
-          failure_code?: string | null
-          failure_message?: string | null
-          id?: string
-          kind?: Database["public"]["Enums"]["payment_kind"]
-          order_id?: string
-          order_name?: string | null
-          payment_method_id?: string | null
-          raw_response?: Json | null
-          status?: Database["public"]["Enums"]["payment_status"]
-          subscription_id?: string | null
-          tenant_id?: string
-          toss_payment_key?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_transaction_payment_method_id_fkey"
-            columns: ["payment_method_id"]
-            isOneToOne: false
-            referencedRelation: "payment_method"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transaction_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "tenant_subscription"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transaction_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_subscription: {
-        Row: {
-          canceled_at: string | null
-          created_at: string
-          current_period_end: string | null
-          current_period_start: string | null
-          grace_until: string | null
-          id: string
-          payment_method_id: string | null
-          plan_id: string
-          status: Database["public"]["Enums"]["subscription_status"]
-          tenant_id: string
-          trial_end: string | null
-          updated_at: string
-        }
-        Insert: {
-          canceled_at?: string | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          grace_until?: string | null
-          id?: string
-          payment_method_id?: string | null
-          plan_id: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          tenant_id: string
-          trial_end?: string | null
-          updated_at?: string
-        }
-        Update: {
-          canceled_at?: string | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          grace_until?: string | null
-          id?: string
-          payment_method_id?: string | null
-          plan_id?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          tenant_id?: string
-          trial_end?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_subscription_payment_method_id_fkey"
-            columns: ["payment_method_id"]
-            isOneToOne: false
-            referencedRelation: "payment_method"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_subscription_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "billing_plan"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_subscription_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "tenant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      webhook_event: {
-        Row: {
-          created_at: string
-          event_key: string
-          event_type: string | null
-          id: string
-          order_id: string | null
-          payload: Json | null
-          payment_key: string | null
-          processed_at: string | null
-          status: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_key: string
-          event_type?: string | null
-          id?: string
-          order_id?: string | null
-          payload?: Json | null
-          payment_key?: string | null
-          processed_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_key?: string
-          event_type?: string | null
-          id?: string
-          order_id?: string | null
-          payload?: Json | null
-          payment_key?: string | null
-          processed_at?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "webhook_event_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenant"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       campaign: {
         Row: {
@@ -814,6 +536,96 @@ export type Database = {
           },
         ]
       }
+      gov_program: {
+        Row: {
+          apply_end: string | null
+          apply_start: string | null
+          content_key: string
+          created_at: string
+          detail_url: string | null
+          external_id: string
+          hashtags: string[]
+          id: string
+          org_name: string | null
+          raw: Json | null
+          region: string | null
+          search_vector: unknown
+          source: string
+          support_field: string | null
+          synced_at: string
+          target_text: string | null
+          title: string
+        }
+        Insert: {
+          apply_end?: string | null
+          apply_start?: string | null
+          content_key: string
+          created_at?: string
+          detail_url?: string | null
+          external_id: string
+          hashtags?: string[]
+          id?: string
+          org_name?: string | null
+          raw?: Json | null
+          region?: string | null
+          search_vector?: unknown
+          source: string
+          support_field?: string | null
+          synced_at?: string
+          target_text?: string | null
+          title: string
+        }
+        Update: {
+          apply_end?: string | null
+          apply_start?: string | null
+          content_key?: string
+          created_at?: string
+          detail_url?: string | null
+          external_id?: string
+          hashtags?: string[]
+          id?: string
+          org_name?: string | null
+          raw?: Json | null
+          region?: string | null
+          search_vector?: unknown
+          source?: string
+          support_field?: string | null
+          synced_at?: string
+          target_text?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      gov_program_sync_log: {
+        Row: {
+          error: string | null
+          fetched: number
+          id: string
+          ran_at: string
+          source: string
+          status: string
+          upserted: number
+        }
+        Insert: {
+          error?: string | null
+          fetched?: number
+          id?: string
+          ran_at?: string
+          source: string
+          status: string
+          upserted?: number
+        }
+        Update: {
+          error?: string | null
+          fetched?: number
+          id?: string
+          ran_at?: string
+          source?: string
+          status?: string
+          upserted?: number
+        }
+        Relationships: []
+      }
       notification: {
         Row: {
           body: string | null
@@ -871,11 +683,150 @@ export type Database = {
           },
         ]
       }
+      payment_method: {
+        Row: {
+          billing_customer_id: string
+          card_company: string | null
+          card_number_masked: string | null
+          card_type: string | null
+          created_at: string
+          encrypted_billing_key: string
+          id: string
+          is_default: boolean
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_customer_id: string
+          card_company?: string | null
+          card_number_masked?: string | null
+          card_type?: string | null
+          created_at?: string
+          encrypted_billing_key: string
+          id?: string
+          is_default?: boolean
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_customer_id?: string
+          card_company?: string | null
+          card_number_masked?: string | null
+          card_type?: string | null
+          created_at?: string
+          encrypted_billing_key?: string
+          id?: string
+          is_default?: boolean
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_billing_customer_id_fkey"
+            columns: ["billing_customer_id"]
+            isOneToOne: false
+            referencedRelation: "billing_customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transaction: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          currency: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          kind: Database["public"]["Enums"]["payment_kind"]
+          order_id: string
+          order_name: string | null
+          payment_method_id: string | null
+          raw_response: Json | null
+          status: Database["public"]["Enums"]["payment_status"]
+          subscription_id: string | null
+          tenant_id: string
+          toss_payment_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["payment_kind"]
+          order_id: string
+          order_name?: string | null
+          payment_method_id?: string | null
+          raw_response?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          tenant_id: string
+          toss_payment_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["payment_kind"]
+          order_id?: string
+          order_name?: string | null
+          payment_method_id?: string | null
+          raw_response?: Json | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          subscription_id?: string | null
+          tenant_id?: string
+          toss_payment_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transaction_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_method"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transaction_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_subscription"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transaction_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile: {
         Row: {
+          accepted_at: string | null
           created_at: string
           daily_summary_at: string | null
-          accepted_at: string | null
           disabled_at: string | null
           email: string | null
           id: string
@@ -895,9 +846,9 @@ export type Database = {
           title: string | null
         }
         Insert: {
+          accepted_at?: string | null
           created_at?: string
           daily_summary_at?: string | null
-          accepted_at?: string | null
           disabled_at?: string | null
           email?: string | null
           id: string
@@ -917,9 +868,9 @@ export type Database = {
           title?: string | null
         }
         Update: {
+          accepted_at?: string | null
           created_at?: string
           daily_summary_at?: string | null
-          accepted_at?: string | null
           disabled_at?: string | null
           email?: string | null
           id?: string
@@ -1205,6 +1156,73 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_subscription: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          grace_until: string | null
+          id: string
+          payment_method_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          id?: string
+          payment_method_id?: string | null
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id: string
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          grace_until?: string | null
+          id?: string
+          payment_method_id?: string | null
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tenant_id?: string
+          trial_end?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscription_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_method"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscription_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "billing_plan"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscription_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       todo_note: {
         Row: {
           completed: boolean
@@ -1259,6 +1277,53 @@ export type Database = {
           },
         ]
       }
+      webhook_event: {
+        Row: {
+          created_at: string
+          event_key: string
+          event_type: string | null
+          id: string
+          order_id: string | null
+          payload: Json | null
+          payment_key: string | null
+          processed_at: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          event_type?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          payment_key?: string | null
+          processed_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          event_type?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          payment_key?: string | null
+          processed_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       deadline_item: {
@@ -1280,12 +1345,59 @@ export type Database = {
     }
     Functions: {
       app_permission_keys: { Args: never; Returns: string[] }
-      auth_has_permission: { Args: { permission_key: string }; Returns: boolean }
+      auth_has_permission: {
+        Args: { permission_key: string }
+        Returns: boolean
+      }
       auth_is_owner: { Args: never; Returns: boolean }
       auth_member_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: string }
       cleanup_old_todo_notes: { Args: never; Returns: number }
       generate_due_notifications: { Args: never; Returns: number }
+      gov_program_to_search_vector: {
+        Args: {
+          hashtags: string[]
+          org_name: string
+          support_field: string
+          target_text: string
+          title: string
+        }
+        Returns: unknown
+      }
+      match_gov_program_candidates: {
+        Args: {
+          fields?: string[]
+          max_rows?: number
+          q?: string
+          tags?: string[]
+          today?: string
+        }
+        Returns: {
+          apply_end: string | null
+          apply_start: string | null
+          content_key: string
+          created_at: string
+          detail_url: string | null
+          external_id: string
+          hashtags: string[]
+          id: string
+          org_name: string | null
+          raw: Json | null
+          region: string | null
+          search_vector: unknown
+          source: string
+          support_field: string | null
+          synced_at: string
+          target_text: string | null
+          title: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "gov_program"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       campaign_channel: "alimtalk" | "email"
@@ -1427,16 +1539,22 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       campaign_channel: ["alimtalk", "email"],
       campaign_status: ["draft", "scheduled", "sending", "sent"],
       document_uploader: ["consultant", "client"],
       notification_type: ["expiry", "deadline", "program_match"],
+      payment_kind: ["initial", "recurring", "refund"],
+      payment_status: ["pending", "succeeded", "failed", "canceled"],
       schedule_type: ["expiry", "deadline", "meeting", "renewal", "etc"],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "expired",
+      ],
       task_stage: ["diagnosis", "proposal", "application", "result"],
     },
   },

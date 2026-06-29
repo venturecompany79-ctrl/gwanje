@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 
 type ButtonVariant =
   | "primary"
@@ -25,7 +25,8 @@ interface ButtonBaseProps {
 
 type ButtonProps = ButtonBaseProps &
   ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
-type LinkButtonProps = ButtonBaseProps & { href: string; className?: string };
+type LinkButtonProps = ButtonBaseProps &
+  AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
 
 function classes({
   variant = "cta",
@@ -71,9 +72,14 @@ export function LinkButton({
   className,
   href,
   children,
+  ...rest
 }: LinkButtonProps) {
   return (
-    <Link href={href} className={classes({ variant, size, full, className })}>
+    <Link
+      href={href}
+      className={classes({ variant, size, full, className })}
+      {...rest}
+    >
       {children}
     </Link>
   );

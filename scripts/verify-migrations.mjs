@@ -99,10 +99,69 @@ await step("migration: 20260617000000_todo_note_30_day_window", read("migrations
 await step("migration: 20260628000000_google_drive_sync", read("migrations/20260628000000_google_drive_sync.sql"));
 await step("migration: 20260629000000_billing_subscription", read("migrations/20260629000000_billing_subscription.sql"));
 await step("migration: 20260630000000_team_permissions", read("migrations/20260630000000_team_permissions.sql"));
+await step("migration: 20260701000000_gov_program_matching", read("migrations/20260701000000_gov_program_matching.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
 await step("seed: seed.sql", read("seed.sql"));
+
+// ── 3-1. 정부지원사업 공개 풀 + 후보 조회 ────────────────────────────────
+await step(
+  "gov_program: 샘플 공고 삽입",
+  `insert into gov_program
+     (source, external_id, content_key, title, support_field, org_name, target_text, hashtags, apply_end, detail_url)
+   values
+     ('bizinfo', 'demo-1', 'smart-factory|중소벤처기업부|2099-12-31',
+      '스마트공장 제조혁신 지원사업', '기술', '중소벤처기업부',
+      '제조업 중소기업 스마트공장 구축 및 R&D 지원', array['제조업','R&D','스마트공장'], '2099-12-31',
+      'https://example.test/demo-1'),
+     ('kstartup', 'demo-2', 'startup|창업진흥원|2099-12-31',
+      '초기창업 패키지', '창업', '창업진흥원',
+      '창업 3년 이내 초기기업 사업화 자금', array['창업','초기기업'], '2099-12-31',
+      'https://example.test/demo-2');`,
+);
+const govProgramCount = await q(
+  "gov_program 행 수",
+  `select count(*)::int as n from gov_program`,
+);
+assert((govProgramCount[0]?.n ?? 0) === 2, "gov_program 샘플 2건 삽입");
+
+let govCandidates = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const r = await db.query(
+    `select source, title
+     from match_gov_program_candidates(
+       '제조업 R&D',
+       array['제조업','R&D']::text[],
+       array['기술']::text[],
+       '2026-06-29'::date,
+       10
+     )`,
+  );
+  govCandidates = r.rows;
+  console.log(`→ gov_program 후보 조회: ${JSON.stringify(govCandidates)}`);
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ gov_program 후보 조회 실행 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert(
+  govCandidates.some((r) => r.title === "스마트공장 제조혁신 지원사업"),
+  "authenticated가 RPC로 매칭 후보를 조회할 수 있음",
+);
+const syncLogGrants = await q(
+  "gov_program_sync_log authenticated grant",
+  `select count(*)::int as n
+   from information_schema.table_privileges
+   where table_name='gov_program_sync_log'
+     and grantee='authenticated'
+     and privilege_type in ('SELECT','INSERT','UPDATE','DELETE')`,
+);
+assert((syncLogGrants[0]?.n ?? 1) === 0, "authenticated는 gov_program_sync_log 권한 없음");
 
 // ── 4. deadline_item 뷰 (KST) ────────────────────────────────────────────
 const dlCount = await q("deadline_item 행 수", `select count(*)::int as n from deadline_item`);

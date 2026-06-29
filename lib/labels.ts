@@ -8,6 +8,7 @@ import type {
   ScheduleType,
   TaskStage,
 } from "@/lib/database.types";
+import type { SourceCode, SupportField } from "@/lib/gov-programs/types";
 
 export const TASK_STAGE_LABEL: Record<TaskStage, string> = {
   diagnosis: "현황진단",
@@ -58,4 +59,22 @@ export const CREDENTIAL_STATUS_LABEL: Record<CredentialStatus, string> = {
   valid: "유효",
   expiring: "임박",
   expired: "만료",
+};
+
+export const SUPPORT_FIELD_LABEL: Record<SupportField, string> = {
+  금융: "금융",
+  기술: "기술",
+  인력: "인력",
+  수출: "수출",
+  내수: "내수",
+  창업: "창업",
+  경영: "경영",
+  기타: "기타",
+};
+
+export const PROGRAM_SOURCE_LABEL: Record<SourceCode, string> = {
+  bizinfo: "기업마당",
+  kstartup: "K-Startup",
+  smes: "중기부",
+  msit: "과기정통부",
 };

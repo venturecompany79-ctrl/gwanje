@@ -197,7 +197,110 @@ create table notification (
 );
 
 -- -------------------------------------------------------------
--- 10. rule — 룰엔진 (Phase 2, 테이블만)
+-- 10. gov_program — 정부지원사업 공개 공고 공유 풀
+--     테넌트 무관 공개 데이터. service_role 크론이 쓰고 authenticated는 읽기 전용.
+-- -------------------------------------------------------------
+create or replace function gov_program_to_search_vector(
+  title text,
+  support_field text,
+  org_name text,
+  target_text text,
+  hashtags text[]
+)
+returns tsvector
+language sql
+immutable
+as $$
+  select to_tsvector(
+    'simple',
+    coalesce(title, '') || ' ' ||
+    coalesce(support_field, '') || ' ' ||
+    coalesce(org_name, '') || ' ' ||
+    coalesce(target_text, '') || ' ' ||
+    array_to_string(coalesce(hashtags, '{}'), ' ')
+  );
+$$;
+
+create table gov_program (
+  id            uuid primary key default gen_random_uuid(),
+  source        text not null check (source in ('bizinfo', 'kstartup', 'smes', 'msit')),
+  external_id   text not null,
+  content_key   text not null,                    -- 정규화 제목+기관+마감 기반 dedup 키
+  title         text not null,
+  support_field text check (
+    support_field is null or
+    support_field in ('금융', '기술', '인력', '수출', '내수', '창업', '경영', '기타')
+  ),
+  org_name      text,
+  target_text   text,
+  hashtags      text[] not null default '{}',
+  region        text,
+  apply_start   date,
+  apply_end     date,
+  detail_url    text,
+  raw           jsonb,
+  synced_at     timestamptz not null default now(),
+  created_at    timestamptz not null default now(),
+  search_vector tsvector generated always as (
+    gov_program_to_search_vector(title, support_field, org_name, target_text, hashtags)
+  ) stored,
+  unique (source, external_id)
+);
+
+create table gov_program_sync_log (
+  id        uuid primary key default gen_random_uuid(),
+  source    text not null check (source in ('bizinfo', 'kstartup', 'smes', 'msit')),
+  status    text not null check (status in ('success', 'failed')),
+  fetched   int not null default 0,
+  upserted  int not null default 0,
+  error     text,
+  ran_at    timestamptz not null default now()
+);
+
+create or replace function match_gov_program_candidates(
+  q text default '',
+  tags text[] default '{}',
+  fields text[] default '{}',
+  today date default current_date,
+  max_rows int default 80
+)
+returns setof gov_program
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with args as (
+    select
+      nullif(btrim(coalesce(q, '')), '') as query_text,
+      coalesce(tags, '{}') as tag_list,
+      coalesce(fields, '{}') as field_list,
+      greatest(1, least(coalesce(max_rows, 80), 200)) as row_limit
+  )
+  select gp.*
+  from gov_program gp
+  cross join args a
+  where (gp.apply_end is null or gp.apply_end >= today)
+    and (
+      a.query_text is null
+      or gp.hashtags && a.tag_list
+      or gp.support_field = any(a.field_list)
+      or gp.search_vector @@ plainto_tsquery('simple', a.query_text)
+      or gp.title ilike '%' || a.query_text || '%'
+      or coalesce(gp.target_text, '') ilike '%' || a.query_text || '%'
+      or coalesce(gp.org_name, '') ilike '%' || a.query_text || '%'
+    )
+  order by
+    case when gp.hashtags && a.tag_list then 0 else 1 end,
+    case when gp.support_field = any(a.field_list) then 0 else 1 end,
+    case when gp.apply_end is null then 1 else 0 end,
+    gp.apply_end asc,
+    gp.synced_at desc
+  limit (select row_limit from args);
+$$;
+
+-- -------------------------------------------------------------
+-- 11. rule — 룰엔진 (Phase 2, 테이블만)
 -- -------------------------------------------------------------
 create table rule (
   id          uuid primary key default gen_random_uuid(),
@@ -209,7 +312,7 @@ create table rule (
 );
 
 -- -------------------------------------------------------------
--- 11. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정)
+-- 12. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정)
 --     security_invoker: 조회자의 RLS가 그대로 적용됨
 --     days_left는 KST 기준 ((now() at time zone 'Asia/Seoul')::date) — 앱(lib/datetime.ts)과 일치
 -- -------------------------------------------------------------
@@ -276,7 +379,7 @@ left join company co on co.id = s.company_id
 where s.date >= (now() at time zone 'Asia/Seoul')::date - interval '30 days';
 
 -- -------------------------------------------------------------
--- 12. RLS — 모든 테이블 tenant 격리
+-- 13. RLS — 모든 tenant 종속 테이블은 tenant 격리, gov_program은 읽기 전용 공개
 -- -------------------------------------------------------------
 alter table tenant enable row level security;
 alter table profile enable row level security;
@@ -289,6 +392,8 @@ alter table document enable row level security;
 alter table campaign enable row level security;
 alter table campaign_recipient enable row level security;
 alter table notification enable row level security;
+alter table gov_program enable row level security;
+alter table gov_program_sync_log enable row level security;
 alter table rule enable row level security;
 
 create policy "tenant: 본인 워크스페이스만" on tenant
@@ -320,16 +425,23 @@ create policy "campaign_recipient: tenant 격리" on campaign_recipient
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "notification: tenant 격리" on notification
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "gov_program: 읽기 전용 공개" on gov_program
+  for select to authenticated using (true);
 create policy "rule: tenant 격리" on rule
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 
 -- -------------------------------------------------------------
--- 13. API 권한 — Supabase Data API에서 authenticated role에 명시 부여
+-- 14. API 권한 — Supabase Data API에서 authenticated role에 명시 부여
 --     RLS가 실제 tenant 격리를 담당하고, grant는 API 접근 권한만 연다.
 -- -------------------------------------------------------------
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant select on deadline_item to authenticated;
+grant select on gov_program to authenticated;
+revoke insert, update, delete on gov_program from authenticated;
+revoke all on gov_program_sync_log from authenticated;
+revoke all on function match_gov_program_candidates(text, text[], text[], date, int) from public, anon;
+grant execute on function match_gov_program_candidates(text, text[], text[], date, int) to authenticated;
 
 alter default privileges in schema public
   grant select, insert, update, delete on tables to authenticated;
@@ -343,7 +455,7 @@ grant update (
 ) on profile to authenticated;
 
 -- -------------------------------------------------------------
--- 14. 인덱스
+-- 15. 인덱스
 -- -------------------------------------------------------------
 create index idx_company_tenant on company (tenant_id);
 create index idx_credential_company on credential (company_id);
@@ -356,6 +468,11 @@ create index idx_document_company on document (company_id);
 create index idx_campaign_tenant on campaign (tenant_id);
 create index idx_recipient_campaign on campaign_recipient (campaign_id);
 create index idx_notification_unread on notification (tenant_id, is_read, created_at desc);
+create index gov_program_apply_end_idx on gov_program (apply_end);
+create index gov_program_content_key_idx on gov_program (content_key);
+create index gov_program_hashtags_idx on gov_program using gin (hashtags);
+create index gov_program_search_vector_idx on gov_program using gin (search_vector);
+create index gov_program_support_field_idx on gov_program (support_field);
 
 -- 자격 1건당 갱신 과제 1건 보장(F9) — 동시요청 중복 방어
 create unique index if not exists task_source_credential_unique
@@ -363,7 +480,7 @@ create unique index if not exists task_source_credential_unique
   where source_credential_id is not null;
 
 -- -------------------------------------------------------------
--- 15. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
+-- 16. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
 --     매일 1회 멱등 생성. 함수는 항상 생성되고, pg_cron 스케줄 등록은 가드 블록으로
 --     감싸 확장이 없어도 마이그레이션이 실패하지 않는다(경고만).
 --     상세는 supabase/migrations/20260613000004_due_notifications_cron.sql 참고.

@@ -1,8 +1,13 @@
 {
+  "regions": ["icn1"],
   "crons": [
     {
       "path": "/api/google-drive/sync",
       "schedule": "5 15 * * *"
+    },
+    {
+      "path": "/api/gov-programs/sync",
+      "schedule": "30 15 * * *"
     }
   ]
 }

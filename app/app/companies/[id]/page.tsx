@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconAlert, IconBack } from "@/components/ui/icons";
 import { getCompanyDetail } from "@/lib/data/company-detail";
+import { getCompanyProgramMatches } from "@/lib/data/company-programs";
 import { CompanyDetailView } from "./_components/CompanyDetailView";
 
 export const metadata: Metadata = { title: "기업 상세" };
@@ -16,7 +17,11 @@ export default async function CompanyDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
-  const data = await getCompanyDetail(id);
+  const shouldLoadRecommend = tab === "recommend";
+  const [data, initialProgramMatches] = await Promise.all([
+    getCompanyDetail(id),
+    shouldLoadRecommend ? getCompanyProgramMatches(id) : Promise.resolve(null),
+  ]);
   if (!data) notFound();
 
   return (
@@ -37,7 +42,11 @@ export default async function CompanyDetailPage({
         <span className="cur">{data.company.name}</span>
       </nav>
 
-      <CompanyDetailView data={data} initialTab={tab ?? "overview"} />
+      <CompanyDetailView
+        data={data}
+        initialTab={tab ?? "overview"}
+        initialProgramMatches={initialProgramMatches}
+      />
     </>
   );
 }

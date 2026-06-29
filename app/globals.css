@@ -1359,6 +1359,14 @@ table.dlist .date {
   text-align: right;
   font-size: 12px;
 }
+/* 자료 행 관리 액션 묶음 (열기 / 업데이트 / 삭제) */
+.doc-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .file-name {
   font-size: 13.5px;
   font-weight: 700;
@@ -2386,6 +2394,147 @@ table.dlist .name {
   margin: 0;
   font-size: 13.5px;
   letter-spacing: -0.14px;
+}
+
+/* 기업 상세 — 정부지원사업 추천 */
+.program-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.program-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas);
+}
+.program-card-main {
+  min-width: 0;
+  flex: 1;
+}
+.program-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.program-title-row h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 800;
+  color: var(--color-ink-deep);
+  letter-spacing: 0;
+}
+.program-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--app-ic-match-bg);
+  color: var(--app-ic-match-icon);
+  font-size: 13px;
+  font-weight: 800;
+}
+.program-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-steel);
+}
+.match-bar {
+  position: relative;
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--app-ic-match-bg);
+}
+.match-bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 8px;
+  border-radius: inherit;
+  background: var(--color-steel);
+}
+.match-bar-fill.is-high {
+  background: var(--app-ic-match-icon);
+}
+.match-bar-fill.is-mid {
+  background: var(--color-attention);
+}
+.program-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.program-reasons span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-charcoal);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.program-card > .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.program-more {
+  display: block;
+  margin: 0 auto 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  background: var(--color-canvas);
+  color: var(--color-ink-deep);
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.program-more:hover {
+  background: var(--color-surface-soft);
+}
+.program-card--skeleton {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-hairline-soft);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+.skeleton-line.w-45 {
+  width: 45%;
+}
+.skeleton-line.w-60 {
+  width: 60%;
+}
+.skeleton-line.w-70 {
+  width: 70%;
+}
+.skeleton-line.w-90 {
+  width: 90%;
 }
 
 /* 슬라이드오버 헤더 eyebrow — 보드처럼 기업명이 섞인 화면용 */
@@ -6176,4 +6325,20 @@ body {
   color: var(--color-primary);
   font-weight: 600;
   text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .program-list {
+    padding: 12px;
+  }
+  .program-card {
+    flex-direction: column;
+    min-height: 176px;
+  }
+  .program-card > .btn {
+    align-self: flex-start;
+  }
+  .program-title-row {
+    align-items: flex-start;
+  }
 }

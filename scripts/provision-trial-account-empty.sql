@@ -16,7 +16,7 @@ begin;
 
 do $prov$
 declare
-  v_email     text := 'CHANGE_ME@example.com';   -- ★ 새 체험 계정 이메일로 변경
+  v_email     text := 'admin@gwanje.com';   -- ★ 새 체험 계정 이메일로 변경
   v_user_id   uuid;
   v_tenant_id uuid;
   v_existing  uuid;

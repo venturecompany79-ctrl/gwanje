@@ -208,6 +208,62 @@ export async function createDocumentDownloadUrl(
   return { ok: true, error: null, url: data.signedUrl };
 }
 
+/**
+ * 자료(document) 삭제 — DB 행 + Storage 파일 본체 제거.
+ * google_drive_sync_jobs는 document FK on delete cascade로 함께 정리된다.
+ * (이미 구글 드라이브에 백업된 파일 자체는 사용자 드라이브에 남는다 — 그건 사용자 소유.)
+ */
+export async function deleteDocument(
+  companyId: string,
+  documentId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const { data: document, error: fetchError } = await supabase
+    .from("document")
+    .select("storage_url")
+    .eq("id", documentId)
+    .eq("company_id", companyId)
+    .eq("tenant_id", ctx.tenantId)
+    .maybeSingle();
+  if (fetchError) {
+    console.error("[deleteDocument:fetch]", fetchError.code, fetchError.message);
+    return { ok: false, error: `자료 확인에 실패했습니다: ${fetchError.message}` };
+  }
+  if (!document) return { ok: false, error: "자료를 찾을 수 없습니다." };
+
+  // Storage 파일 먼저 제거 (실패해도 DB 삭제는 진행 — 고아 행보다 고아 파일이 안전)
+  const storage = parseCompanyDocumentStorageUrl(document.storage_url);
+  if (storage) {
+    const { error: removeError } = await supabase.storage
+      .from(storage.bucket)
+      .remove([storage.path]);
+    if (removeError) {
+      console.error("[deleteDocument:storage]", removeError.message);
+    }
+  }
+
+  const { error } = await supabase
+    .from("document")
+    .delete()
+    .eq("id", documentId)
+    .eq("company_id", companyId);
+  if (error) {
+    console.error("[deleteDocument]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
 export async function addCredential(
   companyId: string,
   formData: FormData,

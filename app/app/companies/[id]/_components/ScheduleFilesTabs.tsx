@@ -10,7 +10,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
-import { IconAlert, IconCalendar, IconDownload, IconFile, IconLink, IconPlus, IconX } from "@/components/ui/icons";
+import { IconAlert, IconCalendar, IconDownload, IconFile, IconLink, IconPlus, IconRefresh, IconTrash, IconX } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
@@ -19,10 +19,61 @@ import { createClient } from "@/lib/supabase/client";
 import {
   addSchedule,
   createDocumentDownloadUrl,
+  deleteDocument,
   prepareDocumentUpload,
   registerUploadedDocument,
 } from "../actions";
 import { retryDriveSync } from "@/lib/actions/google-drive";
+
+const DOCUMENT_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.hwp,.hwpx";
+
+/**
+ * 파일 1건을 Storage에 올리고 document 레코드로 등록한다.
+ * displayName이 기존 자료명과 같으면 registerUploadedDocument가 version+1로 처리(= 업데이트).
+ */
+async function uploadDocumentVersion(
+  companyId: string,
+  file: File,
+  displayName: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createClient();
+  if (!supabase) {
+    return { ok: false, error: "데모 모드에서는 파일을 업로드할 수 없습니다." };
+  }
+
+  const prepared = await prepareDocumentUpload(companyId, {
+    name: file.name,
+    size: file.size,
+  });
+  if (!prepared.ok || !prepared.bucket || !prepared.path) {
+    return { ok: false, error: prepared.error ?? "업로드 준비에 실패했습니다." };
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(prepared.bucket)
+    .upload(prepared.path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+  if (uploadError) {
+    return { ok: false, error: `파일 업로드에 실패했습니다: ${uploadError.message}` };
+  }
+
+  const formData = new FormData();
+  formData.set("name", displayName);
+  formData.set("path", prepared.path);
+  formData.set("size_bytes", String(file.size));
+  formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
+  formData.set("mime_type", file.type || "application/octet-stream");
+
+  const result = await registerUploadedDocument(companyId, formData);
+  if (!result.ok) {
+    await supabase.storage.from(prepared.bucket).remove([prepared.path]);
+    return { ok: false, error: result.error ?? "자료 저장에 실패했습니다." };
+  }
+  return { ok: true };
+}
 
 function AddScheduleSlideOver({
   companyId,
@@ -220,52 +271,12 @@ function UploadDocumentButton({ companyId }: { companyId: string }) {
     setPending(true);
     setError(null);
 
-    const supabase = createClient();
-    if (!supabase) {
-      setError("데모 모드에서는 파일을 업로드할 수 없습니다.");
-      setPending(false);
-      return;
-    }
-
-    const prepared = await prepareDocumentUpload(companyId, {
-      name: file.name,
-      size: file.size,
-    });
-    if (!prepared.ok || !prepared.bucket || !prepared.path) {
-      setError(prepared.error);
-      setPending(false);
-      return;
-    }
-
-    const { error: uploadError } = await supabase.storage
-      .from(prepared.bucket)
-      .upload(prepared.path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
-      });
-    if (uploadError) {
-      setError(`파일 업로드에 실패했습니다: ${uploadError.message}`);
-      setPending(false);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.set("name", file.name);
-    formData.set("path", prepared.path);
-    formData.set("size_bytes", String(file.size));
-    formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
-    // Google Drive 동기화 시 정확한 MIME으로 업로드하기 위해 전달
-    formData.set("mime_type", file.type || "application/octet-stream");
-
-    const result = await registerUploadedDocument(companyId, formData);
-    if (!result.ok) {
-      await supabase.storage.from(prepared.bucket).remove([prepared.path]);
-      setError(result.error);
-      setPending(false);
-      return;
-    }
-
+    const result = await uploadDocumentVersion(companyId, file, file.name);
     setPending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -275,7 +286,7 @@ function UploadDocumentButton({ companyId }: { companyId: string }) {
         ref={inputRef}
         className="sr-only"
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.hwp,.hwpx"
+        accept={DOCUMENT_ACCEPT}
         onChange={handleFileChange}
         aria-label="자료 파일 선택"
       />
@@ -330,6 +341,124 @@ function DocumentDownloadButton({ document }: { document: DocumentRow }) {
       </Button>
       {error ? <span className="field-error">{error}</span> : null}
     </span>
+  );
+}
+
+/** 자료 행 — 새 파일을 올려 같은 자료명의 다음 버전으로 등록 */
+function DocumentUpdateButton({
+  companyId,
+  document,
+  showToast,
+}: {
+  companyId: string;
+  document: DocumentRow;
+  showToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setPending(true);
+    const result = await uploadDocumentVersion(companyId, file, document.name);
+    setPending(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    showToast(`'${document.name}' 새 버전을 등록했습니다`);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        className="sr-only"
+        type="file"
+        accept={DOCUMENT_ACCEPT}
+        onChange={handleChange}
+        aria-label={`${document.name} 새 버전 업로드`}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => inputRef.current?.click()}
+        disabled={pending}
+      >
+        <IconRefresh /> {pending ? "업로드 중…" : "업데이트"}
+      </Button>
+    </>
+  );
+}
+
+/** 자료 행 — 삭제(2단계 확인). DB 행 + Storage 파일 제거 */
+function DocumentDeleteButton({
+  companyId,
+  document,
+  showToast,
+}: {
+  companyId: string;
+  document: DocumentRow;
+  showToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteDocument(companyId, document.id);
+      if (!result.ok) {
+        showToast(result.error ?? "삭제에 실패했습니다.");
+        setConfirming(false);
+        return;
+      }
+      showToast("자료를 삭제했습니다");
+      router.refresh();
+    });
+  }
+
+  if (confirming) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          onClick={handleDelete}
+          disabled={pending}
+        >
+          {pending ? "삭제 중…" : "삭제 확인"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setConfirming(false)}
+          disabled={pending}
+        >
+          취소
+        </Button>
+      </span>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost-danger"
+      size="sm"
+      onClick={() => setConfirming(true)}
+      aria-label={`${document.name} 삭제`}
+    >
+      <IconTrash /> 삭제
+    </Button>
   );
 }
 
@@ -453,7 +582,7 @@ export function FilesTab({
               <th className="r">크기</th>
               <th>등록일</th>
               {driveConnected ? <th>드라이브</th> : null}
-              <th className="r">파일</th>
+              <th className="r">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -488,7 +617,19 @@ export function FilesTab({
                   </td>
                 ) : null}
                 <td className="r">
-                  <DocumentDownloadButton document={d} />
+                  <span className="doc-actions">
+                    <DocumentDownloadButton document={d} />
+                    <DocumentUpdateButton
+                      companyId={companyId}
+                      document={d}
+                      showToast={showToast}
+                    />
+                    <DocumentDeleteButton
+                      companyId={companyId}
+                      document={d}
+                      showToast={showToast}
+                    />
+                  </span>
                 </td>
               </tr>
             ))}

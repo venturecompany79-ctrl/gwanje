@@ -4,13 +4,15 @@ import { useCallback, useState } from "react";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
+import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
 import { CertsTab } from "./CertsTab";
 import { TasksTab } from "./TasksTab";
 import { ScheduleTab, FilesTab } from "./ScheduleFilesTabs";
 import { EditCompanyButton } from "./EditCompanySlideOver";
 import { OverviewTab } from "./OverviewTab";
+import { RecommendTab } from "./RecommendTab";
 
-type TabKey = "overview" | "cert" | "tasks" | "schedule" | "files";
+type TabKey = "overview" | "cert" | "tasks" | "schedule" | "files" | "recommend";
 
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "개요/프로파일" },
@@ -18,6 +20,7 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
+  { key: "recommend", label: "정부지원사업 추천" },
 ];
 
 // ?tab= 별칭 — 자연스러운 표기(docs)도 허용 (GWJ-012)
@@ -76,9 +79,11 @@ function CompanyHeader({
 export function CompanyDetailView({
   data,
   initialTab,
+  initialProgramMatches,
 }: {
   data: CompanyDetailData;
   initialTab: string;
+  initialProgramMatches?: CompanyProgramMatchesData | null;
 }) {
   const [tab, setTab] = useState<TabKey>(() => resolveTab(initialTab));
   const { toast, showToast } = useToast();
@@ -115,16 +120,6 @@ export function CompanyDetailView({
             {t.label}
           </button>
         ))}
-        {/* 추천 — Phase2 자리만 (CLAUDE.md 11절). 미출시 표기는 GWJ-006과 동일 정책 */}
-        <button
-          type="button"
-          className="pill-tab pill-tab--soon"
-          disabled
-          aria-disabled
-          title="준비 중인 기능입니다"
-        >
-          추천 <span className="pill-tab-soon">준비 중</span>
-        </button>
       </div>
 
       {tab === "overview" ? <OverviewTab company={company} /> : null}
@@ -160,6 +155,14 @@ export function CompanyDetailView({
           documents={data.documents}
           driveConnected={data.driveConnected}
           driveConfigured={data.driveConfigured}
+          showToast={showToast}
+        />
+      ) : null}
+      {tab === "recommend" ? (
+        <RecommendTab
+          companyId={company.id}
+          companyName={company.name}
+          initialData={initialProgramMatches}
           showToast={showToast}
         />
       ) : null}
