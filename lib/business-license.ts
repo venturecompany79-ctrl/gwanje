@@ -33,6 +33,10 @@ const STOP_LABELS = [
   "업 태",
   "종목",
   "종 목",
+  "산업분류코드",
+  "산업분류",
+  "업종코드",
+  "생산요소",
   "발급사유",
   "발급일자",
   "세무서장",
@@ -185,6 +189,24 @@ function isLabelish(value: string): boolean {
   return /^(종\s*목|업\s*태|사업의?\s*종류|소재지|발급사유?)$/.test(value.trim());
 }
 
+// 인라인 추출이 라벨/헤더 줄을 값으로 오인한 경우(예: "업태" 값이 "종목 산업분류코드"로 잡힘)를 걸러낸다.
+function isHeaderish(value: string): boolean {
+  const compact = value.replace(/\s+/g, "");
+  return /^(종목|업태|산업분류코드|산업분류|업종코드|생산요소|사업의?종류)/.test(
+    compact,
+  );
+}
+
+// 종목/업태 값 끝에 붙은 산업분류코드(예: "응용 소프트웨어 개발 산업분류코드 58222")를 제거한다.
+function stripTrailingCode(value: string | null): string | null {
+  if (!value) return null;
+  const cleaned = value
+    .replace(/\s*(산업\s*분류\s*코드|산업\s*분류|업종\s*코드|생산\s*요소).*$/, "")
+    .replace(/\s+[A-Za-z]?\d{3,}\s*$/, "")
+    .trim();
+  return cleaned || null;
+}
+
 // 표 데이터 행("정보통신업 소프트웨어 개발")을 업태/종목으로 분리.
 // 업태는 보통 '…업' 또는 '서비스'로 끝나므로 그 지점을 경계로 본다.
 function splitTypeItemRow(row: string): [string | null, string | null] {
@@ -200,14 +222,15 @@ function splitTypeItemRow(row: string): [string | null, string | null] {
   return [first, second];
 }
 
-// "업태 종목"만 있는 헤더 줄인지 판별("사업의 종류" 접두는 무시).
+// "업태 종목 [산업분류코드]" 형태의 헤더 줄인지 판별("사업의 종류" 접두·뒤따르는 코드 컬럼은 무시).
 function headerRowOrder(line: string): "tae-first" | "mok-first" | null {
   const compact = line
     .replace(/[:：|]/g, "")
     .replace(/사업의?\s*종류/g, "")
     .replace(/\s+/g, "");
-  if (compact === "업태종목") return "tae-first";
-  if (compact === "종목업태") return "mok-first";
+  // 헤더 라벨만으로 시작하는지 검사(뒤에 산업분류코드 등 추가 컬럼이 와도 허용).
+  if (compact.startsWith("업태종목")) return "tae-first";
+  if (compact.startsWith("종목업태")) return "mok-first";
   return null;
 }
 
@@ -234,9 +257,11 @@ function parseTypeItemTable(text: string): {
       const cleaned = cleanValue(dataRaw);
       if (!cleaned) continue;
       const [first, second] = splitTypeItemRow(cleaned);
+      const a = stripTrailingCode(first);
+      const b = stripTrailingCode(second);
       return order === "tae-first"
-        ? { businessCondition: first, item: second }
-        : { businessCondition: second, item: first };
+        ? { businessCondition: a, item: b }
+        : { businessCondition: b, item: a };
     }
   }
   return { businessCondition: null, item: null };
@@ -248,16 +273,22 @@ function parseIndustry(text: string): {
 } {
   // 업태(사업 형태)와 종목(취급 품목)을 분리해 반환한다.
   // 대표 업종(industry)은 종목을 우선 사용하고, 종목이 없으면 업태로 대체한다.
-  let businessCondition = findValueAfterLabel(text, ["업태", "업 태"]);
-  let item = findValueAfterLabel(text, ["종목", "종 목"]);
-  if (businessCondition && isLabelish(businessCondition)) businessCondition = null;
-  if (item && isLabelish(item)) item = null;
+  //
+  // 현대 NTS 사업자등록증은 "업태 종목 산업분류코드" 표 형식이 표준이라 표 파싱을 먼저 시도하고,
+  // 표가 없는 옛 양식/단일 줄 양식은 인라인 라벨 추출로 보완한다.
+  const table = parseTypeItemTable(text);
+  let businessCondition = table.businessCondition;
+  let item = table.item;
 
-  // 인라인 추출이 비었거나(라벨만 잡힘) 한쪽이 비면 표 헤더 양식으로 재시도.
-  if (!businessCondition || !item) {
-    const table = parseTypeItemTable(text);
-    if (table.businessCondition) businessCondition = table.businessCondition;
-    if (table.item) item = table.item;
+  if (!businessCondition) {
+    let bc = findValueAfterLabel(text, ["업태", "업 태"]);
+    if (bc && (isLabelish(bc) || isHeaderish(bc))) bc = null;
+    businessCondition = stripTrailingCode(bc);
+  }
+  if (!item) {
+    let it = findValueAfterLabel(text, ["종목", "종 목"]);
+    if (it && (isLabelish(it) || isHeaderish(it))) it = null;
+    item = stripTrailingCode(it);
   }
 
   return {
