@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/icons";
 import { formatKstDate } from "@/lib/datetime";
 import {
-  CATEGORY_COLORS,
   addCategory,
   disableTeamMember,
   inviteTeamMember,
@@ -33,6 +32,7 @@ import {
   updateNotifyRules,
   updateProfile,
 } from "@/lib/actions/settings";
+import { CATEGORY_COLORS } from "@/lib/categoryColors";
 import type {
   SettingsCategory,
   SettingsData,

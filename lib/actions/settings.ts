@@ -19,6 +19,7 @@ import {
   type MemberRole,
   type PermissionKey,
 } from "@/lib/permissions";
+import { CATEGORY_COLORS, type CategoryColor } from "@/lib/categoryColors";
 
 // 사전 알림 시점은 사용자가 자유롭게 추가/변경 (GWJ-017) — 1~365일 정수 범위만 검증
 const LEAD_DAY_MIN = 1;
@@ -175,17 +176,6 @@ export async function renameCategory(
   return { ok: true, error: null };
 }
 
-// 카테고리 색은 디자인 시스템 토큰 값만 허용 (임의 색 생성 금지 — CLAUDE.md §5)
-export const CATEGORY_COLORS = [
-  "#0064e0", // primary (cobalt)
-  "#a121ce", // oculus-purple
-  "#31a24c", // success
-  "#f2a918", // attention
-  "#f7b928", // warning
-  "#e41e3f", // critical
-  "#5d6c7b", // steel
-] as const;
-
 export async function setCategoryColor(
   id: string,
   color: string | null,
@@ -197,7 +187,7 @@ export async function setCategoryColor(
   if ("error" in allowed) return { ok: false, error: allowed.error };
 
   if (!id) return { ok: false, error: "분류를 찾을 수 없습니다." };
-  if (color !== null && !CATEGORY_COLORS.includes(color as (typeof CATEGORY_COLORS)[number])) {
+  if (color !== null && !CATEGORY_COLORS.includes(color as CategoryColor)) {
     return { ok: false, error: "허용되지 않은 색상입니다." };
   }
 
