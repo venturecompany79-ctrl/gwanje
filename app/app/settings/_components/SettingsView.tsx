@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/icons";
 import { formatKstDate } from "@/lib/datetime";
 import {
+  CATEGORY_COLORS,
   addCategory,
   disableTeamMember,
   inviteTeamMember,
   renameCategory,
+  setCategoryColor,
   updateTeamMember,
   updateNotifyRules,
   updateProfile,
@@ -413,6 +415,92 @@ function RulesSection({
   );
 }
 
+function ColorPicker({
+  category,
+  onSaved,
+}: {
+  category: SettingsCategory;
+  onSaved: OnSaved;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 바깥 클릭·ESC로 팔레트 닫기
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function pick(color: string | null) {
+    setOpen(false);
+    if (color === category.color) return;
+    startTransition(async () => {
+      const result = await setCategoryColor(category.id, color);
+      onSaved(result.ok, result.error);
+    });
+  }
+
+  return (
+    <div className="cat-sw-wrap" ref={ref}>
+      <button
+        type="button"
+        className="cat-sw"
+        title="색상 지정"
+        aria-label={`${category.name} 색상 지정`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        disabled={pending}
+        style={category.color ? { background: category.color } : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {category.color ? null : <IconPalette />}
+      </button>
+      {open ? (
+        <div className="cat-palette" role="menu">
+          {CATEGORY_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              role="menuitemradio"
+              aria-checked={category.color === color}
+              className={`cat-sw-opt${category.color === color ? " is-sel" : ""}`}
+              style={{ background: color }}
+              title={color}
+              aria-label={color}
+              onClick={() => pick(color)}
+            >
+              {category.color === color ? <IconCheck /> : null}
+            </button>
+          ))}
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={!category.color}
+            className={`cat-sw-opt cat-sw-none${!category.color ? " is-sel" : ""}`}
+            title="색상 없음"
+            aria-label="색상 없음"
+            onClick={() => pick(null)}
+          >
+            <IconX />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function CatRow({
   category,
   onSaved,
@@ -439,13 +527,7 @@ function CatRow({
 
   return (
     <div className="cat-row">
-      <span
-        className="cat-sw"
-        title="색상 — 카테고리 색 토큰 정식 정의 전까지 중립 표시"
-        style={category.color ? { background: category.color } : undefined}
-      >
-        {category.color ? null : <IconPalette />}
-      </span>
+      <ColorPicker category={category} onSaved={onSaved} />
       {editing ? (
         <div className="cat-edit">
           <input
@@ -528,8 +610,8 @@ function CatsSection({
       <div className="sp-head">
         <h2>분류 카테고리</h2>
         <p>
-          과제·자격에 사용하는 분류 카테고리입니다. 색상은 디자인 시스템 토큰
-          정식 정의 후 지정할 수 있습니다.
+          과제·자격에 사용하는 분류 카테고리입니다. 왼쪽 원형 색상 칩을 눌러
+          카테고리 색을 지정할 수 있습니다.
         </p>
       </div>
       <div className="sp-body">

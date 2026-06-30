@@ -175,6 +175,46 @@ export async function renameCategory(
   return { ok: true, error: null };
 }
 
+// 카테고리 색은 디자인 시스템 토큰 값만 허용 (임의 색 생성 금지 — CLAUDE.md §5)
+export const CATEGORY_COLORS = [
+  "#0064e0", // primary (cobalt)
+  "#a121ce", // oculus-purple
+  "#31a24c", // success
+  "#f2a918", // attention
+  "#f7b928", // warning
+  "#e41e3f", // critical
+  "#5d6c7b", // steel
+] as const;
+
+export async function setCategoryColor(
+  id: string,
+  color: string | null,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "settings.categories.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  if (!id) return { ok: false, error: "분류를 찾을 수 없습니다." };
+  if (color !== null && !CATEGORY_COLORS.includes(color as (typeof CATEGORY_COLORS)[number])) {
+    return { ok: false, error: "허용되지 않은 색상입니다." };
+  }
+
+  const { error } = await supabase
+    .from("category")
+    .update({ color })
+    .eq("id", id);
+  if (error) {
+    console.error("[setCategoryColor]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+
+  // 카테고리 칩은 대시보드·보드·기업상세 등 전 화면에서 사용
+  revalidatePath("/app", "layout");
+  return { ok: true, error: null };
+}
+
 export type AddCategoryResult = ActionResult & { categoryId?: string };
 
 export async function addCategory(name: string): Promise<AddCategoryResult> {
