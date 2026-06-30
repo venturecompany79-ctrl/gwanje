@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Topbar } from "@/components/shell/Topbar";
+import { CategoryColorStyle } from "@/components/shell/CategoryColorStyle";
 import { getShellData } from "@/lib/data/shell";
 import { getSubscriptionGate } from "@/lib/billing/data";
 import { IconAlert } from "@/components/ui/icons";
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="shell">
+      <CategoryColorStyle />
       <Sidebar
         consultantName={shell.consultantName}
         orgName={shell.orgName}
