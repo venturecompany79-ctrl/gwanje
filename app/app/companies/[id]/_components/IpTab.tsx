@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/icons";
 import { formatBytes } from "@/lib/format";
 import {
-  IP_DEADLINE_TYPE_LABEL,
   IP_RIGHT_KIND_LABEL,
   IP_RIGHT_STATUS_LABEL,
 } from "@/lib/labels";
@@ -37,7 +36,6 @@ import type {
   IpRightRow,
 } from "@/lib/data/company-detail";
 import type {
-  IpDeadlineType,
   IpRightKind,
   IpRightStatus,
 } from "@/lib/database.types";
@@ -65,13 +63,6 @@ const IP_RIGHT_STATUS_OPTIONS: IpRightStatus[] = [
   "rejected",
   "abandoned",
   "expired",
-];
-const IP_DEADLINE_TYPE_OPTIONS: IpDeadlineType[] = [
-  "office_action",
-  "registration_fee",
-  "renewal",
-  "annuity",
-  "etc",
 ];
 
 const STATUS_TONE = {
@@ -213,6 +204,8 @@ function IpAttachments({
   ipRightId,
   docName,
   initialAttachments,
+  draftFile,
+  onDraftFileChange,
   demo,
   showToast,
 }: {
@@ -220,6 +213,8 @@ function IpAttachments({
   ipRightId: string | null;
   docName: string;
   initialAttachments: IpRightAttachment[];
+  draftFile?: File | null;
+  onDraftFileChange?: (file: File | null) => void;
   demo: boolean;
   showToast: (message: string) => void;
 }) {
@@ -233,7 +228,13 @@ function IpAttachments({
   async function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !ipRightId) return;
+    if (!file) return;
+
+    if (!ipRightId) {
+      onDraftFileChange?.(file);
+      setError(null);
+      return;
+    }
 
     setPending(true);
     setError(null);
@@ -264,11 +265,50 @@ function IpAttachments({
     return (
       <div className="field">
         <label>첨부 자료</label>
+        {draftFile ? (
+          <ul className="cred-attach-list">
+            <li>
+              <IconFile />
+              <span className="cred-attach-name">{draftFile.name}</span>
+              <span className="cred-attach-size">{formatBytes(draftFile.size)}</span>
+              <span className="cred-attach-actions">
+                <button
+                  type="button"
+                  className="link-btn link-btn--danger"
+                  onClick={() => onDraftFileChange?.(null)}
+                >
+                  <IconTrash /> 제거
+                </button>
+              </span>
+            </li>
+          </ul>
+        ) : null}
+        <input
+          ref={inputRef}
+          className="sr-only"
+          type="file"
+          accept={IP_DOC_ACCEPT}
+          onChange={handleChange}
+          aria-label="특허·상표 첨부 파일 선택"
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          disabled={demo}
+        >
+          <IconFile /> {draftFile ? "파일 변경" : "파일 선택"}
+        </Button>
         <p className="form-hint">
-          <IconInfo /> 특허·상표를 먼저 저장하면 출원서·등록증·통지서 파일을
-          첨부할 수 있습니다. 첨부한 파일은 기업의 &lsquo;자료&rsquo; 탭에도
-          연동됩니다.
+          <IconInfo /> 선택한 파일은 저장 후 이 권리에 연결되고, 기업의
+          &lsquo;자료&rsquo; 탭(분류: 지식재산권)에도 자동으로 연동됩니다.
         </p>
+        {error ? (
+          <div className="inline-error">
+            <IconAlert /> {error}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -388,22 +428,47 @@ function IpSlideOver({
   const [pending, startTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [title, setTitle] = useState(ipRight?.title ?? "");
+  const [draftFile, setDraftFile] = useState<File | null>(null);
   const isEdit = ipRight !== null;
-  const primaryDeadline = ipRight?.nextDeadline ?? null;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = isEdit
-        ? await updateIpRight(companyId, ipRight.id, formData)
+        ? {
+            ...(await updateIpRight(companyId, ipRight.id, formData)),
+            ipRightId: undefined,
+          }
         : await addIpRight(companyId, formData);
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      if (!isEdit && draftFile) {
+        const ipRightId = result.ipRightId;
+        if (!ipRightId) {
+          setError("첨부 자료를 연결할 특허·상표 정보를 찾지 못했습니다.");
+          return;
+        }
+        const uploadResult = await uploadDocumentVersion(
+          companyId,
+          draftFile,
+          title.trim() || draftFile.name,
+          {
+            docCategory: IP_DOC_CATEGORY,
+            ipRightId,
+          },
+        );
+        if (!uploadResult.ok) {
+          onClose();
+          showToast("저장됐지만 자료 등록에 실패했습니다");
+          router.refresh();
+          return;
+        }
+      }
       onClose();
-      showToast("저장되었습니다");
+      showToast(draftFile ? "저장하고 자료에 등록했습니다" : "저장되었습니다");
       router.refresh();
     });
   }
@@ -537,68 +602,13 @@ function IpSlideOver({
               />
             </div>
 
-            <div className="ip-form-section">
-              <div>
-                <h3>주요기한</h3>
-                <p>다음 대응·납부·갱신 기한은 대시보드와 알림센터에 함께 표시됩니다.</p>
-              </div>
-              <input type="hidden" name="deadline_id" value={primaryDeadline?.id ?? ""} />
-              <div className="form-grid2">
-                <div className="field">
-                  <label htmlFor="ip-deadline-type">유형</label>
-                  <select
-                    id="ip-deadline-type"
-                    name="deadline_type"
-                    className="input"
-                    defaultValue={primaryDeadline?.type ?? "office_action"}
-                  >
-                    {IP_DEADLINE_TYPE_OPTIONS.map((value) => (
-                      <option key={value} value={value}>
-                        {IP_DEADLINE_TYPE_LABEL[value]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <InputField
-                  label="기한일"
-                  name="deadline_due_date"
-                  type="date"
-                  defaultValue={primaryDeadline?.dueDate ?? ""}
-                />
-              </div>
-              <InputField
-                label="기한명"
-                name="deadline_title"
-                placeholder="예: 의견제출통지 대응"
-                defaultValue={primaryDeadline?.title ?? ""}
-              />
-              <div className="field">
-                <label htmlFor="ip-deadline-memo">기한 메모</label>
-                <textarea
-                  id="ip-deadline-memo"
-                  name="deadline_memo"
-                  className="memo-input"
-                  placeholder="제출 서류, 납부 금액, 준비사항 등"
-                  defaultValue={primaryDeadline?.memo ?? ""}
-                />
-              </div>
-              {primaryDeadline ? (
-                <label className="check-line">
-                  <input
-                    type="checkbox"
-                    name="deadline_is_done"
-                    defaultChecked={primaryDeadline.isDone}
-                  />
-                  기한 완료 처리
-                </label>
-              ) : null}
-            </div>
-
             <IpAttachments
               companyId={companyId}
               ipRightId={ipRight?.id ?? null}
               docName={title}
               initialAttachments={ipRight?.attachments ?? []}
+              draftFile={draftFile}
+              onDraftFileChange={setDraftFile}
               demo={demo}
               showToast={showToast}
             />

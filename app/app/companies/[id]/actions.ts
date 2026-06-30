@@ -699,7 +699,7 @@ export async function addSchedule(
 export async function addIpRight(
   companyId: string,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult & { ipRightId?: string }> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
@@ -748,7 +748,7 @@ export async function addIpRight(
   if (!deadlineResult.ok) return deadlineResult;
 
   revalidateCompany(companyId);
-  return { ok: true, error: null };
+  return { ok: true, error: null, ipRightId: inserted.id };
 }
 
 export async function updateIpRight(
