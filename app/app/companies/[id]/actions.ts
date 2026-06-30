@@ -5,6 +5,11 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type {
+  IpDeadlineType,
+  IpRightKind,
+  IpRightStatus,
+} from "@/lib/database.types";
 import {
   DEMO_ERROR,
   getTenantContext,
@@ -31,6 +36,7 @@ function revalidateCompany(companyId: string) {
   revalidatePath(`/app/companies/${companyId}`);
   revalidatePath("/app/companies");
   revalidatePath("/app");
+  revalidatePath("/app/notifications");
 }
 
 async function assertCompanyAccess(
@@ -127,6 +133,23 @@ export async function registerUploadedDocument(
     }
     if (!cred) return { ok: false, error: "연결할 자격을 찾을 수 없습니다." };
   }
+  const ipRightId = optionalText(formData, "ip_right_id");
+  if (credentialId && ipRightId) {
+    return { ok: false, error: "자격과 지식재산권 자료 연결은 동시에 설정할 수 없습니다." };
+  }
+  if (ipRightId) {
+    const { data: right, error: rightError } = await supabase
+      .from("ip_right")
+      .select("id")
+      .eq("id", ipRightId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (rightError) {
+      console.error("[registerUploadedDocument:ip_right]", rightError.code, rightError.message);
+      return { ok: false, error: `지식재산권 확인에 실패했습니다: ${rightError.message}` };
+    }
+    if (!right) return { ok: false, error: "연결할 지식재산권을 찾을 수 없습니다." };
+  }
 
   const { data: latest, error: latestError } = await supabase
     .from("document")
@@ -150,6 +173,7 @@ export async function registerUploadedDocument(
       tenant_id: ctx.tenantId,
       company_id: companyId,
       credential_id: credentialId,
+      ip_right_id: ipRightId,
       name,
       doc_category: optionalText(formData, "doc_category"),
       version,
@@ -460,6 +484,175 @@ function isScheduleType(value: string): value is ScheduleTypeValue {
   return (SCHEDULE_TYPES as readonly string[]).includes(value);
 }
 
+const IP_RIGHT_KINDS: IpRightKind[] = ["patent", "trademark"];
+const IP_RIGHT_STATUSES: IpRightStatus[] = [
+  "preparing",
+  "filed",
+  "examining",
+  "office_action",
+  "registered",
+  "rejected",
+  "abandoned",
+  "expired",
+];
+const IP_DEADLINE_TYPES: IpDeadlineType[] = [
+  "office_action",
+  "registration_fee",
+  "renewal",
+  "annuity",
+  "etc",
+];
+
+function readIpRightForm(formData: FormData):
+  | {
+      ok: true;
+      value: {
+        kind: IpRightKind;
+        title: string;
+        applicationNo: string | null;
+        registrationNo: string | null;
+        agentName: string | null;
+        status: IpRightStatus;
+        appliedDate: string | null;
+        registeredDate: string | null;
+        memo: string | null;
+      };
+    }
+  | { ok: false; error: string } {
+  const kindRaw = String(formData.get("kind") ?? "");
+  if (!IP_RIGHT_KINDS.includes(kindRaw as IpRightKind)) {
+    return { ok: false, error: "구분을 선택해 주세요." };
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { ok: false, error: "명칭을 입력해 주세요." };
+
+  const statusRaw = String(formData.get("status") ?? "preparing");
+  if (!IP_RIGHT_STATUSES.includes(statusRaw as IpRightStatus)) {
+    return { ok: false, error: "진행상태 값이 올바르지 않습니다." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      kind: kindRaw as IpRightKind,
+      title,
+      applicationNo: optionalText(formData, "application_no"),
+      registrationNo: optionalText(formData, "registration_no"),
+      agentName: optionalText(formData, "agent_name"),
+      status: statusRaw as IpRightStatus,
+      appliedDate: optionalText(formData, "applied_date"),
+      registeredDate: optionalText(formData, "registered_date"),
+      memo: optionalText(formData, "memo"),
+    },
+  };
+}
+
+function readIpDeadlineForm(formData: FormData):
+  | {
+      ok: true;
+      value: {
+        id: string | null;
+        type: IpDeadlineType;
+        title: string | null;
+        dueDate: string | null;
+        isDone: boolean;
+        memo: string | null;
+      };
+    }
+  | { ok: false; error: string } {
+  const typeRaw = String(formData.get("deadline_type") ?? "etc");
+  if (!IP_DEADLINE_TYPES.includes(typeRaw as IpDeadlineType)) {
+    return { ok: false, error: "기한 유형 값이 올바르지 않습니다." };
+  }
+
+  const title = optionalText(formData, "deadline_title");
+  const dueDate = optionalText(formData, "deadline_due_date");
+  if (title && !dueDate) return { ok: false, error: "기한일을 선택해 주세요." };
+  if (dueDate && !title) return { ok: false, error: "기한명을 입력해 주세요." };
+
+  return {
+    ok: true,
+    value: {
+      id: optionalText(formData, "deadline_id"),
+      type: typeRaw as IpDeadlineType,
+      title,
+      dueDate,
+      isDone: formData.get("deadline_is_done") === "on",
+      memo: optionalText(formData, "deadline_memo"),
+    },
+  };
+}
+
+async function savePrimaryIpDeadline(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  input: {
+    tenantId: string;
+    companyId: string;
+    ipRightId: string;
+    deadline: {
+      id: string | null;
+      type: IpDeadlineType;
+      title: string | null;
+      dueDate: string | null;
+      isDone: boolean;
+      memo: string | null;
+    };
+  },
+): Promise<ActionResult> {
+  const { deadline } = input;
+  if (!deadline.title || !deadline.dueDate) {
+    if (!deadline.id) return { ok: true, error: null };
+    const { error } = await supabase
+      .from("ip_deadline")
+      .delete()
+      .eq("id", deadline.id)
+      .eq("ip_right_id", input.ipRightId)
+      .eq("company_id", input.companyId);
+    if (error) {
+      console.error("[savePrimaryIpDeadline:delete]", error.code, error.message);
+      return { ok: false, error: `기한 삭제에 실패했습니다: ${error.message}` };
+    }
+    return { ok: true, error: null };
+  }
+
+  if (deadline.id) {
+    const { error } = await supabase
+      .from("ip_deadline")
+      .update({
+        type: deadline.type,
+        title: deadline.title,
+        due_date: deadline.dueDate,
+        is_done: deadline.isDone,
+        memo: deadline.memo,
+      })
+      .eq("id", deadline.id)
+      .eq("ip_right_id", input.ipRightId)
+      .eq("company_id", input.companyId);
+    if (error) {
+      console.error("[savePrimaryIpDeadline:update]", error.code, error.message);
+      return { ok: false, error: `기한 저장에 실패했습니다: ${error.message}` };
+    }
+    return { ok: true, error: null };
+  }
+
+  const { error } = await supabase.from("ip_deadline").insert({
+    tenant_id: input.tenantId,
+    company_id: input.companyId,
+    ip_right_id: input.ipRightId,
+    type: deadline.type,
+    title: deadline.title,
+    due_date: deadline.dueDate,
+    is_done: deadline.isDone,
+    memo: deadline.memo,
+  });
+  if (error) {
+    console.error("[savePrimaryIpDeadline:insert]", error.code, error.message);
+    return { ok: false, error: `기한 저장에 실패했습니다: ${error.message}` };
+  }
+  return { ok: true, error: null };
+}
+
 /** 일정 추가 (일정 탭 — GWJ-021) */
 export async function addSchedule(
   companyId: string,
@@ -500,6 +693,226 @@ export async function addSchedule(
   }
 
   revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+export async function addIpRight(
+  companyId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const right = readIpRightForm(formData);
+  if (!right.ok) return { ok: false, error: right.error };
+  const deadline = readIpDeadlineForm(formData);
+  if (!deadline.ok) return { ok: false, error: deadline.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const { data: inserted, error } = await supabase
+    .from("ip_right")
+    .insert({
+      tenant_id: ctx.tenantId,
+      company_id: companyId,
+      kind: right.value.kind,
+      title: right.value.title,
+      application_no: right.value.applicationNo,
+      registration_no: right.value.registrationNo,
+      agent_name: right.value.agentName,
+      status: right.value.status,
+      applied_date: right.value.appliedDate,
+      registered_date: right.value.registeredDate,
+      memo: right.value.memo,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[addIpRight]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+
+  const deadlineResult = await savePrimaryIpDeadline(supabase, {
+    tenantId: ctx.tenantId,
+    companyId,
+    ipRightId: inserted.id,
+    deadline: deadline.value,
+  });
+  if (!deadlineResult.ok) return deadlineResult;
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+export async function updateIpRight(
+  companyId: string,
+  ipRightId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const right = readIpRightForm(formData);
+  if (!right.ok) return { ok: false, error: right.error };
+  const deadline = readIpDeadlineForm(formData);
+  if (!deadline.ok) return { ok: false, error: deadline.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const { error } = await supabase
+    .from("ip_right")
+    .update({
+      kind: right.value.kind,
+      title: right.value.title,
+      application_no: right.value.applicationNo,
+      registration_no: right.value.registrationNo,
+      agent_name: right.value.agentName,
+      status: right.value.status,
+      applied_date: right.value.appliedDate,
+      registered_date: right.value.registeredDate,
+      memo: right.value.memo,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", ipRightId)
+    .eq("company_id", companyId);
+  if (error) {
+    console.error("[updateIpRight]", error.code, error.message);
+    return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+
+  const deadlineResult = await savePrimaryIpDeadline(supabase, {
+    tenantId: ctx.tenantId,
+    companyId,
+    ipRightId,
+    deadline: deadline.value,
+  });
+  if (!deadlineResult.ok) return deadlineResult;
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+export async function deleteIpRight(
+  companyId: string,
+  ipRightId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+  if (!ipRightId) return { ok: false, error: "지식재산권을 찾을 수 없습니다." };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const { error } = await supabase
+    .from("ip_right")
+    .delete()
+    .eq("id", ipRightId)
+    .eq("company_id", companyId);
+  if (error) {
+    console.error("[deleteIpRight]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+export async function createIpTask(
+  companyId: string,
+  ipRightId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const { data: right, error: rightError } = await supabase
+    .from("ip_right")
+    .select("id, title")
+    .eq("id", ipRightId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (rightError) {
+    console.error("[createIpTask:right]", rightError.code, rightError.message);
+    return { ok: false, error: `지식재산권 확인에 실패했습니다: ${rightError.message}` };
+  }
+  if (!right) return { ok: false, error: "지식재산권을 찾을 수 없습니다." };
+
+  const { data: deadlines, error: deadlineError } = await supabase
+    .from("ip_deadline")
+    .select("title, due_date")
+    .eq("ip_right_id", ipRightId)
+    .eq("company_id", companyId)
+    .eq("is_done", false)
+    .order("due_date", { ascending: true })
+    .limit(1);
+  if (deadlineError) {
+    console.error("[createIpTask:deadline]", deadlineError.code, deadlineError.message);
+    return { ok: false, error: `기한 확인에 실패했습니다: ${deadlineError.message}` };
+  }
+
+  const nextDeadline = deadlines?.[0] ?? null;
+  const taskTitle = nextDeadline
+    ? `${right.title} · ${nextDeadline.title}`
+    : `${right.title} 지식재산권 관리`;
+  const dueDate = nextDeadline?.due_date ?? null;
+
+  let existingQuery = supabase
+    .from("task")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("title", taskTitle)
+    .neq("stage", "result")
+    .limit(1);
+  existingQuery =
+    dueDate === null
+      ? existingQuery.is("due_date", null)
+      : existingQuery.eq("due_date", dueDate);
+  const { data: existing, error: existingError } = await existingQuery;
+  if (existingError) {
+    console.error("[createIpTask:existing]", existingError.code, existingError.message);
+    return { ok: false, error: `중복 확인에 실패했습니다: ${existingError.message}` };
+  }
+  if (existing && existing.length > 0) {
+    return { ok: false, error: "이미 같은 내용의 진행 중 Task가 있습니다." };
+  }
+
+  const { error } = await supabase.from("task").insert({
+    tenant_id: ctx.tenantId,
+    company_id: companyId,
+    title: taskTitle,
+    stage: "diagnosis",
+    due_date: dueDate,
+    assignee_id: ctx.userId,
+  });
+  if (error) {
+    console.error("[createIpTask]", error.code, error.message);
+    return { ok: false, error: `과제 생성에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  revalidatePath("/app/board");
   return { ok: true, error: null };
 }
 

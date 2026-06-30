@@ -16,6 +16,7 @@ export interface RawNotification {
   isRead: boolean;
   companyId: string | null;
   companyName: string | null;
+  refTable: string | null;
   /** ref(자격·과제·일정)의 마감 D-day — deadline_item 뷰에서 역참조 */
   daysLeft: number | null;
   createdAt: string;
@@ -118,6 +119,7 @@ export async function getNotificationsData(): Promise<NotificationsData> {
           companyName: n.company_id
             ? (companyName.get(n.company_id) ?? null)
             : null,
+          refTable: n.ref_table,
           daysLeft:
             n.ref_table && n.ref_id
               ? (daysLeftByRef.get(`${n.ref_table}:${n.ref_id}`) ?? null)

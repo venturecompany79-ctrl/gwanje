@@ -49,6 +49,13 @@ const TYPE_ICO_CLASS: Record<NotificationType, string> = {
   program_match: "alert-ico--match",
 };
 
+const REF_TAB: Record<string, string> = {
+  credential: "cert",
+  ip_deadline: "ip",
+  task: "tasks",
+  schedule: "schedule",
+};
+
 function typeIcon(type: NotificationType) {
   switch (type) {
     case "expiry":
@@ -216,7 +223,8 @@ export function NotificationsView({ data }: { data: NotificationsData }) {
       setReadOverride((prev) => ({ ...prev, [n.id]: true }));
       void markNotificationRead(n.id);
     }
-    router.push(`/app/companies/${n.companyId}`);
+    const tab = n.refTable ? REF_TAB[n.refTable] : null;
+    router.push(tab ? `/app/companies/${n.companyId}?tab=${tab}` : `/app/companies/${n.companyId}`);
   }
 
   return (

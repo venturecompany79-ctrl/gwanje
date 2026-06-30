@@ -2185,6 +2185,85 @@ table.dlist .date {
   flex: none;
 }
 
+/* 특허·상표 탭 */
+.ip-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+.ip-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas);
+}
+.ip-summary-card span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-steel);
+  white-space: nowrap;
+}
+.ip-summary-card b {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-ink-deep);
+}
+.ip-deadline-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ip-deadline-cell > span:last-child {
+  min-width: 0;
+  color: var(--color-charcoal);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
+}
+.ip-form-section h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink-deep);
+  margin: 0;
+}
+.ip-form-section p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--color-steel);
+}
+.check-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-charcoal);
+}
+.check-line input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
 /* 자격 테이블 행 상태 */
 table.dlist tr.row-soon {
   background: var(--app-row-soon-bg);
@@ -5866,6 +5945,10 @@ body {
     min-width: 680px;
   }
 
+  .ip-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kcol {
     flex-basis: min(330px, 78vw);
     min-height: 430px;
@@ -5911,6 +5994,11 @@ body {
 
   .kpi-row {
     grid-template-columns: 1fr;
+  }
+
+  .ip-summary-grid {
+    grid-template-columns: 1fr;
+    padding: 14px 16px;
   }
 
   .kpi {
@@ -6006,7 +6094,8 @@ body {
   }
 
   .dlist--cards .chip-row,
-  .dlist--cards .due-cell {
+  .dlist--cards .due-cell,
+  .dlist--cards .ip-deadline-cell {
     justify-content: flex-end;
   }
 

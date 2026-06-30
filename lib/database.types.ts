@@ -368,6 +368,7 @@ export type Database = {
           doc_category: string | null
           file_type: string | null
           id: string
+          ip_right_id: string | null
           name: string
           size_bytes: number | null
           storage_url: string | null
@@ -382,6 +383,7 @@ export type Database = {
           doc_category?: string | null
           file_type?: string | null
           id?: string
+          ip_right_id?: string | null
           name: string
           size_bytes?: number | null
           storage_url?: string | null
@@ -396,6 +398,7 @@ export type Database = {
           doc_category?: string | null
           file_type?: string | null
           id?: string
+          ip_right_id?: string | null
           name?: string
           size_bytes?: number | null
           storage_url?: string | null
@@ -419,7 +422,141 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "document_ip_right_id_fkey"
+            columns: ["ip_right_id"]
+            isOneToOne: false
+            referencedRelation: "ip_right"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ip_deadline: {
+        Row: {
+          company_id: string
+          created_at: string
+          due_date: string
+          id: string
+          ip_right_id: string
+          is_done: boolean
+          memo: string | null
+          tenant_id: string
+          title: string
+          type: Database["public"]["Enums"]["ip_deadline_type"]
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          ip_right_id: string
+          is_done?: boolean
+          memo?: string | null
+          tenant_id: string
+          title: string
+          type?: Database["public"]["Enums"]["ip_deadline_type"]
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          ip_right_id?: string
+          is_done?: boolean
+          memo?: string | null
+          tenant_id?: string
+          title?: string
+          type?: Database["public"]["Enums"]["ip_deadline_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ip_deadline_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_deadline_ip_right_id_fkey"
+            columns: ["ip_right_id"]
+            isOneToOne: false
+            referencedRelation: "ip_right"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_deadline_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ip_right: {
+        Row: {
+          agent_name: string | null
+          application_no: string | null
+          applied_date: string | null
+          company_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["ip_right_kind"]
+          memo: string | null
+          registered_date: string | null
+          registration_no: string | null
+          status: Database["public"]["Enums"]["ip_right_status"]
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_name?: string | null
+          application_no?: string | null
+          applied_date?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["ip_right_kind"]
+          memo?: string | null
+          registered_date?: string | null
+          registration_no?: string | null
+          status?: Database["public"]["Enums"]["ip_right_status"]
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_name?: string | null
+          application_no?: string | null
+          applied_date?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["ip_right_kind"]
+          memo?: string | null
+          registered_date?: string | null
+          registration_no?: string | null
+          status?: Database["public"]["Enums"]["ip_right_status"]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ip_right_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_right_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
@@ -1419,6 +1556,22 @@ export type Database = {
       campaign_channel: "alimtalk" | "email"
       campaign_status: "draft" | "scheduled" | "sending" | "sent"
       document_uploader: "consultant" | "client"
+      ip_deadline_type:
+        | "office_action"
+        | "registration_fee"
+        | "renewal"
+        | "annuity"
+        | "etc"
+      ip_right_kind: "patent" | "trademark"
+      ip_right_status:
+        | "preparing"
+        | "filed"
+        | "examining"
+        | "office_action"
+        | "registered"
+        | "rejected"
+        | "abandoned"
+        | "expired"
       notification_type: "expiry" | "deadline" | "program_match"
       payment_kind: "initial" | "recurring" | "refund"
       payment_status: "pending" | "succeeded" | "failed" | "canceled"
@@ -1560,6 +1713,24 @@ export const Constants = {
       campaign_channel: ["alimtalk", "email"],
       campaign_status: ["draft", "scheduled", "sending", "sent"],
       document_uploader: ["consultant", "client"],
+      ip_deadline_type: [
+        "office_action",
+        "registration_fee",
+        "renewal",
+        "annuity",
+        "etc",
+      ],
+      ip_right_kind: ["patent", "trademark"],
+      ip_right_status: [
+        "preparing",
+        "filed",
+        "examining",
+        "office_action",
+        "registered",
+        "rejected",
+        "abandoned",
+        "expired",
+      ],
       notification_type: ["expiry", "deadline", "program_match"],
       payment_kind: ["initial", "recurring", "refund"],
       payment_status: ["pending", "succeeded", "failed", "canceled"],
@@ -1582,6 +1753,9 @@ export type DocumentUploader = Enums<"document_uploader">
 export type CampaignStatus = Enums<"campaign_status">
 export type CampaignChannel = Enums<"campaign_channel">
 export type NotificationType = Enums<"notification_type">
+export type IpRightKind = Enums<"ip_right_kind">
+export type IpRightStatus = Enums<"ip_right_status">
+export type IpDeadlineType = Enums<"ip_deadline_type">
 export type CredentialStatus = "valid" | "expiring" | "expired"
 
 export type DeadlineItem = Omit<
@@ -1591,8 +1765,8 @@ export type DeadlineItem = Omit<
   days_left: number
   due_date: string
   id: string
-  source: "credential" | "task" | "schedule"
-  status: CredentialStatus | TaskStage | ScheduleType
+  source: "credential" | "task" | "schedule" | "ip_deadline"
+  status: CredentialStatus | TaskStage | ScheduleType | IpDeadlineType
   tenant_id: string
   title: string
 }

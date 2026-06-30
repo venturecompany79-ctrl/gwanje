@@ -1,12 +1,13 @@
 // Supabase env 미설정 시 화면 확인용 데모 데이터 (와이어프레임 시나리오와 동일).
 // 날짜는 오늘 기준 상대값으로 생성해 D-day가 항상 자연스럽게 보인다.
-import type { DeadlineItem, TaskStage } from "@/lib/database.types";
+import type { DeadlineItem, IpDeadlineType, TaskStage } from "@/lib/database.types";
 import type { DashboardData } from "@/lib/data/dashboard";
 import type { CompaniesData, CompanyListRow } from "@/lib/data/companies";
 import type {
   CategoryOption,
   CompanyDetailData,
   CredentialRow,
+  IpRightRow,
 } from "@/lib/data/company-detail";
 import type { BoardData, BoardTask } from "@/lib/data/board";
 import type {
@@ -224,6 +225,44 @@ function demoCredential(
   };
 }
 
+function demoIpRight(
+  n: number,
+  kind: IpRightRow["kind"],
+  title: string,
+  status: IpRightRow["status"],
+  deadlineTitle: string | null,
+  deadlineType: IpDeadlineType,
+  deadlineInDays: number | null,
+): IpRightRow {
+  const deadline =
+    deadlineTitle && deadlineInDays !== null
+      ? {
+          id: `00000000-0000-0000-0000-0000000000i${n}`,
+          type: deadlineType,
+          title: deadlineTitle,
+          dueDate: dateAfter(deadlineInDays),
+          daysLeft: deadlineInDays,
+          isDone: false,
+          memo: null,
+        }
+      : null;
+  return {
+    id: `00000000-0000-0000-0000-0000000000p${n}`,
+    kind,
+    title,
+    applicationNo: kind === "patent" ? `10-2026-000${n}234` : `40-2026-000${n}234`,
+    registrationNo: status === "registered" ? `${kind === "patent" ? "10" : "40"}-234${n}567` : null,
+    agentName: "김변리사",
+    status,
+    appliedDate: dateAfter(-120 - n * 12),
+    registeredDate: status === "registered" ? dateAfter(-30) : null,
+    memo: null,
+    deadlines: deadline ? [deadline] : [],
+    nextDeadline: deadline,
+    attachments: [],
+  };
+}
+
 function demoTask(
   n: number,
   companyN: number,
@@ -330,6 +369,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       demo: true,
       company,
       credentials,
+      ipRights: [],
       tasks: companyTasks,
       schedules: [],
       documents: [],
@@ -347,6 +387,26 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       demoCredential(2, "기업부설연구소", 2, "2022-09-01", 83, 60, false),
       demoCredential(3, "연구개발 세액공제", 3, "2025-03-01", -102, 30, false),
       demoCredential(4, "이노비즈 인증", 0, "2024-07-20", 771, 90, false),
+    ],
+    ipRights: [
+      demoIpRight(
+        1,
+        "patent",
+        "AI 기반 기업지원사업 매칭 방법",
+        "examining",
+        "의견제출통지 대응",
+        "office_action",
+        6,
+      ),
+      demoIpRight(
+        2,
+        "trademark",
+        "관제",
+        "registered",
+        "상표권 갱신 준비",
+        "renewal",
+        48,
+      ),
     ],
     tasks: companyTasks,
     schedules: [
@@ -576,6 +636,7 @@ function demoNotification(
     isRead: read,
     companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
     companyName,
+    refTable: type === "expiry" ? "credential" : type === "deadline" ? "task" : null,
     daysLeft,
     createdAt: dateTimeAfter(-createdDaysAgo, time),
   };

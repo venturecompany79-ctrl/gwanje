@@ -7,6 +7,7 @@ import type { DeadlineItem } from "@/lib/database.types";
 
 const SOURCE_LABEL: Record<DeadlineItem["source"], string> = {
   credential: "자격·인증",
+  ip_deadline: "지식재산권",
   task: "과제",
   schedule: "일정",
 };

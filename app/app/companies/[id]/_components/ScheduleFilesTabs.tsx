@@ -311,7 +311,11 @@ function DocumentUpdateButton({
     if (!file) return;
 
     setPending(true);
-    const result = await uploadDocumentVersion(companyId, file, document.name);
+    const result = await uploadDocumentVersion(companyId, file, document.name, {
+      docCategory: document.docCategory ?? undefined,
+      credentialId: document.credentialId ?? undefined,
+      ipRightId: document.ipRightId ?? undefined,
+    });
     setPending(false);
     if (!result.ok) {
       showToast(result.error);

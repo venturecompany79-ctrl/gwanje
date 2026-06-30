@@ -96,10 +96,15 @@ await step("migration: 20260615000000_company_document_storage", read("migration
 await step("migration: 20260615000001_company_document_mime_types", read("migrations/20260615000001_company_document_mime_types.sql"));
 await step("migration: 20260616000000_board_todos_task_files", read("migrations/20260616000000_board_todos_task_files.sql"));
 await step("migration: 20260617000000_todo_note_30_day_window", read("migrations/20260617000000_todo_note_30_day_window.sql"));
+await step("migration: 20260619000000_deadline_item_renewal_merge", read("migrations/20260619000000_deadline_item_renewal_merge.sql"));
+await step("migration: 20260619010000_normalize_growth_stage_tags", read("migrations/20260619010000_normalize_growth_stage_tags.sql"));
 await step("migration: 20260628000000_google_drive_sync", read("migrations/20260628000000_google_drive_sync.sql"));
 await step("migration: 20260629000000_billing_subscription", read("migrations/20260629000000_billing_subscription.sql"));
 await step("migration: 20260630000000_team_permissions", read("migrations/20260630000000_team_permissions.sql"));
 await step("migration: 20260701000000_gov_program_matching", read("migrations/20260701000000_gov_program_matching.sql"));
+await step("migration: 20260702000000_company_region_business_condition", read("migrations/20260702000000_company_region_business_condition.sql"));
+await step("migration: 20260703000000_document_credential_link", read("migrations/20260703000000_document_credential_link.sql"));
+await step("migration: 20260704000000_ip_rights", read("migrations/20260704000000_ip_rights.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);

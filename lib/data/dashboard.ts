@@ -3,6 +3,7 @@ import { shiftDateString, todayKstDate } from "@/lib/datetime";
 import type {
   CredentialStatus,
   DeadlineItem,
+  IpDeadlineType,
   NotificationType,
   ScheduleType,
   TaskStage,
@@ -41,6 +42,7 @@ export interface DashboardFile {
 /** deadline_item / notification 의 source·ref_table → 기업상세 탭 키 매핑 (credential은 탭키가 cert) */
 const SOURCE_TAB: Record<string, string> = {
   credential: "cert",
+  ip_deadline: "ip",
   task: "tasks",
   schedule: "schedule",
 };
@@ -94,7 +96,7 @@ function formatTimeAgo(iso: string, now: Date): string {
   return formatKstMonthDay(then);
 }
 
-const DEADLINE_SOURCES = ["credential", "task", "schedule"] as const;
+const DEADLINE_SOURCES = ["credential", "task", "schedule", "ip_deadline"] as const;
 const DEADLINE_STATUSES = [
   "valid",
   "expiring",
@@ -107,6 +109,9 @@ const DEADLINE_STATUSES = [
   "deadline",
   "meeting",
   "renewal",
+  "office_action",
+  "registration_fee",
+  "annuity",
   "etc",
 ] as const;
 
@@ -119,7 +124,7 @@ function isDeadlineSource(value: string | null): value is DeadlineItem["source"]
 
 function isDeadlineStatus(
   value: string | null,
-): value is CredentialStatus | TaskStage | ScheduleType {
+): value is CredentialStatus | TaskStage | ScheduleType | IpDeadlineType {
   return DEADLINE_STATUSES.some((status) => status === value);
 }
 

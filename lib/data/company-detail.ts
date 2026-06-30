@@ -5,6 +5,9 @@ import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import type {
   CredentialStatus,
   DocumentUploader,
+  IpDeadlineType,
+  IpRightKind,
+  IpRightStatus,
   ScheduleType,
   TaskStage,
 } from "@/lib/database.types";
@@ -57,6 +60,40 @@ export interface CredentialRow {
   attachments: CredentialAttachment[];
 }
 
+/** 지식재산권에 명시 연결(ip_right_id)된 첨부 자료 — 기업 '자료' 탭의 document와 동일 행 */
+export interface IpRightAttachment {
+  id: string;
+  name: string;
+  fileType: string | null;
+  sizeBytes: number | null;
+}
+
+export interface IpDeadlineRow {
+  id: string;
+  type: IpDeadlineType;
+  title: string;
+  dueDate: string;
+  daysLeft: number;
+  isDone: boolean;
+  memo: string | null;
+}
+
+export interface IpRightRow {
+  id: string;
+  kind: IpRightKind;
+  title: string;
+  applicationNo: string | null;
+  registrationNo: string | null;
+  agentName: string | null;
+  status: IpRightStatus;
+  appliedDate: string | null;
+  registeredDate: string | null;
+  memo: string | null;
+  deadlines: IpDeadlineRow[];
+  nextDeadline: IpDeadlineRow | null;
+  attachments: IpRightAttachment[];
+}
+
 export interface TaskRow {
   id: string;
   title: string;
@@ -93,6 +130,8 @@ export interface DocumentRow {
   docCategory: string | null;
   version: number;
   uploadedBy: DocumentUploader;
+  credentialId?: string | null;
+  ipRightId?: string | null;
   storageUrl?: string | null;
   fileType: string | null;
   sizeBytes: number | null;
@@ -111,6 +150,7 @@ export interface CompanyDetailData {
   demo: boolean;
   company: CompanyProfile;
   credentials: CredentialRow[];
+  ipRights: IpRightRow[];
   tasks: TaskRow[];
   schedules: ScheduleRow[];
   documents: DocumentRow[];
@@ -150,8 +190,18 @@ export async function getCompanyDetail(
   const supabase = await createClient();
   if (!supabase) return DEMO_COMPANY_DETAIL(companyId);
 
-  const [company, credentials, tasks, schedules, documents, categories, profiles, connection] =
-    await Promise.all([
+  const [
+    company,
+    credentials,
+    ipRights,
+    ipDeadlines,
+    tasks,
+    schedules,
+    documents,
+    categories,
+    profiles,
+    connection,
+  ] = await Promise.all([
       supabase
         .from("company")
         .select(
@@ -166,6 +216,16 @@ export async function getCompanyDetail(
         )
         .eq("company_id", companyId),
       supabase
+        .from("ip_right")
+        .select(
+          "id, kind, title, application_no, registration_no, agent_name, status, applied_date, registered_date, memo, created_at",
+        )
+        .eq("company_id", companyId),
+      supabase
+        .from("ip_deadline")
+        .select("id, ip_right_id, type, title, due_date, is_done, memo")
+        .eq("company_id", companyId),
+      supabase
         .from("task")
         .select(
           "id, title, category_id, stage, due_date, assignee_id, memo, source_credential_id",
@@ -178,7 +238,7 @@ export async function getCompanyDetail(
       supabase
         .from("document")
         .select(
-          "id, name, doc_category, version, uploaded_by, storage_url, file_type, size_bytes, created_at, credential_id",
+          "id, name, doc_category, version, uploaded_by, storage_url, file_type, size_bytes, created_at, credential_id, ip_right_id",
         )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
@@ -201,6 +261,8 @@ export async function getCompanyDetail(
   if (!company.data) return null;
 
   logRelatedQueryError("credentials", credentials.error);
+  logRelatedQueryError("ip_rights", ipRights.error);
+  logRelatedQueryError("ip_deadlines", ipDeadlines.error);
   logRelatedQueryError("tasks", tasks.error);
   logRelatedQueryError("schedules", schedules.error);
   logRelatedQueryError("documents", documents.error);
@@ -208,6 +270,8 @@ export async function getCompanyDetail(
   logRelatedQueryError("profiles", profiles.error);
 
   const credentialData = credentials.error ? [] : (credentials.data ?? []);
+  const ipRightData = ipRights.error ? [] : (ipRights.data ?? []);
+  const ipDeadlineData = ipDeadlines.error ? [] : (ipDeadlines.data ?? []);
   const taskData = tasks.error ? [] : (tasks.data ?? []);
   const scheduleData = schedules.error ? [] : (schedules.data ?? []);
   const documentData = documents.error ? [] : (documents.data ?? []);
@@ -243,16 +307,28 @@ export async function getCompanyDetail(
   const taskTitle = new Map(taskData.map((t) => [t.id, t.title]));
   // 자격별 첨부 자료 — documentData는 created_at desc 정렬이라 최신순으로 쌓인다.
   const attachmentsByCredential = new Map<string, CredentialAttachment[]>();
+  const attachmentsByIpRight = new Map<string, IpRightAttachment[]>();
   for (const d of documentData) {
-    if (!d.credential_id) continue;
-    const list = attachmentsByCredential.get(d.credential_id) ?? [];
-    list.push({
-      id: d.id,
-      name: d.name,
-      fileType: d.file_type,
-      sizeBytes: d.size_bytes,
-    });
-    attachmentsByCredential.set(d.credential_id, list);
+    if (d.credential_id) {
+      const list = attachmentsByCredential.get(d.credential_id) ?? [];
+      list.push({
+        id: d.id,
+        name: d.name,
+        fileType: d.file_type,
+        sizeBytes: d.size_bytes,
+      });
+      attachmentsByCredential.set(d.credential_id, list);
+    }
+    if (d.ip_right_id) {
+      const list = attachmentsByIpRight.get(d.ip_right_id) ?? [];
+      list.push({
+        id: d.id,
+        name: d.name,
+        fileType: d.file_type,
+        sizeBytes: d.size_bytes,
+      });
+      attachmentsByIpRight.set(d.ip_right_id, list);
+    }
   }
   const renewalSources = new Set(
     taskData
@@ -286,6 +362,54 @@ export async function getCompanyDetail(
         (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
         (b.daysLeft ?? Number.MAX_SAFE_INTEGER),
     );
+
+  const deadlinesByIpRight = new Map<string, IpDeadlineRow[]>();
+  for (const d of ipDeadlineData) {
+    const list = deadlinesByIpRight.get(d.ip_right_id) ?? [];
+    list.push({
+      id: d.id,
+      type: d.type,
+      title: d.title,
+      dueDate: d.due_date,
+      daysLeft: daysFromToday(d.due_date),
+      isDone: d.is_done,
+      memo: d.memo,
+    });
+    deadlinesByIpRight.set(d.ip_right_id, list);
+  }
+  for (const list of deadlinesByIpRight.values()) {
+    list.sort((a, b) => {
+      if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+      return a.daysLeft - b.daysLeft;
+    });
+  }
+
+  const ipRightRows: IpRightRow[] = ipRightData
+    .map((r) => {
+      const deadlines = deadlinesByIpRight.get(r.id) ?? [];
+      const nextDeadline = deadlines.find((d) => !d.isDone) ?? null;
+      return {
+        id: r.id,
+        kind: r.kind,
+        title: r.title,
+        applicationNo: r.application_no,
+        registrationNo: r.registration_no,
+        agentName: r.agent_name,
+        status: r.status,
+        appliedDate: r.applied_date,
+        registeredDate: r.registered_date,
+        memo: r.memo,
+        deadlines,
+        nextDeadline,
+        attachments: attachmentsByIpRight.get(r.id) ?? [],
+      };
+    })
+    .sort((a, b) => {
+      const aDue = a.nextDeadline?.daysLeft ?? Number.MAX_SAFE_INTEGER;
+      const bDue = b.nextDeadline?.daysLeft ?? Number.MAX_SAFE_INTEGER;
+      if (aDue !== bDue) return aDue - bDue;
+      return a.title.localeCompare(b.title, "ko");
+    });
 
   const taskRows: TaskRow[] = taskData
     .map((t) => ({
@@ -348,6 +472,7 @@ export async function getCompanyDetail(
       memo: company.data.memo,
     },
     credentials: credentialRows,
+    ipRights: ipRightRows,
     tasks: taskRows,
     schedules: scheduleRows,
     documents: documentData.map((d) => ({
@@ -356,6 +481,8 @@ export async function getCompanyDetail(
       docCategory: d.doc_category,
       version: d.version,
       uploadedBy: d.uploaded_by,
+      credentialId: d.credential_id,
+      ipRightId: d.ip_right_id,
       storageUrl: d.storage_url,
       fileType: d.file_type,
       sizeBytes: d.size_bytes,

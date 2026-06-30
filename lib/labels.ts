@@ -4,6 +4,9 @@ import type {
   CampaignStatus,
   CredentialStatus,
   DocumentUploader,
+  IpDeadlineType,
+  IpRightKind,
+  IpRightStatus,
   NotificationType,
   ScheduleType,
   TaskStage,
@@ -59,6 +62,30 @@ export const CREDENTIAL_STATUS_LABEL: Record<CredentialStatus, string> = {
   valid: "유효",
   expiring: "임박",
   expired: "만료",
+};
+
+export const IP_RIGHT_KIND_LABEL: Record<IpRightKind, string> = {
+  patent: "특허",
+  trademark: "상표",
+};
+
+export const IP_RIGHT_STATUS_LABEL: Record<IpRightStatus, string> = {
+  preparing: "준비중",
+  filed: "출원",
+  examining: "심사중",
+  office_action: "중간사건",
+  registered: "등록",
+  rejected: "거절",
+  abandoned: "포기",
+  expired: "만료",
+};
+
+export const IP_DEADLINE_TYPE_LABEL: Record<IpDeadlineType, string> = {
+  office_action: "의견제출 대응",
+  registration_fee: "등록료 납부",
+  renewal: "갱신",
+  annuity: "연차료",
+  etc: "기타",
 };
 
 export const SUPPORT_FIELD_LABEL: Record<SupportField, string> = {

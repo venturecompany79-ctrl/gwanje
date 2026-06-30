@@ -6,17 +6,26 @@ import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
 import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
 import { CertsTab } from "./CertsTab";
+import { IpTab } from "./IpTab";
 import { TasksTab } from "./TasksTab";
 import { ScheduleTab, FilesTab } from "./ScheduleFilesTabs";
 import { EditCompanyButton } from "./EditCompanySlideOver";
 import { OverviewTab } from "./OverviewTab";
 import { RecommendTab } from "./RecommendTab";
 
-type TabKey = "overview" | "cert" | "tasks" | "schedule" | "files" | "recommend";
+type TabKey =
+  | "overview"
+  | "cert"
+  | "ip"
+  | "tasks"
+  | "schedule"
+  | "files"
+  | "recommend";
 
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "개요/프로파일" },
   { key: "cert", label: "자격·인증" },
+  { key: "ip", label: "특허·상표" },
   { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
@@ -128,6 +137,14 @@ export function CompanyDetailView({
           companyId={company.id}
           credentials={data.credentials}
           categories={data.categories}
+          demo={data.demo}
+          showToast={showToast}
+        />
+      ) : null}
+      {tab === "ip" ? (
+        <IpTab
+          companyId={company.id}
+          ipRights={data.ipRights}
           demo={data.demo}
           showToast={showToast}
         />

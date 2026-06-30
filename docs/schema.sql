@@ -13,6 +13,24 @@ create type document_uploader as enum ('consultant', 'client');
 create type campaign_status as enum ('draft', 'scheduled', 'sending', 'sent');
 create type campaign_channel as enum ('alimtalk', 'email');
 create type notification_type as enum ('expiry', 'deadline', 'program_match');
+create type ip_right_kind as enum ('patent', 'trademark');
+create type ip_right_status as enum (
+  'preparing',
+  'filed',
+  'examining',
+  'office_action',
+  'registered',
+  'rejected',
+  'abandoned',
+  'expired'
+);
+create type ip_deadline_type as enum (
+  'office_action',
+  'registration_fee',
+  'renewal',
+  'annuity',
+  'etc'
+);
 
 -- -------------------------------------------------------------
 -- 1. tenant / profile — 워크스페이스 / 컨설턴트
@@ -152,7 +170,43 @@ create table document (
 );
 
 -- -------------------------------------------------------------
--- 8. campaign / campaign_recipient — 일괄안내 / 수신·응답
+-- 8. ip_right / ip_deadline — 지식재산권(특허·상표) / 대응·납부·갱신 기한
+-- -------------------------------------------------------------
+create table ip_right (
+  id              uuid primary key default gen_random_uuid(),
+  tenant_id       uuid not null references tenant (id) on delete cascade,
+  company_id      uuid not null references company (id) on delete cascade,
+  kind            ip_right_kind not null,
+  title           text not null,
+  application_no  text,
+  registration_no text,
+  agent_name      text,
+  status          ip_right_status not null default 'preparing',
+  applied_date    date,
+  registered_date date,
+  memo            text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create table ip_deadline (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references tenant (id) on delete cascade,
+  company_id  uuid not null references company (id) on delete cascade,
+  ip_right_id uuid not null references ip_right (id) on delete cascade,
+  type        ip_deadline_type not null default 'etc',
+  title       text not null,
+  due_date    date not null,
+  is_done     boolean not null default false,
+  memo        text,
+  created_at  timestamptz not null default now()
+);
+
+alter table document
+  add column ip_right_id uuid references ip_right (id) on delete set null;
+
+-- -------------------------------------------------------------
+-- 9. campaign / campaign_recipient — 일괄안내 / 수신·응답
 -- -------------------------------------------------------------
 create table campaign (
   id           uuid primary key default gen_random_uuid(),
@@ -181,7 +235,7 @@ create table campaign_recipient (
 );
 
 -- -------------------------------------------------------------
--- 9. notification — 알림
+-- 10. notification — 알림
 -- -------------------------------------------------------------
 create table notification (
   id         uuid primary key default gen_random_uuid(),
@@ -198,7 +252,7 @@ create table notification (
 );
 
 -- -------------------------------------------------------------
--- 10. gov_program — 정부지원사업 공개 공고 공유 풀
+-- 11. gov_program — 정부지원사업 공개 공고 공유 풀
 --     테넌트 무관 공개 데이터. service_role 크론이 쓰고 authenticated는 읽기 전용.
 -- -------------------------------------------------------------
 create or replace function gov_program_to_search_vector(
@@ -301,7 +355,7 @@ as $$
 $$;
 
 -- -------------------------------------------------------------
--- 11. rule — 룰엔진 (Phase 2, 테이블만)
+-- 12. rule — 룰엔진 (Phase 2, 테이블만)
 -- -------------------------------------------------------------
 create table rule (
   id          uuid primary key default gen_random_uuid(),
@@ -313,7 +367,7 @@ create table rule (
 );
 
 -- -------------------------------------------------------------
--- 12. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정)
+-- 13. deadline_item 뷰 — 대시보드 D-day 통합 (자격+과제+일정+지식재산권 기한)
 --     security_invoker: 조회자의 RLS가 그대로 적용됨
 --     days_left는 KST 기준 ((now() at time zone 'Asia/Seoul')::date) — 앱(lib/datetime.ts)과 일치
 -- -------------------------------------------------------------
@@ -340,6 +394,12 @@ from credential c
 join company co on co.id = c.company_id
 left join category cat on cat.id = c.category_id
 where c.expires_date is not null
+  and not exists (
+    select 1
+    from task t
+    where t.source_credential_id = c.id
+      and t.stage <> 'result'
+  )
 
 union all
 
@@ -377,10 +437,29 @@ select
   s.type::text
 from schedule s
 left join company co on co.id = s.company_id
-where s.date >= (now() at time zone 'Asia/Seoul')::date - interval '30 days';
+where s.date >= (now() at time zone 'Asia/Seoul')::date - interval '30 days'
+
+union all
+
+select
+  'ip_deadline',
+  d.id,
+  d.tenant_id,
+  d.company_id,
+  co.name,
+  r.title || ' · ' || d.title,
+  null,
+  '지식재산권',
+  d.due_date,
+  (d.due_date - (now() at time zone 'Asia/Seoul')::date),
+  d.type::text
+from ip_deadline d
+join ip_right r on r.id = d.ip_right_id
+join company co on co.id = d.company_id
+where d.is_done = false;
 
 -- -------------------------------------------------------------
--- 13. RLS — 모든 tenant 종속 테이블은 tenant 격리, gov_program은 읽기 전용 공개
+-- 14. RLS — 모든 tenant 종속 테이블은 tenant 격리, gov_program은 읽기 전용 공개
 -- -------------------------------------------------------------
 alter table tenant enable row level security;
 alter table profile enable row level security;
@@ -390,6 +469,8 @@ alter table credential enable row level security;
 alter table task enable row level security;
 alter table schedule enable row level security;
 alter table document enable row level security;
+alter table ip_right enable row level security;
+alter table ip_deadline enable row level security;
 alter table campaign enable row level security;
 alter table campaign_recipient enable row level security;
 alter table notification enable row level security;
@@ -420,6 +501,10 @@ create policy "schedule: tenant 격리" on schedule
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "document: tenant 격리" on document
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "ip_right: tenant 격리" on ip_right
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "ip_deadline: tenant 격리" on ip_deadline
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "campaign: tenant 격리" on campaign
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "campaign_recipient: tenant 격리" on campaign_recipient
@@ -432,7 +517,7 @@ create policy "rule: tenant 격리" on rule
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 
 -- -------------------------------------------------------------
--- 14. API 권한 — Supabase Data API에서 authenticated role에 명시 부여
+-- 15. API 권한 — Supabase Data API에서 authenticated role에 명시 부여
 --     RLS가 실제 tenant 격리를 담당하고, grant는 API 접근 권한만 연다.
 -- -------------------------------------------------------------
 grant usage on schema public to authenticated;
@@ -456,7 +541,7 @@ grant update (
 ) on profile to authenticated;
 
 -- -------------------------------------------------------------
--- 15. 인덱스
+-- 16. 인덱스
 -- -------------------------------------------------------------
 create index idx_company_tenant on company (tenant_id);
 create index idx_credential_company on credential (company_id);
@@ -467,6 +552,12 @@ create index idx_task_stage on task (tenant_id, stage);
 create index idx_schedule_date on schedule (tenant_id, date);
 create index idx_document_company on document (company_id);
 create index idx_document_credential on document (credential_id);
+create index idx_document_ip_right on document (ip_right_id);
+create index idx_ip_right_company on ip_right (company_id);
+create index idx_ip_right_tenant_status on ip_right (tenant_id, status);
+create index idx_ip_deadline_company on ip_deadline (company_id);
+create index idx_ip_deadline_due on ip_deadline (tenant_id, due_date) where is_done = false;
+create index idx_ip_deadline_right on ip_deadline (ip_right_id);
 create index idx_campaign_tenant on campaign (tenant_id);
 create index idx_recipient_campaign on campaign_recipient (campaign_id);
 create index idx_notification_unread on notification (tenant_id, is_read, created_at desc);
@@ -482,7 +573,7 @@ create unique index if not exists task_source_credential_unique
   where source_credential_id is not null;
 
 -- -------------------------------------------------------------
--- 16. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
+-- 17. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭
 --     매일 1회 멱등 생성. 함수는 항상 생성되고, pg_cron 스케줄 등록은 가드 블록으로
 --     감싸 확장이 없어도 마이그레이션이 실패하지 않는다(경고만).
 --     상세는 supabase/migrations/20260613000004_due_notifications_cron.sql 참고.
