@@ -14,22 +14,29 @@ type MobileConfigExtra = {
 
 const extra = (Constants.expoConfig?.extra ?? {}) as MobileConfigExtra;
 
+function firstPresent(...values: (string | undefined)[]) {
+  return values.find((value) => value && value.trim().length > 0) ?? "";
+}
+
 function webOrigin() {
   if (Platform.OS !== "web") return "";
   if (typeof window === "undefined") return "";
   return window.location.origin;
 }
 
-export const supabaseUrl =
-  process.env.EXPO_PUBLIC_SUPABASE_URL ?? extra.supabaseUrl ?? "";
-export const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  extra.supabasePublishableKey ??
-  "";
-export const webApiBaseUrl = (
-  process.env.EXPO_PUBLIC_WEB_API_BASE_URL ??
-  extra.webApiBaseUrl ??
-  webOrigin()
+export const supabaseUrl = firstPresent(
+  process.env.EXPO_PUBLIC_SUPABASE_URL,
+  extra.supabaseUrl,
+);
+export const supabaseAnonKey = firstPresent(
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  extra.supabasePublishableKey,
+);
+export const webApiBaseUrl = firstPresent(
+  process.env.EXPO_PUBLIC_WEB_API_BASE_URL,
+  extra.webApiBaseUrl,
+  webOrigin(),
 ).replace(/\/$/, "");
 
 export const hasMobileEnv = Boolean(supabaseUrl && supabaseAnonKey);
