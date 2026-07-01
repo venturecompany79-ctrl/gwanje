@@ -8,13 +8,14 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Redirect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { PrimaryButton } from "@/ui/Primitives";
 
 export default function LoginScreen() {
-  const { signIn, envReady } = useAuth();
+  const { session, signIn, envReady } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -36,6 +37,10 @@ export default function LoginScreen() {
     } finally {
       setPending(false);
     }
+  }
+
+  if (session) {
+    return <Redirect href="/" />;
   }
 
   return (

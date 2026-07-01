@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { X } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
@@ -17,16 +17,22 @@ import { ddayLabel, shortDate } from "@/lib/dates";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
 import { loadTask, type MobileTask } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
+import { useAuth } from "@/context/AuthContext";
 import { EmptyState, LoadingState, PrimaryButton, StagePill } from "@/ui/Primitives";
 
 export default function TaskModal() {
   const router = useRouter();
+  const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const loadCurrentTask = useCallback(
-    () => loadTask(String(id)),
-    [id],
+    () => (session ? loadTask(String(id)) : Promise.resolve(null)),
+    [id, session],
   );
   const { data, loading, error, refresh } = useAsyncData(loadCurrentTask);
+
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <>

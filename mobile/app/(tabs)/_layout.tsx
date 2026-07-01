@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import {
@@ -9,10 +9,17 @@ import {
   ListTodo,
 } from "lucide-react-native";
 import { colors, typography } from "@/design/tokens";
+import { useAuth } from "@/context/AuthContext";
 
 const ICON_SIZE = 22;
 
 export default function TabLayout() {
+  const { session } = useAuth();
+
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

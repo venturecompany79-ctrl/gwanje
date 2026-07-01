@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { colors, typography } from "@/design/tokens";
 
 function RootStack() {
-  const { session, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -27,26 +27,21 @@ function RootStack() {
           contentStyle: { backgroundColor: colors.grouped },
         }}
       >
-        {session ? (
-          <>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="task/[id]"
-              options={{
-                presentation: "modal",
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="company/[id]"
-              options={{
-                headerShown: false,
-              }}
-            />
-          </>
-        ) : (
-          <Stack.Screen name="(auth)" />
-        )}
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="task/[id]"
+          options={{
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="company/[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
     </>
   );

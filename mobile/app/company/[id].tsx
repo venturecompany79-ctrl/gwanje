@@ -1,27 +1,33 @@
 import { useCallback } from "react";
 import { Linking, Pressable, StyleSheet } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Mail, Phone } from "lucide-react-native";
 import { colors, radius } from "@/design/tokens";
 import { daysFromDateString, ddayLabel, shortDate } from "@/lib/dates";
 import { TASK_STAGE_LABEL } from "@/lib/labels";
 import { loadCompanyDetail } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
+import { useAuth } from "@/context/AuthContext";
 import { DdayPill, EmptyState, LoadingState, Row, Section } from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
 export default function CompanyDetailScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const loadCurrentCompany = useCallback(
-    () => loadCompanyDetail(String(id)),
-    [id],
+    () => (session ? loadCompanyDetail(String(id)) : Promise.resolve(null)),
+    [id, session],
   );
   const { data, loading, refreshing, error, refresh } = useAsyncData(
     loadCurrentCompany,
   );
 
   const company = data?.company;
+
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <>
