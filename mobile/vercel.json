@@ -1,0 +1,65 @@
+{
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run export:web",
+  "outputDirectory": "dist",
+  "regions": ["icn1"],
+  "headers": [
+    {
+      "source": "/_expo/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/mobile/:path*",
+      "destination": "https://gwanje.vercel.app/api/mobile/:path*"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/today",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tasks",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/companies",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/task/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/company/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

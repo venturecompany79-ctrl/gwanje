@@ -1,0 +1,1810 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1362" height="2491" viewBox="0 0 1362 2491">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#8595a4"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0a1317" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  <style>
+    .bg { fill: #f2f4f7; }
+    .title { font: 700 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0a1317; }
+    .subtitle { font: 500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5d6c7b; }
+    .legend { font: 600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #444950; }
+    .relation { fill: none; stroke: #8595a4; stroke-width: 1.15; opacity: 0.68; marker-end: url(#arrow); }
+    .card { fill: #ffffff; stroke: #ced0d4; stroke-width: 1; filter: url(#shadow); }
+    .card-view { stroke: #385898; stroke-dasharray: 4 3; }
+    .head { fill: #0a1317; }
+    .head-view { fill: #385898; }
+    .table-name { font: 700 13px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; fill: #ffffff; }
+    .view-badge { font: 800 9px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; fill: #ffffff; text-anchor: end; opacity: 0.88; }
+    .col-name { font: 600 11px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; fill: #1c1e21; }
+    .col-type { font: 500 9px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; fill: #5d6c7b; text-anchor: end; }
+  </style>
+  <rect class="bg" width="100%" height="100%"/>
+  <text class="title" x="42" y="34">관제 Supabase ERD</text>
+  <text class="subtitle" x="42" y="53">Generated from linked Supabase public schema · 2026-07-01 · 28 tables + 1 view · 54 foreign keys</text>
+
+        <g transform="translate(42, 56)">
+          <rect width="16" height="16" rx="4" fill="#f8fbff" stroke="#ced0d4"/>
+          <text class="legend" x="24" y="12">Core Tenant &amp; CRM</text>
+        </g>
+
+
+        <g transform="translate(334, 56)">
+          <rect width="16" height="16" rx="4" fill="#fffdf7" stroke="#ced0d4"/>
+          <text class="legend" x="24" y="12">Operations</text>
+        </g>
+
+
+        <g transform="translate(626, 56)">
+          <rect width="16" height="16" rx="4" fill="#fbfbff" stroke="#ced0d4"/>
+          <text class="legend" x="24" y="12">Campaigns &amp; Programs</text>
+        </g>
+
+
+        <g transform="translate(918, 56)">
+          <rect width="16" height="16" rx="4" fill="#f9fffb" stroke="#ced0d4"/>
+          <text class="legend" x="24" y="12">Integrations &amp; Billing</text>
+        </g>
+
+  <g class="relations">
+
+      <path id="rel-0" d="M 42 1538.5 C 180 1538.5, 180 149.5, 318 149.5" class="relation"/>
+      <title>billing_customer.tenant_id → tenant.id</title>
+
+
+      <path id="rel-1" d="M 42 1123 C 180 1123, 180 149.5, 318 149.5" class="relation"/>
+      <title>campaign.tenant_id → tenant.id</title>
+
+
+      <path id="rel-2" d="M 376 1503 C 347 1503, 347 1123, 318 1123" class="relation"/>
+      <title>campaign_recipient.campaign_id → campaign.id</title>
+
+
+      <path id="rel-3" d="M 652 1503 C 681 1503, 681 282.5, 710 282.5" class="relation"/>
+      <title>campaign_recipient.company_id → company.id</title>
+
+
+      <path id="rel-4" d="M 376 1503 C 347 1503, 347 149.5, 318 149.5" class="relation"/>
+      <title>campaign_recipient.tenant_id → tenant.id</title>
+
+
+      <path id="rel-5" d="M 1044 178 C 681 178, 681 149.5, 318 149.5" class="relation"/>
+      <title>category.tenant_id → tenant.id</title>
+
+
+      <path id="rel-6" d="M 710 282.5 C 514 282.5, 514 149.5, 318 149.5" class="relation"/>
+      <title>company.tenant_id → tenant.id</title>
+
+
+      <path id="rel-7" d="M 318 343 C 681 343, 681 178, 1044 178" class="relation"/>
+      <title>credential.category_id → category.id</title>
+
+
+      <path id="rel-8" d="M 318 343 C 514 343, 514 282.5, 710 282.5" class="relation"/>
+      <title>credential.company_id → company.id</title>
+
+
+      <path id="rel-9" d="M 42 343 C 180 343, 180 149.5, 318 149.5" class="relation"/>
+      <title>credential.tenant_id → tenant.id</title>
+
+
+      <path id="rel-10" d="M 1044 428.5 C 1015 428.5, 1015 282.5, 986 282.5" class="relation"/>
+      <title>document.company_id → company.id</title>
+
+
+      <path id="rel-11" d="M 1044 428.5 C 681 428.5, 681 343, 318 343" class="relation"/>
+      <title>document.credential_id → credential.id</title>
+
+
+      <path id="rel-12" d="M 1044 428.5 C 1015 428.5, 1015 888, 986 888" class="relation"/>
+      <title>document.ip_right_id → ip_right.id</title>
+
+
+      <path id="rel-13" d="M 1044 428.5 C 681 428.5, 681 149.5, 318 149.5" class="relation"/>
+      <title>document.tenant_id → tenant.id</title>
+
+
+      <path id="rel-14" d="M 376 1772.5 C 347 1772.5, 347 149.5, 318 149.5" class="relation"/>
+      <title>google_drive_connections.tenant_id → tenant.id</title>
+
+
+      <path id="rel-15" d="M 986 1924.5 C 1015 1924.5, 1015 428.5, 1044 428.5" class="relation"/>
+      <title>google_drive_sync_jobs.document_id → document.id</title>
+
+
+      <path id="rel-16" d="M 710 1924.5 C 514 1924.5, 514 149.5, 318 149.5" class="relation"/>
+      <title>google_drive_sync_jobs.tenant_id → tenant.id</title>
+
+
+      <path id="rel-17" d="M 1044 717 C 1015 717, 1015 282.5, 986 282.5" class="relation"/>
+      <title>ip_deadline.company_id → company.id</title>
+
+
+      <path id="rel-18" d="M 1044 717 C 1015 717, 1015 888, 986 888" class="relation"/>
+      <title>ip_deadline.ip_right_id → ip_right.id</title>
+
+
+      <path id="rel-19" d="M 1044 717 C 681 717, 681 149.5, 318 149.5" class="relation"/>
+      <title>ip_deadline.tenant_id → tenant.id</title>
+
+
+      <path id="rel-20" d="M 710 888 C 848 888, 848 282.5, 986 282.5" class="relation"/>
+      <title>ip_right.company_id → company.id</title>
+
+
+      <path id="rel-21" d="M 710 888 C 514 888, 514 149.5, 318 149.5" class="relation"/>
+      <title>ip_right.tenant_id → tenant.id</title>
+
+
+      <path id="rel-22" d="M 710 1195.5 C 514 1195.5, 514 149.5, 318 149.5" class="relation"/>
+      <title>mobile_device.tenant_id → tenant.id</title>
+
+
+      <path id="rel-23" d="M 710 1195.5 C 681 1195.5, 681 311, 652 311" class="relation"/>
+      <title>mobile_device.user_id → profile.id</title>
+
+
+      <path id="rel-24" d="M 1044 967.5 C 1015 967.5, 1015 1195.5, 986 1195.5" class="relation"/>
+      <title>mobile_push_delivery.device_id → mobile_device.id</title>
+
+
+      <path id="rel-25" d="M 1044 967.5 C 681 967.5, 681 853.5, 318 853.5" class="relation"/>
+      <title>mobile_push_delivery.notification_id → notification.id</title>
+
+
+      <path id="rel-26" d="M 1044 967.5 C 681 967.5, 681 149.5, 318 149.5" class="relation"/>
+      <title>mobile_push_delivery.tenant_id → tenant.id</title>
+
+
+      <path id="rel-27" d="M 318 853.5 C 514 853.5, 514 282.5, 710 282.5" class="relation"/>
+      <title>notification.company_id → company.id</title>
+
+
+      <path id="rel-28" d="M 42 853.5 C 180 853.5, 180 149.5, 318 149.5" class="relation"/>
+      <title>notification.tenant_id → tenant.id</title>
+
+
+      <path id="rel-29" d="M 376 2051.5 C 347 2051.5, 347 1538.5, 318 1538.5" class="relation"/>
+      <title>payment_method.billing_customer_id → billing_customer.id</title>
+
+
+      <path id="rel-30" d="M 376 2051.5 C 347 2051.5, 347 149.5, 318 149.5" class="relation"/>
+      <title>payment_method.tenant_id → tenant.id</title>
+
+
+      <path id="rel-31" d="M 1044 1728.5 C 848 1728.5, 848 2051.5, 652 2051.5" class="relation"/>
+      <title>payment_transaction.payment_method_id → payment_method.id</title>
+
+
+      <path id="rel-32" d="M 1044 1728.5 C 1015 1728.5, 1015 2270, 986 2270" class="relation"/>
+      <title>payment_transaction.subscription_id → tenant_subscription.id</title>
+
+
+      <path id="rel-33" d="M 1044 1728.5 C 681 1728.5, 681 149.5, 318 149.5" class="relation"/>
+      <title>payment_transaction.tenant_id → tenant.id</title>
+
+
+      <path id="rel-34" d="M 376 311 C 514 311, 514 311, 652 311" class="relation"/>
+      <title>profile.invited_by → profile.id</title>
+
+
+      <path id="rel-35" d="M 376 311 C 347 311, 347 149.5, 318 149.5" class="relation"/>
+      <title>profile.tenant_id → tenant.id</title>
+
+
+      <path id="rel-36" d="M 42 1345 C 180 1345, 180 149.5, 318 149.5" class="relation"/>
+      <title>rule.tenant_id → tenant.id</title>
+
+
+      <path id="rel-37" d="M 710 599.5 C 848 599.5, 848 282.5, 986 282.5" class="relation"/>
+      <title>schedule.company_id → company.id</title>
+
+
+      <path id="rel-38" d="M 710 599.5 C 681 599.5, 681 685, 652 685" class="relation"/>
+      <title>schedule.related_task_id → task.id</title>
+
+
+      <path id="rel-39" d="M 710 599.5 C 514 599.5, 514 149.5, 318 149.5" class="relation"/>
+      <title>schedule.tenant_id → tenant.id</title>
+
+
+      <path id="rel-40" d="M 376 685 C 514 685, 514 311, 652 311" class="relation"/>
+      <title>task.assignee_id → profile.id</title>
+
+
+      <path id="rel-41" d="M 652 685 C 848 685, 848 178, 1044 178" class="relation"/>
+      <title>task.category_id → category.id</title>
+
+
+      <path id="rel-42" d="M 652 685 C 681 685, 681 282.5, 710 282.5" class="relation"/>
+      <title>task.company_id → company.id</title>
+
+
+      <path id="rel-43" d="M 376 685 C 347 685, 347 343, 318 343" class="relation"/>
+      <title>task.source_credential_id → credential.id</title>
+
+
+      <path id="rel-44" d="M 376 685 C 347 685, 347 149.5, 318 149.5" class="relation"/>
+      <title>task.tenant_id → tenant.id</title>
+
+
+      <path id="rel-45" d="M 318 593.5 C 347 593.5, 347 685, 376 685" class="relation"/>
+      <title>task_file.task_id → task.id</title>
+
+
+      <path id="rel-46" d="M 42 593.5 C 180 593.5, 180 149.5, 318 149.5" class="relation"/>
+      <title>task_file.tenant_id → tenant.id</title>
+
+
+      <path id="rel-47" d="M 318 593.5 C 347 593.5, 347 311, 376 311" class="relation"/>
+      <title>task_file.uploaded_by → profile.id</title>
+
+
+      <path id="rel-48" d="M 710 2270 C 681 2270, 681 2051.5, 652 2051.5" class="relation"/>
+      <title>tenant_subscription.payment_method_id → payment_method.id</title>
+
+
+      <path id="rel-49" d="M 986 2270 C 1015 2270, 1015 1411.5, 1044 1411.5" class="relation"/>
+      <title>tenant_subscription.plan_id → billing_plan.id</title>
+
+
+      <path id="rel-50" d="M 710 2270 C 514 2270, 514 149.5, 318 149.5" class="relation"/>
+      <title>tenant_subscription.tenant_id → tenant.id</title>
+
+
+      <path id="rel-51" d="M 376 964 C 347 964, 347 149.5, 318 149.5" class="relation"/>
+      <title>todo_note.tenant_id → tenant.id</title>
+
+
+      <path id="rel-52" d="M 376 964 C 514 964, 514 311, 652 311" class="relation"/>
+      <title>todo_note.user_id → profile.id</title>
+
+
+      <path id="rel-53" d="M 42 1770 C 180 1770, 180 149.5, 318 149.5" class="relation"/>
+      <title>webhook_event.tenant_id → tenant.id</title>
+
+  </g>
+  <g class="tables">
+
+    <g class="table" transform="translate(42, 98)">
+      <rect class="card" width="276" height="103" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">tenant</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">name</text>
+            <text class="col-type" x="262" y="73">text · not null</text>
+
+
+            <text class="col-name" x="14" y="92">created_at</text>
+            <text class="col-type" x="262" y="92">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 98)">
+      <rect class="card" width="276" height="426" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">profile</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">name</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">title</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">phone</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">email</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">notify_lead_days</text>
+            <text class="col-type" x="262" y="168">_int4 · not null</text>
+
+
+            <text class="col-name" x="14" y="187">notify_channels</text>
+            <text class="col-type" x="262" y="187">_text · not null</text>
+
+
+            <text class="col-name" x="14" y="206">notify_match</text>
+            <text class="col-type" x="262" y="206">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="225">daily_summary_at</text>
+            <text class="col-type" x="262" y="225">time without time zone · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">sender_name</text>
+            <text class="col-type" x="262" y="244">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="263">sender_phone</text>
+            <text class="col-type" x="262" y="263">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">created_at</text>
+            <text class="col-type" x="262" y="282">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="301">role</text>
+            <text class="col-type" x="262" y="301">text · not null</text>
+
+
+            <text class="col-name" x="14" y="320">permissions</text>
+            <text class="col-type" x="262" y="320">_text · not null</text>
+
+
+            <text class="col-name" x="14" y="339">status</text>
+            <text class="col-type" x="262" y="339">text · not null</text>
+
+
+            <text class="col-name" x="14" y="358">invited_by</text>
+            <text class="col-type" x="262" y="358">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="377">invited_at</text>
+            <text class="col-type" x="262" y="377">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="396">accepted_at</text>
+            <text class="col-type" x="262" y="396">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="415">disabled_at</text>
+            <text class="col-type" x="262" y="415">timestamptz · nullable</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 98)">
+      <rect class="card" width="276" height="369" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">company</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">name</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">biz_no</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">industry</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">founded_date</text>
+            <text class="col-type" x="262" y="149">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">revenue</text>
+            <text class="col-type" x="262" y="168">bigint · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">headcount</text>
+            <text class="col-type" x="262" y="187">integer · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">ceo_name</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">contact_name</text>
+            <text class="col-type" x="262" y="225">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">contact_phone</text>
+            <text class="col-type" x="262" y="244">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="263">contact_email</text>
+            <text class="col-type" x="262" y="263">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">condition_tags</text>
+            <text class="col-type" x="262" y="282">_text · not null</text>
+
+
+            <text class="col-name" x="14" y="301">memo</text>
+            <text class="col-type" x="262" y="301">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="320">created_at</text>
+            <text class="col-type" x="262" y="320">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="339">region</text>
+            <text class="col-type" x="262" y="339">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="358">business_condition</text>
+            <text class="col-type" x="262" y="358">text · nullable</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 98)">
+      <rect class="card" width="276" height="160" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">category</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">name</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">color</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">sort_order</text>
+            <text class="col-type" x="262" y="130">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="149">created_at</text>
+            <text class="col-type" x="262" y="149">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 225)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">credential</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">type</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">category_id</text>
+            <text class="col-type" x="262" y="130">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">issued_date</text>
+            <text class="col-type" x="262" y="149">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">expires_date</text>
+            <text class="col-type" x="262" y="168">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">renew_lead_days</text>
+            <text class="col-type" x="262" y="187">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="206">memo</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 548)">
+      <rect class="card" width="276" height="274" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">task</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">title</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">category_id</text>
+            <text class="col-type" x="262" y="130">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">stage</text>
+            <text class="col-type" x="262" y="149">task_stage · not null</text>
+
+
+            <text class="col-name" x="14" y="168">due_date</text>
+            <text class="col-type" x="262" y="168">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">assignee_id</text>
+            <text class="col-type" x="262" y="187">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">source_credential_id</text>
+            <text class="col-type" x="262" y="206">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">memo</text>
+            <text class="col-type" x="262" y="225">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">created_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="263">updated_at</text>
+            <text class="col-type" x="262" y="263">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 491)">
+      <rect class="card" width="276" height="217" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">schedule</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="111">title</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">date</text>
+            <text class="col-type" x="262" y="130">date · not null</text>
+
+
+            <text class="col-name" x="14" y="149">type</text>
+            <text class="col-type" x="262" y="149">schedule_type · not null</text>
+
+
+            <text class="col-name" x="14" y="168">related_task_id</text>
+            <text class="col-type" x="262" y="168">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">memo</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">created_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 282)">
+      <rect class="card" width="276" height="293" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">document</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">name</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">doc_category</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">version</text>
+            <text class="col-type" x="262" y="149">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="168">uploaded_by</text>
+            <text class="col-type" x="262" y="168">document_uploader · not null</text>
+
+
+            <text class="col-name" x="14" y="187">storage_url</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">file_type</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">size_bytes</text>
+            <text class="col-type" x="262" y="225">bigint · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">created_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="263">credential_id</text>
+            <text class="col-type" x="262" y="263">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">ip_right_id</text>
+            <text class="col-type" x="262" y="282">FK · uuid · nullable</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 485)">
+      <rect class="card" width="276" height="217" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">task_file</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">task_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">file_name</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">file_path</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">file_size</text>
+            <text class="col-type" x="262" y="149">bigint · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">mime_type</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">uploaded_by</text>
+            <text class="col-type" x="262" y="187">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">created_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 846)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">todo_note</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">user_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">note_date</text>
+            <text class="col-type" x="262" y="111">date · not null</text>
+
+
+            <text class="col-name" x="14" y="130">content</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">tag</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">completed</text>
+            <text class="col-type" x="262" y="168">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="187">sort_order</text>
+            <text class="col-type" x="262" y="187">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="206">created_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="225">updated_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 732)">
+      <rect class="card" width="276" height="312" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">ip_right</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">kind</text>
+            <text class="col-type" x="262" y="111">ip_right_kind · not null</text>
+
+
+            <text class="col-name" x="14" y="130">title</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">application_no</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">registration_no</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">agent_name</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">status</text>
+            <text class="col-type" x="262" y="206">ip_right_status · not null</text>
+
+
+            <text class="col-name" x="14" y="225">applied_date</text>
+            <text class="col-type" x="262" y="225">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">registered_date</text>
+            <text class="col-type" x="262" y="244">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="263">memo</text>
+            <text class="col-type" x="262" y="263">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">created_at</text>
+            <text class="col-type" x="262" y="282">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="301">updated_at</text>
+            <text class="col-type" x="262" y="301">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 599)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">ip_deadline</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">company_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">ip_right_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="130">type</text>
+            <text class="col-type" x="262" y="130">ip_deadline_type · not null</text>
+
+
+            <text class="col-name" x="14" y="149">title</text>
+            <text class="col-type" x="262" y="149">text · not null</text>
+
+
+            <text class="col-name" x="14" y="168">due_date</text>
+            <text class="col-type" x="262" y="168">date · not null</text>
+
+
+            <text class="col-name" x="14" y="187">is_done</text>
+            <text class="col-type" x="262" y="187">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="206">memo</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 726)">
+      <rect class="card" width="276" height="255" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">notification</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">type</text>
+            <text class="col-type" x="262" y="92">notification_type · not null</text>
+
+
+            <text class="col-name" x="14" y="111">title</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">body</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">company_id</text>
+            <text class="col-type" x="262" y="149">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">ref_table</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">ref_id</text>
+            <text class="col-type" x="262" y="187">uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">is_urgent</text>
+            <text class="col-type" x="262" y="206">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="225">is_read</text>
+            <text class="col-type" x="262" y="225">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="244">created_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 1106)">
+      <rect class="card card-view" width="276" height="255" rx="12"/>
+      <rect class="head head-view" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#385898"/>
+      <text class="table-name" x="14" y="22">deadline_item</text>
+      <text class="view-badge" x="262" y="22">VIEW</text>
+
+            <text class="col-name" x="14" y="54">source</text>
+            <text class="col-type" x="262" y="54">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="73">id</text>
+            <text class="col-type" x="262" y="73">uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="92">tenant_id</text>
+            <text class="col-type" x="262" y="92">uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="111">company_id</text>
+            <text class="col-type" x="262" y="111">uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">company_name</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">title</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">category_id</text>
+            <text class="col-type" x="262" y="168">uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">category_name</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">due_date</text>
+            <text class="col-type" x="262" y="206">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">days_left</text>
+            <text class="col-type" x="262" y="225">integer · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">status</text>
+            <text class="col-type" x="262" y="244">text · nullable</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 1068)">
+      <rect class="card" width="276" height="255" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">mobile_device</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">user_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">expo_push_token</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">platform</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">device_name</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">app_version</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">last_seen_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="206">disabled_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="244">updated_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 859)">
+      <rect class="card" width="276" height="217" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">mobile_push_delivery</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">notification_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">device_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="130">expo_ticket_id</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">status</text>
+            <text class="col-type" x="262" y="149">text · not null</text>
+
+
+            <text class="col-name" x="14" y="168">error</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">sent_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="206">created_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 1005)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">campaign</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">title</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">body</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">channel</text>
+            <text class="col-type" x="262" y="130">campaign_channel · not null</text>
+
+
+            <text class="col-name" x="14" y="149">segment</text>
+            <text class="col-type" x="262" y="149">jsonb · not null</text>
+
+
+            <text class="col-name" x="14" y="168">status</text>
+            <text class="col-type" x="262" y="168">campaign_status · not null</text>
+
+
+            <text class="col-name" x="14" y="187">scheduled_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">sent_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 1385)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">campaign_recipient</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">campaign_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">company_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="130">delivered</text>
+            <text class="col-type" x="262" y="130">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="149">delivered_at</text>
+            <text class="col-type" x="262" y="149">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">responded</text>
+            <text class="col-type" x="262" y="168">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="187">responded_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">response_note</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 1347)">
+      <rect class="card" width="276" height="369" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">gov_program</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">source</text>
+            <text class="col-type" x="262" y="73">text · not null</text>
+
+
+            <text class="col-name" x="14" y="92">external_id</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">content_key</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">title</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">support_field</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">org_name</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">target_text</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">hashtags</text>
+            <text class="col-type" x="262" y="206">_text · not null</text>
+
+
+            <text class="col-name" x="14" y="225">region</text>
+            <text class="col-type" x="262" y="225">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">apply_start</text>
+            <text class="col-type" x="262" y="244">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="263">apply_end</text>
+            <text class="col-type" x="262" y="263">date · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">detail_url</text>
+            <text class="col-type" x="262" y="282">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="301">raw</text>
+            <text class="col-type" x="262" y="301">jsonb · nullable</text>
+
+
+            <text class="col-name" x="14" y="320">synced_at</text>
+            <text class="col-type" x="262" y="320">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="339">created_at</text>
+            <text class="col-type" x="262" y="339">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="358">search_vector</text>
+            <text class="col-type" x="262" y="358">tsvector · nullable</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 1100)">
+      <rect class="card" width="276" height="179" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">gov_program_sync_log</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">source</text>
+            <text class="col-type" x="262" y="73">text · not null</text>
+
+
+            <text class="col-name" x="14" y="92">status</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">fetched</text>
+            <text class="col-type" x="262" y="111">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="130">upserted</text>
+            <text class="col-type" x="262" y="130">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="149">error</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">ran_at</text>
+            <text class="col-type" x="262" y="168">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 1265)">
+      <rect class="card" width="276" height="160" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">rule</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">name</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">eligibility</text>
+            <text class="col-type" x="262" y="111">jsonb · not null</text>
+
+
+            <text class="col-name" x="14" y="130">active</text>
+            <text class="col-type" x="262" y="130">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="149">created_at</text>
+            <text class="col-type" x="262" y="149">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 1645)">
+      <rect class="card" width="276" height="255" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">google_drive_connections</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">user_id</text>
+            <text class="col-type" x="262" y="92">uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">google_email</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">encrypted_refresh_token</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">root_folder_id</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">root_folder_name</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">connected_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="206">revoked_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="244">updated_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 1740)">
+      <rect class="card" width="276" height="369" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">google_drive_sync_jobs</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">user_id</text>
+            <text class="col-type" x="262" y="92">uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">document_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="130">storage_bucket</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">storage_path</text>
+            <text class="col-type" x="262" y="149">text · not null</text>
+
+
+            <text class="col-name" x="14" y="168">file_name</text>
+            <text class="col-type" x="262" y="168">text · not null</text>
+
+
+            <text class="col-name" x="14" y="187">mime_type</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">size_bytes</text>
+            <text class="col-type" x="262" y="206">bigint · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">status</text>
+            <text class="col-type" x="262" y="225">text · not null</text>
+
+
+            <text class="col-name" x="14" y="244">attempts</text>
+            <text class="col-type" x="262" y="244">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="263">google_drive_file_id</text>
+            <text class="col-type" x="262" y="263">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">google_drive_web_view_link</text>
+            <text class="col-type" x="262" y="282">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="301">last_error</text>
+            <text class="col-type" x="262" y="301">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="320">next_run_at</text>
+            <text class="col-type" x="262" y="320">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="339">created_at</text>
+            <text class="col-type" x="262" y="339">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="358">updated_at</text>
+            <text class="col-type" x="262" y="358">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 1303)">
+      <rect class="card" width="276" height="217" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">billing_plan</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">code</text>
+            <text class="col-type" x="262" y="73">text · not null</text>
+
+
+            <text class="col-name" x="14" y="92">name</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">amount</text>
+            <text class="col-type" x="262" y="111">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="130">currency</text>
+            <text class="col-type" x="262" y="130">text · not null</text>
+
+
+            <text class="col-name" x="14" y="149">interval</text>
+            <text class="col-type" x="262" y="149">text · not null</text>
+
+
+            <text class="col-name" x="14" y="168">is_active</text>
+            <text class="col-type" x="262" y="168">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="187">created_at</text>
+            <text class="col-type" x="262" y="187">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="206">updated_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 1449)">
+      <rect class="card" width="276" height="179" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">billing_customer</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">toss_customer_key</text>
+            <text class="col-type" x="262" y="92">text · not null</text>
+
+
+            <text class="col-name" x="14" y="111">billing_email</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">billing_name</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">created_at</text>
+            <text class="col-type" x="262" y="149">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="168">updated_at</text>
+            <text class="col-type" x="262" y="168">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(376, 1924)">
+      <rect class="card" width="276" height="255" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">payment_method</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">billing_customer_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">encrypted_billing_key</text>
+            <text class="col-type" x="262" y="111">text · not null</text>
+
+
+            <text class="col-name" x="14" y="130">card_company</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">card_number_masked</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">card_type</text>
+            <text class="col-type" x="262" y="168">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">is_default</text>
+            <text class="col-type" x="262" y="187">boolean · not null</text>
+
+
+            <text class="col-name" x="14" y="206">status</text>
+            <text class="col-type" x="262" y="206">text · not null</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="244">updated_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(710, 2133)">
+      <rect class="card" width="276" height="274" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">tenant_subscription</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">plan_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="111">payment_method_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">status</text>
+            <text class="col-type" x="262" y="130">subscription_status · not null</text>
+
+
+            <text class="col-name" x="14" y="149">current_period_start</text>
+            <text class="col-type" x="262" y="149">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">current_period_end</text>
+            <text class="col-type" x="262" y="168">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">grace_until</text>
+            <text class="col-type" x="262" y="187">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">trial_end</text>
+            <text class="col-type" x="262" y="206">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">canceled_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="244">created_at</text>
+            <text class="col-type" x="262" y="244">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="263">updated_at</text>
+            <text class="col-type" x="262" y="263">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(1044, 1544)">
+      <rect class="card" width="276" height="369" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">payment_transaction</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">tenant_id</text>
+            <text class="col-type" x="262" y="73">FK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="92">subscription_id</text>
+            <text class="col-type" x="262" y="92">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="111">payment_method_id</text>
+            <text class="col-type" x="262" y="111">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">kind</text>
+            <text class="col-type" x="262" y="130">payment_kind · not null</text>
+
+
+            <text class="col-name" x="14" y="149">status</text>
+            <text class="col-type" x="262" y="149">payment_status · not null</text>
+
+
+            <text class="col-name" x="14" y="168">order_id</text>
+            <text class="col-type" x="262" y="168">text · not null</text>
+
+
+            <text class="col-name" x="14" y="187">order_name</text>
+            <text class="col-type" x="262" y="187">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">toss_payment_key</text>
+            <text class="col-type" x="262" y="206">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">amount</text>
+            <text class="col-type" x="262" y="225">integer · not null</text>
+
+
+            <text class="col-name" x="14" y="244">currency</text>
+            <text class="col-type" x="262" y="244">text · not null</text>
+
+
+            <text class="col-name" x="14" y="263">failure_code</text>
+            <text class="col-type" x="262" y="263">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="282">failure_message</text>
+            <text class="col-type" x="262" y="282">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="301">raw_response</text>
+            <text class="col-type" x="262" y="301">jsonb · nullable</text>
+
+
+            <text class="col-name" x="14" y="320">approved_at</text>
+            <text class="col-type" x="262" y="320">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="339">created_at</text>
+            <text class="col-type" x="262" y="339">timestamptz · not null</text>
+
+
+            <text class="col-name" x="14" y="358">updated_at</text>
+            <text class="col-type" x="262" y="358">timestamptz · not null</text>
+
+    </g>
+
+
+    <g class="table" transform="translate(42, 1652)">
+      <rect class="card" width="276" height="236" rx="12"/>
+      <rect class="head" width="276" height="34" rx="12"/>
+      <path d="M 0 24 H 276 V 34 H 0 Z" fill="#0a1317"/>
+      <text class="table-name" x="14" y="22">webhook_event</text>
+
+
+            <text class="col-name" x="14" y="54">id</text>
+            <text class="col-type" x="262" y="54">PK · uuid · not null</text>
+
+
+            <text class="col-name" x="14" y="73">event_key</text>
+            <text class="col-type" x="262" y="73">text · not null</text>
+
+
+            <text class="col-name" x="14" y="92">event_type</text>
+            <text class="col-type" x="262" y="92">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="111">order_id</text>
+            <text class="col-type" x="262" y="111">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="130">payment_key</text>
+            <text class="col-type" x="262" y="130">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="149">status</text>
+            <text class="col-type" x="262" y="149">text · nullable</text>
+
+
+            <text class="col-name" x="14" y="168">tenant_id</text>
+            <text class="col-type" x="262" y="168">FK · uuid · nullable</text>
+
+
+            <text class="col-name" x="14" y="187">payload</text>
+            <text class="col-type" x="262" y="187">jsonb · nullable</text>
+
+
+            <text class="col-name" x="14" y="206">processed_at</text>
+            <text class="col-type" x="262" y="206">timestamptz · nullable</text>
+
+
+            <text class="col-name" x="14" y="225">created_at</text>
+            <text class="col-type" x="262" y="225">timestamptz · not null</text>
+
+    </g>
+
+  </g>
+</svg>

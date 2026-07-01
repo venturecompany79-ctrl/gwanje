@@ -1,5 +1,7 @@
 # dependencies
 /node_modules
+/mobile/node_modules
+/mobile/.expo/
 
 # next.js
 /.next/
@@ -17,6 +19,7 @@ npm-debug.log*
 # env
 .env*
 !.env.example
+!.env*.example
 
 # typescript
 *.tsbuildinfo

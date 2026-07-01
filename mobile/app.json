@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "관제",
+    "slug": "gwanje-mobile",
+    "scheme": "gwanje",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gwanje.app",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "마감과 만료 알림을 모바일에서 받을 수 있습니다."
+      }
+    },
+    "android": {
+      "package": "com.gwanje.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#0064E0"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
