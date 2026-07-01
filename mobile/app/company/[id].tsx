@@ -55,6 +55,7 @@ export default function CompanyDetailScreen() {
                   title={company.contact_phone}
                   subtitle="전화 걸기"
                   icon={<Phone size={18} color={colors.brand} />}
+                  tone="brand"
                   onPress={() => Linking.openURL(`tel:${company.contact_phone}`)}
                 />
               ) : null}
@@ -63,6 +64,7 @@ export default function CompanyDetailScreen() {
                   title={company.contact_email}
                   subtitle="메일 작성"
                   icon={<Mail size={18} color={colors.brand} />}
+                  tone="brand"
                   onPress={() => Linking.openURL(`mailto:${company.contact_email}`)}
                 />
               ) : null}
@@ -76,10 +78,16 @@ export default function CompanyDetailScreen() {
                     title={item.title ?? "일정"}
                     subtitle={shortDate(item.due_date)}
                     right={<DdayPill daysLeft={item.days_left} />}
+                    tone={
+                      item.days_left !== null && item.days_left <= 3
+                        ? "critical"
+                        : "attention"
+                    }
+                    accent={item.days_left !== null && item.days_left <= 3}
                   />
                 ))
               ) : (
-                <EmptyState title="다가오는 일정이 없습니다" />
+                <EmptyState title="다가오는 일정이 없습니다" compact />
               )}
             </Section>
 
@@ -91,10 +99,11 @@ export default function CompanyDetailScreen() {
                     title={credential.type}
                     subtitle={`만료 ${shortDate(credential.expires_date)}`}
                     meta={credential.memo}
+                    dense
                   />
                 ))
               ) : (
-                <EmptyState title="등록된 자격이 없습니다" />
+                <EmptyState title="등록된 자격이 없습니다" compact />
               )}
             </Section>
 
@@ -106,11 +115,13 @@ export default function CompanyDetailScreen() {
                     title={task.title}
                     subtitle={TASK_STAGE_LABEL[task.stage]}
                     meta={`${shortDate(task.due_date)} · ${ddayLabel(daysFromDateString(task.due_date))}`}
+                    tone="brand"
+                    dense
                     onPress={() => router.push(`/task/${task.id}`)}
                   />
                 ))
               ) : (
-                <EmptyState title="등록된 Task가 없습니다" />
+                <EmptyState title="등록된 Task가 없습니다" compact />
               )}
             </Section>
           </>

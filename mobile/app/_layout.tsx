@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -49,19 +49,42 @@ function RootStack() {
 
 export default function Layout() {
   return (
-    <GestureHandlerRootView style={styles.flex}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <RootStack />
-        </AuthProvider>
-      </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.host}>
+      <View style={styles.appFrame}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <RootStack />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </View>
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
+  host: {
     flex: 1,
+    backgroundColor: colors.stage,
+    alignItems: "center",
+  },
+  appFrame: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: colors.grouped,
+    ...Platform.select({
+      web: {
+        maxWidth: 430,
+        minHeight: "100%",
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.hairlineSoft,
+        shadowColor: colors.ink,
+        shadowOpacity: 0.1,
+        shadowRadius: 34,
+        shadowOffset: { width: 0, height: 18 },
+      },
+      default: {},
+    }),
   },
   loading: {
     flex: 1,

@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { ClipboardList } from "lucide-react-native";
-import { colors, radius, spacing, typography } from "@/design/tokens";
-import { ddayLabel, shortDate } from "@/lib/dates";
+import { colors, spacing } from "@/design/tokens";
+import { shortDate } from "@/lib/dates";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
 import { loadTasks, type MobileTask } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { EmptyState, LoadingState, Row, Section, StagePill } from "@/ui/Primitives";
+import {
+  DdayPill,
+  EmptyState,
+  FilterChip,
+  LoadingState,
+  Row,
+  Section,
+  StatusBadge,
+} from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
 type StageFilter = "all" | TaskStage;
@@ -18,13 +26,29 @@ const FILTERS: { value: StageFilter; label: string }[] = [
 ];
 
 function TaskRow({ task, onPress }: { task: MobileTask; onPress: () => void }) {
+  const urgent =
+    task.daysLeft !== null && task.daysLeft !== undefined && task.daysLeft <= 3;
   return (
     <Row
       title={task.title}
       subtitle={task.companyName}
-      meta={`${task.categoryName ?? "분류 없음"} · ${shortDate(task.due_date)} · ${ddayLabel(task.daysLeft)}`}
-      icon={<ClipboardList size={18} color={colors.brand} />}
-      right={<StagePill label={TASK_STAGE_LABEL[task.stage]} active={task.stage !== "result"} />}
+      meta={`${task.categoryName ?? "분류 없음"} · ${shortDate(task.due_date)}`}
+      icon={
+        <ClipboardList
+          size={18}
+          color={urgent ? colors.critical : colors.brand}
+        />
+      }
+      tone={urgent ? "critical" : "brand"}
+      accent={urgent}
+      right={
+        <View style={styles.taskRight}>
+          <DdayPill daysLeft={task.daysLeft} />
+          <StatusBadge tone={task.stage === "result" ? "success" : "neutral"}>
+            {TASK_STAGE_LABEL[task.stage]}
+          </StatusBadge>
+        </View>
+      }
       onPress={onPress}
     />
   );
@@ -44,15 +68,12 @@ export default function TasksScreen() {
     <Screen title="Task" subtitle="단계와 메모 수정" refreshing={refreshing} onRefresh={refresh}>
       <View style={styles.filters}>
         {FILTERS.map((item) => (
-          <Pressable
+          <FilterChip
             key={item.value}
+            label={item.label}
+            active={filter === item.value}
             onPress={() => setFilter(item.value)}
-            style={[styles.filter, filter === item.value && styles.filterActive]}
-          >
-            <Text style={[styles.filterText, filter === item.value && styles.filterTextActive]}>
-              {item.label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
 
@@ -69,7 +90,7 @@ export default function TasksScreen() {
               />
             ))
           ) : (
-            <EmptyState title="표시할 Task가 없습니다" />
+            <EmptyState title="표시할 Task가 없습니다" compact />
           )}
         </Section>
       ) : null}
@@ -80,28 +101,10 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   filters: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
   },
-  filter: {
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.canvas,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.separator,
-  },
-  filterActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
-  filterText: {
-    ...typography.footnote,
-    color: colors.secondaryLabel,
-  },
-  filterTextActive: {
-    color: colors.canvas,
+  taskRight: {
+    alignItems: "flex-end",
+    gap: 6,
   },
 });

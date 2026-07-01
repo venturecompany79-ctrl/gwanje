@@ -86,7 +86,7 @@ export default function TodayScreen() {
               <Row
                 key={note.id}
                 title={note.content}
-                subtitle={tagLabel(note.tag)}
+                subtitle={note.completed ? "완료됨" : tagLabel(note.tag)}
                 icon={
                   note.completed ? (
                     <Check size={18} color={colors.success} />
@@ -94,11 +94,17 @@ export default function TodayScreen() {
                     <Circle size={18} color={colors.tertiaryLabel} />
                   )
                 }
+                tone={note.completed ? "success" : "neutral"}
+                dense
                 onPress={() => toggle(note)}
               />
             ))
           ) : (
-            <EmptyState title="오늘 노트가 없습니다" description="가벼운 현장 메모부터 남겨두세요." />
+            <EmptyState
+              title="오늘 노트가 없습니다"
+              description="가벼운 현장 메모부터 남겨두세요."
+              compact
+            />
           )}
         </Section>
       ) : null}
@@ -114,7 +120,7 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 92,
     borderRadius: radius.md,
-    backgroundColor: colors.tertiaryGrouped,
+    backgroundColor: colors.surfaceSoft,
     padding: spacing.md,
     ...typography.body,
     color: colors.label,
@@ -127,13 +133,16 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
-    backgroundColor: colors.fill,
+    backgroundColor: colors.surfaceSoft,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
   },
   tagActive: {
-    backgroundColor: "rgba(0, 100, 224, 0.12)",
+    backgroundColor: colors.brandLight,
+    borderColor: "rgba(0, 100, 224, 0.18)",
   },
   tagText: {
     ...typography.footnote,

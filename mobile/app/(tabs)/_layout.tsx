@@ -29,6 +29,7 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           ...typography.caption,
           fontSize: 11,
+          fontWeight: "700",
         },
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.separator,
-    backgroundColor: "transparent",
+    borderTopColor: colors.hairlineSoft,
+    backgroundColor: "rgba(255,255,255,0.86)",
   },
 });

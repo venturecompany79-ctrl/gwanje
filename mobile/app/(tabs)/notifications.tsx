@@ -8,7 +8,14 @@ import { ddayLabel, timeLabel } from "@/lib/dates";
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from "@/lib/labels";
 import { loadNotifications, type NotificationItem } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { EmptyState, LoadingState, Row, Section } from "@/ui/Primitives";
+import {
+  EmptyState,
+  FilterChip,
+  LoadingState,
+  Row,
+  Section,
+  StatusBadge,
+} from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
 type Filter = "all" | NotificationType;
@@ -27,14 +34,29 @@ function NotificationRow({
   item: NotificationItem;
   onRead: (item: NotificationItem) => void;
 }) {
+  const tone = item.is_urgent
+    ? "critical"
+    : item.type === "expiry"
+      ? "attention"
+      : item.type === "program_match"
+        ? "purple"
+        : "brand";
   return (
     <Row
       title={item.title}
       subtitle={item.companyName}
       meta={`${NOTIFICATION_TYPE_LABEL[item.type]} · ${timeLabel(item.created_at)}`}
-      icon={<Bell size={18} color={item.is_urgent ? colors.critical : colors.brand} />}
+      icon={
+        <Bell
+          size={18}
+          color={item.is_urgent ? colors.critical : colors.brand}
+        />
+      }
+      tone={tone}
+      accent={item.is_urgent}
       right={
         <View style={styles.nRight}>
+          {item.is_urgent ? <StatusBadge tone="critical">긴급</StatusBadge> : null}
           {item.daysLeft !== null ? (
             <Text style={styles.dday}>{ddayLabel(item.daysLeft)}</Text>
           ) : null}
@@ -86,15 +108,12 @@ export default function NotificationsScreen() {
     >
       <View style={styles.filters}>
         {FILTERS.map((item) => (
-          <Pressable
+          <FilterChip
             key={item.value}
+            label={item.label}
+            active={filter === item.value}
             onPress={() => setFilter(item.value)}
-            style={[styles.filter, filter === item.value && styles.filterActive]}
-          >
-            <Text style={[styles.filterText, filter === item.value && styles.filterTextActive]}>
-              {item.label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
 
@@ -107,7 +126,7 @@ export default function NotificationsScreen() {
               <NotificationRow key={item.id} item={item} onRead={markRead} />
             ))
           ) : (
-            <EmptyState title="표시할 알림이 없습니다" />
+            <EmptyState title="표시할 알림이 없습니다" compact />
           )}
         </Section>
       ) : null}
@@ -119,27 +138,6 @@ const styles = StyleSheet.create({
   filters: {
     flexDirection: "row",
     gap: spacing.sm,
-  },
-  filter: {
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.canvas,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.separator,
-  },
-  filterActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
-  filterText: {
-    ...typography.footnote,
-    color: colors.secondaryLabel,
-  },
-  filterTextActive: {
-    color: colors.canvas,
   },
   readAll: {
     width: 38,
@@ -155,7 +153,8 @@ const styles = StyleSheet.create({
   },
   dday: {
     ...typography.caption,
-    color: colors.secondaryLabel,
+    color: colors.stone,
+    fontWeight: "700",
   },
   unreadDot: {
     width: 8,

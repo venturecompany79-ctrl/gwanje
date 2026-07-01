@@ -18,7 +18,13 @@ import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
 import { loadTask, type MobileTask } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { useAuth } from "@/context/AuthContext";
-import { EmptyState, LoadingState, PrimaryButton, StagePill } from "@/ui/Primitives";
+import {
+  EmptyState,
+  LoadingState,
+  PrimaryButton,
+  StagePill,
+  StatusBadge,
+} from "@/ui/Primitives";
 
 export default function TaskModal() {
   const router = useRouter();
@@ -44,6 +50,7 @@ export default function TaskModal() {
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.grabber} />
+            <Text style={styles.sheetTitle}>Task 수정</Text>
             <Pressable style={styles.close} onPress={() => router.back()}>
               <X size={18} color={colors.secondaryLabel} />
             </Pressable>
@@ -77,9 +84,11 @@ function TaskForm({
   const [stage, setStage] = useState<TaskStage>(task.stage);
   const [memo, setMemo] = useState(task.memo ?? "");
   const [pending, setPending] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function save() {
     setPending(true);
+    setSaveError(null);
     try {
       await mobileApi(`/api/mobile/tasks/${task.id}`, {
         method: "PATCH",
@@ -90,7 +99,7 @@ function TaskForm({
       onClose();
     } catch (err) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.warn("[task:save]", err);
+      setSaveError(err instanceof Error ? err.message : "저장에 실패했습니다.");
     } finally {
       setPending(false);
     }
@@ -98,11 +107,15 @@ function TaskForm({
 
   return (
     <>
-      <Text style={styles.company}>{task.companyName}</Text>
-      <Text style={styles.title}>{task.title}</Text>
-      <Text style={styles.meta}>
-        {task.categoryName ?? "분류 없음"} · {shortDate(task.due_date)} · {ddayLabel(task.daysLeft)}
-      </Text>
+      <View style={styles.taskHead}>
+        <Text style={styles.company}>{task.companyName}</Text>
+        <Text style={styles.title}>{task.title}</Text>
+        <View style={styles.metaRow}>
+          <StatusBadge tone="neutral">{task.categoryName ?? "분류 없음"}</StatusBadge>
+          <Text style={styles.meta}>{shortDate(task.due_date)}</Text>
+          <Text style={styles.metaStrong}>{ddayLabel(task.daysLeft)}</Text>
+        </View>
+      </View>
 
       <View style={styles.block}>
         <Text style={styles.label}>단계</Text>
@@ -126,6 +139,8 @@ function TaskForm({
         />
       </View>
 
+      {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+
       <PrimaryButton disabled={pending} onPress={save}>
         {pending ? "저장 중..." : "변경 저장"}
       </PrimaryButton>
@@ -136,7 +151,7 @@ function TaskForm({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.grouped,
+    backgroundColor: "rgba(10, 19, 23, 0.20)",
     justifyContent: "flex-end",
   },
   sheet: {
@@ -147,18 +162,28 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingTop: spacing.sm,
     gap: spacing.base,
-    minHeight: "76%",
+    minHeight: "74%",
+    maxHeight: "92%",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairlineSoft,
   },
   header: {
-    minHeight: 38,
+    minHeight: 48,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingTop: 3,
   },
   grabber: {
     width: 42,
     height: 5,
     borderRadius: radius.full,
-    backgroundColor: colors.separator,
+    backgroundColor: colors.hairline,
+  },
+  sheetTitle: {
+    ...typography.callout,
+    color: colors.inkDeep,
+    fontWeight: "700",
+    marginTop: spacing.md,
   },
   close: {
     position: "absolute",
@@ -173,14 +198,30 @@ const styles = StyleSheet.create({
   company: {
     ...typography.callout,
     color: colors.secondaryLabel,
+    fontWeight: "700",
   },
   title: {
     ...typography.title2,
-    color: colors.label,
+    color: colors.inkDeep,
   },
   meta: {
-    ...typography.callout,
-    color: colors.secondaryLabel,
+    ...typography.footnote,
+    color: colors.stone,
+    fontWeight: "700",
+  },
+  metaStrong: {
+    ...typography.footnote,
+    color: colors.critical,
+    fontWeight: "800",
+  },
+  taskHead: {
+    gap: spacing.xs,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexWrap: "wrap",
   },
   block: {
     gap: spacing.sm,
@@ -197,10 +238,15 @@ const styles = StyleSheet.create({
   memo: {
     minHeight: 130,
     borderRadius: radius.lg,
-    backgroundColor: colors.grouped,
+    backgroundColor: colors.surfaceSoft,
     padding: spacing.base,
     textAlignVertical: "top",
     ...typography.body,
-    color: colors.label,
+    color: colors.ink,
+  },
+  saveError: {
+    ...typography.footnote,
+    color: colors.critical,
+    fontWeight: "700",
   },
 });

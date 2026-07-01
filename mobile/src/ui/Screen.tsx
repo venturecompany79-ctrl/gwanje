@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -33,6 +34,7 @@ export function Screen({
   return (
     <ScrollView
       style={styles.root}
+      showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={
         onRefresh ? (
@@ -65,26 +67,32 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.lg,
-    gap: spacing.base,
+    paddingTop: spacing.xl,
+    gap: spacing.lg,
   },
   head: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing.base,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
   },
   headText: {
     flex: 1,
   },
   title: {
     ...typography.largeTitle,
-    color: colors.label,
+    color: colors.inkDeep,
+    ...Platform.select({
+      web: {
+        fontWeight: "800",
+      },
+      default: {},
+    }),
   },
   subtitle: {
     ...typography.callout,
     color: colors.secondaryLabel,
-    marginTop: 2,
+    marginTop: 4,
   },
   action: {
     paddingBottom: 2,

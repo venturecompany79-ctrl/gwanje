@@ -10,13 +10,31 @@ import { DdayPill, EmptyState, LoadingState, Row, Section } from "@/ui/Primitive
 import { Screen } from "@/ui/Screen";
 
 function CompanyRow({ company, onPress }: { company: CompanyListItem; onPress: () => void }) {
+  const hasDeadline = company.nearestDaysLeft !== null;
+  const companyMeta = [company.industry, company.region].filter(Boolean).join(" · ");
+  const urgent =
+    company.nearestDaysLeft !== null &&
+    company.nearestDaysLeft !== undefined &&
+    company.nearestDaysLeft <= 7;
   return (
     <Row
       title={company.name}
-      subtitle={[company.industry, company.region, company.contact_name].filter(Boolean).join(" · ")}
-      meta={company.nearestDaysLeft === null ? "다가오는 마감 없음" : `가장 가까운 일정 ${ddayLabel(company.nearestDaysLeft)}`}
-      icon={<Building2 size={18} color={colors.brand} />}
-      right={<DdayPill daysLeft={company.nearestDaysLeft} />}
+      subtitle={company.contact_name ? `담당 ${company.contact_name}` : "담당자 미지정"}
+      meta={
+        hasDeadline
+          ? [companyMeta, `가까운 일정 ${ddayLabel(company.nearestDaysLeft)}`]
+              .filter(Boolean)
+              .join(" · ")
+          : companyMeta || "다가오는 마감 없음"
+      }
+      icon={
+        <Building2
+          size={18}
+          color={urgent ? colors.attention : colors.brand}
+        />
+      }
+      tone={urgent ? "attention" : "brand"}
+      right={hasDeadline ? <DdayPill daysLeft={company.nearestDaysLeft} /> : undefined}
       onPress={onPress}
     />
   );
@@ -63,7 +81,7 @@ export default function CompaniesScreen() {
               />
             ))
           ) : (
-            <EmptyState title="검색 결과가 없습니다" />
+            <EmptyState title="검색 결과가 없습니다" compact />
           )}
         </Section>
       ) : null}
@@ -81,7 +99,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.separator,
+    borderColor: colors.hairline,
   },
   searchInput: {
     flex: 1,
