@@ -1,20 +1,22 @@
 import { Redirect, Tabs } from "expo-router";
 import { StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import {
   Bell,
   Building2,
+  CalendarDays,
   ClipboardList,
   Home,
-  ListTodo,
 } from "lucide-react-native";
-import { colors, typography } from "@/design/tokens";
+import { colors } from "@/design/tokens";
 import { useAuth } from "@/context/AuthContext";
 
-const ICON_SIZE = 22;
+const ICON_SIZE = 25;
 
 export default function TabLayout() {
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (!session) {
     return <Redirect href="/login" />;
@@ -25,15 +27,15 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
-        tabBarInactiveTintColor: colors.tertiaryLabel,
-        tabBarLabelStyle: {
-          ...typography.caption,
-          fontSize: 11,
-          fontWeight: "700",
-        },
-        tabBarStyle: styles.tabBar,
+        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarLabelStyle: styles.label,
+        tabBarIconStyle: styles.icon,
+        tabBarStyle: [
+          styles.tabBar,
+          { height: 52 + insets.bottom, paddingBottom: insets.bottom, paddingTop: 8 },
+        ],
         tabBarBackground: () => (
-          <BlurView intensity={88} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
         ),
       }}
     >
@@ -41,35 +43,41 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "홈",
-          tabBarIcon: ({ color }) => <Home size={ICON_SIZE} color={color} />,
+          tabBarIcon: ({ color }) => <Home size={ICON_SIZE} color={color} strokeWidth={1.9} />,
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
           title: "알림",
-          tabBarIcon: ({ color }) => <Bell size={ICON_SIZE} color={color} />,
+          tabBarIcon: ({ color }) => <Bell size={ICON_SIZE} color={color} strokeWidth={1.9} />,
         }}
       />
       <Tabs.Screen
         name="today"
         options={{
           title: "오늘",
-          tabBarIcon: ({ color }) => <ListTodo size={ICON_SIZE} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <CalendarDays size={ICON_SIZE} color={color} strokeWidth={1.9} />
+          ),
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
           title: "Task",
-          tabBarIcon: ({ color }) => <ClipboardList size={ICON_SIZE} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <ClipboardList size={ICON_SIZE} color={color} strokeWidth={1.9} />
+          ),
         }}
       />
       <Tabs.Screen
         name="companies"
         options={{
           title: "기업",
-          tabBarIcon: ({ color }) => <Building2 size={ICON_SIZE} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Building2 size={ICON_SIZE} color={color} strokeWidth={1.9} />
+          ),
         }}
       />
     </Tabs>
@@ -80,7 +88,17 @@ const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.hairlineSoft,
-    backgroundColor: "rgba(255,255,255,0.86)",
+    borderTopColor: colors.separatorStrong,
+    backgroundColor: colors.tabBar,
+    elevation: 0,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: "500",
+    letterSpacing: -0.1,
+    marginTop: 1,
+  },
+  icon: {
+    marginBottom: 0,
   },
 });

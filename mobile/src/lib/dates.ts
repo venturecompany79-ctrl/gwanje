@@ -4,6 +4,17 @@ export function todayKstDate(): string {
   return kst.toISOString().slice(0, 10);
 }
 
+export function longKstDate(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(kst);
+}
+
 export function shiftDateString(date: string, days: number): string {
   const parsed = new Date(`${date}T00:00:00.000Z`);
   parsed.setUTCDate(parsed.getUTCDate() + days);
@@ -21,6 +32,12 @@ export function shortDate(date: string | null | undefined): string {
   if (!date) return "-";
   const [, month, day] = date.split("-");
   return `${month}.${day}`;
+}
+
+export function monthDayKo(date: string | null | undefined): string {
+  if (!date) return "-";
+  const [, month, day] = date.split("-");
+  return `${parseInt(month, 10)}월 ${parseInt(day, 10)}일`;
 }
 
 export function daysFromDateString(date: string | null | undefined): number | null {

@@ -1,25 +1,66 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import * as Haptics from "expo-haptics";
-import { Check, Circle, Tag } from "lucide-react-native";
+import { Check } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { todayKstDate } from "@/lib/dates";
+import { longKstDate, todayKstDate } from "@/lib/dates";
 import { TODO_TAGS, type TodoTag } from "@/lib/labels";
 import { loadTodayNotes, type TodoNoteRow } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { EmptyState, LoadingState, PrimaryButton, Row, Section } from "@/ui/Primitives";
+import { Cell, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
-function tagLabel(tag: string | null) {
-  return tag ? `[${tag}]` : "[태그 없음]";
+function NoteCell({
+  note,
+  last,
+  onToggle,
+}: {
+  note: TodoNoteRow;
+  last?: boolean;
+  onToggle: () => void;
+}) {
+  const done = note.completed;
+  return (
+    <Cell last={last} sepInset={46} align="flex-start">
+      <Pressable
+        onPress={onToggle}
+        hitSlop={8}
+        style={[styles.check, done ? styles.checkDone : styles.checkOff]}
+      >
+        {done ? <Check size={12} color={colors.canvas} strokeWidth={2.4} /> : null}
+      </Pressable>
+      <View style={styles.noteMain}>
+        <Text style={[styles.noteText, done && styles.noteTextDone]}>
+          {note.content}
+        </Text>
+        <View style={styles.noteMeta}>
+          {note.tag ? (
+            <View style={styles.tagChip}>
+              <Text style={styles.tagChipText}>{note.tag}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.noteTime}>{note.completed ? "완료" : "메모"}</Text>
+        </View>
+      </View>
+    </Cell>
+  );
 }
 
 export default function TodayScreen() {
   const [draft, setDraft] = useState("");
-  const [tag, setTag] = useState<TodoTag | null>("업무");
+  const [tag, setTag] = useState<TodoTag>("상담");
   const { data, loading, refreshing, error, refresh } =
     useAsyncData(loadTodayNotes);
+
+  const canAdd = draft.trim().length > 0;
 
   async function addNote() {
     const content = draft.trim();
@@ -44,69 +85,73 @@ export default function TodayScreen() {
   return (
     <Screen
       title="오늘"
-      subtitle={`${todayKstDate()} · 업무일지`}
+      subtitle={`${longKstDate()} · 업무일지`}
       refreshing={refreshing}
       onRefresh={refresh}
     >
-      <Section title="새 노트">
-        <View style={styles.composer}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="오늘 처리할 일을 적어보세요"
-            style={styles.input}
-            multiline
-          />
-          <View style={styles.tagRow}>
-            {TODO_TAGS.map((item) => (
-              <Pressable
-                key={item}
-                onPress={() => setTag(item)}
-                style={[styles.tag, tag === item && styles.tagActive]}
-              >
-                <Tag size={14} color={tag === item ? colors.brand : colors.secondaryLabel} />
-                <Text style={[styles.tagText, tag === item && styles.tagTextActive]}>
-                  {item}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <PrimaryButton disabled={!draft.trim()} onPress={addNote}>
-            추가
-          </PrimaryButton>
+      <View style={styles.composer}>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="업무 메모 입력"
+          placeholderTextColor={colors.tertiaryLabel}
+          style={styles.input}
+          multiline
+        />
+        <View style={styles.composerSep} />
+        <View style={styles.composerFooter}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagRow}
+          >
+            {TODO_TAGS.map((item) => {
+              const active = tag === item;
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setTag(item)}
+                  style={[styles.tag, active ? styles.tagActive : styles.tagOff]}
+                >
+                  <Text style={[styles.tagText, active && styles.tagTextActive]}>
+                    {item}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Pressable
+            onPress={addNote}
+            disabled={!canAdd}
+            style={[styles.add, canAdd ? styles.addOn : styles.addOff]}
+          >
+            <Text style={[styles.addText, canAdd ? styles.addTextOn : styles.addTextOff]}>
+              추가
+            </Text>
+          </Pressable>
         </View>
-      </Section>
+      </View>
 
-      {loading ? <LoadingState /> : null}
-      {error ? <EmptyState title="오늘 업무를 불러오지 못했습니다" description={error} /> : null}
+      <SectionLabel>오늘의 노트</SectionLabel>
+      {loading && !data ? <Loading /> : null}
+      {error ? <InlineEmpty>오늘 업무를 불러오지 못했습니다</InlineEmpty> : null}
       {data ? (
-        <Section title="오늘의 노트" caption={`${data.length}건`}>
-          {data.length > 0 ? (
-            data.map((note) => (
-              <Row
+        data.length > 0 ? (
+          <Group>
+            {data.map((note, i) => (
+              <NoteCell
                 key={note.id}
-                title={note.content}
-                subtitle={note.completed ? "완료됨" : tagLabel(note.tag)}
-                icon={
-                  note.completed ? (
-                    <Check size={18} color={colors.success} />
-                  ) : (
-                    <Circle size={18} color={colors.tertiaryLabel} />
-                  )
-                }
-                tone={note.completed ? "success" : "neutral"}
-                dense
-                onPress={() => toggle(note)}
+                note={note}
+                last={i === data.length - 1}
+                onToggle={() => toggle(note)}
               />
-            ))
-          ) : (
-            <EmptyState
-              title="오늘 노트가 없습니다"
-              description="가벼운 현장 메모부터 남겨두세요."
-              compact
-            />
-          )}
-        </Section>
+            ))}
+          </Group>
+        ) : (
+          <Group>
+            <InlineEmpty>아직 오늘의 메모가 없습니다</InlineEmpty>
+          </Group>
+        )
       ) : null}
     </Screen>
   );
@@ -114,41 +159,134 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   composer: {
-    padding: spacing.base,
-    gap: spacing.md,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.base,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    overflow: "hidden",
   },
   input: {
-    minHeight: 92,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceSoft,
-    padding: spacing.md,
-    ...typography.body,
+    minHeight: 64,
+    paddingHorizontal: 15,
+    paddingTop: 14,
+    paddingBottom: 8,
+    fontSize: 15.5,
+    lineHeight: 21,
+    letterSpacing: -0.3,
     color: colors.label,
+    textAlignVertical: "top",
   },
-  tagRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
+  composerSep: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
   },
-  tag: {
-    minHeight: 34,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceSoft,
+  composerFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    paddingLeft: 12,
+    paddingRight: 11,
+    gap: 10,
+  },
+  tagRow: {
+    gap: 6,
+    alignItems: "center",
+  },
+  tag: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   tagActive: {
-    backgroundColor: colors.brandLight,
-    borderColor: "rgba(0, 100, 224, 0.18)",
+    backgroundColor: colors.brandTintStrong,
+  },
+  tagOff: {
+    backgroundColor: colors.fill,
   },
   tagText: {
-    ...typography.footnote,
-    color: colors.secondaryLabel,
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.subText,
   },
   tagTextActive: {
     color: colors.brand,
+    fontWeight: "600",
+  },
+  add: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: radius.chip,
+    flexShrink: 0,
+  },
+  addOn: {
+    backgroundColor: colors.brand,
+  },
+  addOff: {
+    backgroundColor: colors.fillStrong,
+  },
+  addText: {
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+  addTextOn: {
+    color: colors.canvas,
+  },
+  addTextOff: {
+    color: colors.tertiaryLabel,
+  },
+  check: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    marginTop: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.8,
+  },
+  checkOff: {
+    borderColor: colors.quaternary,
+    backgroundColor: "transparent",
+  },
+  checkDone: {
+    borderColor: colors.brand,
+    backgroundColor: colors.brand,
+  },
+  noteMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  noteText: {
+    fontSize: 15,
+    lineHeight: 21,
+    letterSpacing: -0.3,
+    color: colors.label,
+  },
+  noteTextDone: {
+    color: "#A9A9AE",
+    textDecorationLine: "line-through",
+  },
+  noteMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 5,
+  },
+  tagChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    backgroundColor: colors.fill,
+  },
+  tagChipText: {
+    ...typography.smallBadge,
+    color: colors.secondaryLabel,
+  },
+  noteTime: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.tertiaryLabel,
   },
 });

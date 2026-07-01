@@ -32,7 +32,8 @@ function RootStack() {
         <Stack.Screen
           name="task/[id]"
           options={{
-            presentation: "modal",
+            presentation: "transparentModal",
+            animation: "fade",
             headerShown: false,
           }}
         />
@@ -96,14 +97,14 @@ const styles = StyleSheet.create({
   mark: {
     width: 56,
     height: 56,
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: colors.ink,
+    backgroundColor: colors.brand,
     color: colors.canvas,
     textAlign: "center",
     lineHeight: 56,
     fontSize: 24,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   loadingText: {
     ...typography.callout,

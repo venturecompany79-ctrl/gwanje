@@ -1,143 +1,323 @@
-import { useCallback } from "react";
-import { Linking, Pressable, StyleSheet } from "react-native";
+import { useCallback, type ReactNode } from "react";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Mail, Phone } from "lucide-react-native";
-import { colors, radius } from "@/design/tokens";
-import { daysFromDateString, ddayLabel, shortDate } from "@/lib/dates";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ChevronLeft, Mail, Phone, ShieldCheck } from "lucide-react-native";
+import { colors, radius, spacing, typography } from "@/design/tokens";
+import { daysFromDateString, monthDayKo } from "@/lib/dates";
 import { TASK_STAGE_LABEL } from "@/lib/labels";
 import { loadCompanyDetail } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { useAuth } from "@/context/AuthContext";
-import { DdayPill, EmptyState, LoadingState, Row, Section } from "@/ui/Primitives";
-import { Screen } from "@/ui/Screen";
+import {
+  Cell,
+  Chevron,
+  DdayBadge,
+  Group,
+  InlineEmpty,
+  Loading,
+  SectionLabel,
+  StageBadge,
+} from "@/ui/Primitives";
+
+function ActionButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.action,
+        pressed && !disabled && styles.actionPressed,
+        disabled && styles.actionDisabled,
+      ]}
+    >
+      {icon}
+      <Text style={[styles.actionLabel, disabled && styles.actionLabelOff]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function CompanyDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const loadCurrentCompany = useCallback(
     () => (session ? loadCompanyDetail(String(id)) : Promise.resolve(null)),
     [id, session],
   );
-  const { data, loading, refreshing, error, refresh } = useAsyncData(
-    loadCurrentCompany,
-  );
-
-  const company = data?.company;
+  const { data, loading, error } = useAsyncData(loadCurrentCompany);
 
   if (!session) {
     return <Redirect href="/login" />;
   }
 
+  const company = data?.company;
+  const meta = company
+    ? [company.industry, company.region].filter(Boolean).join(" · ")
+    : "";
+  const contactName = company?.contact_name ?? company?.ceo_name ?? "담당자 미지정";
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <Screen
-        title={company?.name ?? "기업"}
-        subtitle={company ? [company.industry, company.region].filter(Boolean).join(" · ") : undefined}
-        refreshing={refreshing}
-        onRefresh={refresh}
-        action={
-          <Pressable style={styles.back} onPress={() => router.back()}>
-            <ArrowLeft size={18} color={colors.secondaryLabel} />
+      <View style={styles.root}>
+        <View style={[styles.nav, { paddingTop: insets.top }]}>
+          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={8}>
+            <ChevronLeft size={22} color={colors.brand} strokeWidth={2.1} />
+            <Text style={styles.backText}>기업</Text>
           </Pressable>
-        }
-      >
-        {loading ? <LoadingState /> : null}
-        {error ? <EmptyState title="기업 상세를 불러오지 못했습니다" description={error} /> : null}
-        {data && company ? (
-          <>
-            <Section title="담당자">
-              <Row title="대표자" subtitle={company.ceo_name ?? "-"} />
-              <Row title="실무 담당" subtitle={company.contact_name ?? "-"} />
-              {company.contact_phone ? (
-                <Row
-                  title={company.contact_phone}
-                  subtitle="전화 걸기"
-                  icon={<Phone size={18} color={colors.brand} />}
-                  tone="brand"
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
+        >
+          {loading && !data ? <Loading /> : null}
+          {error ? <InlineEmpty>기업 상세를 불러오지 못했습니다</InlineEmpty> : null}
+          {data && company ? (
+            <>
+              <View style={styles.titleBlock}>
+                <Text style={styles.name}>{company.name}</Text>
+                {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+              </View>
+
+              <View style={styles.actions}>
+                <ActionButton
+                  icon={<Phone size={21} color={colors.brand} strokeWidth={1.8} />}
+                  label="전화"
+                  disabled={!company.contact_phone}
                   onPress={() => Linking.openURL(`tel:${company.contact_phone}`)}
                 />
-              ) : null}
-              {company.contact_email ? (
-                <Row
-                  title={company.contact_email}
-                  subtitle="메일 작성"
-                  icon={<Mail size={18} color={colors.brand} />}
-                  tone="brand"
+                <ActionButton
+                  icon={<Mail size={21} color={colors.brand} strokeWidth={1.8} />}
+                  label="메일"
+                  disabled={!company.contact_email}
                   onPress={() => Linking.openURL(`mailto:${company.contact_email}`)}
                 />
-              ) : null}
-            </Section>
+              </View>
 
-            <Section title="다가오는 일정" caption={`${data.deadlines.length}건`}>
+              <SectionLabel>담당자</SectionLabel>
+              <View style={styles.contactCard}>
+                <Text style={styles.contactName}>{contactName}</Text>
+                {company.contact_phone ? (
+                  <Text style={styles.contactLine}>{company.contact_phone}</Text>
+                ) : null}
+                {company.contact_email ? (
+                  <Text style={styles.contactLine}>{company.contact_email}</Text>
+                ) : null}
+              </View>
+
               {data.deadlines.length > 0 ? (
-                data.deadlines.map((item) => (
-                  <Row
-                    key={`${item.source}-${item.id}`}
-                    title={item.title ?? "일정"}
-                    subtitle={shortDate(item.due_date)}
-                    right={<DdayPill daysLeft={item.days_left} />}
-                    tone={
-                      item.days_left !== null && item.days_left <= 3
-                        ? "critical"
-                        : "attention"
-                    }
-                    accent={item.days_left !== null && item.days_left <= 3}
-                  />
-                ))
-              ) : (
-                <EmptyState title="다가오는 일정이 없습니다" compact />
-              )}
-            </Section>
+                <>
+                  <SectionLabel>다가오는 일정</SectionLabel>
+                  <Group>
+                    {data.deadlines.map((item, i) => (
+                      <Cell key={`${item.source}-${item.id}`} last={i === data.deadlines.length - 1}>
+                        <Text style={styles.scheduleTitle} numberOfLines={1}>
+                          {item.title ?? "일정"}
+                        </Text>
+                        <View style={styles.scheduleRight}>
+                          <Text style={styles.due}>{monthDayKo(item.due_date)}</Text>
+                          <DdayBadge daysLeft={item.days_left} />
+                        </View>
+                      </Cell>
+                    ))}
+                  </Group>
+                </>
+              ) : null}
 
-            <Section title="자격·인증" caption={`${data.credentials.length}건`}>
-              {data.credentials.length > 0 ? (
-                data.credentials.slice(0, 8).map((credential) => (
-                  <Row
-                    key={credential.id}
-                    title={credential.type}
-                    subtitle={`만료 ${shortDate(credential.expires_date)}`}
-                    meta={credential.memo}
-                    dense
-                  />
-                ))
-              ) : (
-                <EmptyState title="등록된 자격이 없습니다" compact />
-              )}
-            </Section>
+              <SectionLabel>자격 · 인증</SectionLabel>
+              <Group>
+                {data.credentials.length > 0 ? (
+                  data.credentials.slice(0, 10).map((credential, i, arr) => (
+                    <Cell key={credential.id} last={i === arr.length - 1} sepInset={43}>
+                      <ShieldCheck size={17} color={colors.muted} strokeWidth={1.5} />
+                      <Text style={styles.credName} numberOfLines={1}>
+                        {credential.type}
+                      </Text>
+                    </Cell>
+                  ))
+                ) : (
+                  <InlineEmpty>등록된 자격·인증 없음</InlineEmpty>
+                )}
+              </Group>
 
-            <Section title="Task" caption={`${data.tasks.length}건`}>
-              {data.tasks.length > 0 ? (
-                data.tasks.slice(0, 8).map((task) => (
-                  <Row
-                    key={task.id}
-                    title={task.title}
-                    subtitle={TASK_STAGE_LABEL[task.stage]}
-                    meta={`${shortDate(task.due_date)} · ${ddayLabel(daysFromDateString(task.due_date))}`}
-                    tone="brand"
-                    dense
-                    onPress={() => router.push(`/task/${task.id}`)}
-                  />
-                ))
-              ) : (
-                <EmptyState title="등록된 Task가 없습니다" compact />
-              )}
-            </Section>
-          </>
-        ) : null}
-      </Screen>
+              <SectionLabel>Task</SectionLabel>
+              <Group>
+                {data.tasks.length > 0 ? (
+                  data.tasks.slice(0, 10).map((task, i, arr) => {
+                    const done = task.stage === "result";
+                    return (
+                      <Cell
+                        key={task.id}
+                        last={i === arr.length - 1}
+                        onPress={() => router.push(`/task/${task.id}`)}
+                      >
+                        <View style={styles.taskMain}>
+                          <Text style={styles.taskTitle} numberOfLines={1}>
+                            {task.title}
+                          </Text>
+                          <View style={styles.taskMeta}>
+                            <StageBadge label={TASK_STAGE_LABEL[task.stage]} done={done} />
+                          </View>
+                        </View>
+                        <DdayBadge
+                          daysLeft={daysFromDateString(task.due_date)}
+                          tone={done ? "success" : undefined}
+                          label={done ? "완료" : undefined}
+                        />
+                        <Chevron />
+                      </Cell>
+                    );
+                  })
+                ) : (
+                  <InlineEmpty>등록된 Task 없음</InlineEmpty>
+                )}
+              </Group>
+            </>
+          ) : null}
+        </ScrollView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.grouped,
+  },
+  nav: {
+    backgroundColor: colors.grouped,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+  },
   back: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.full,
-    backgroundColor: colors.fill,
+    height: 44,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingLeft: 8,
+    paddingRight: 12,
+    alignSelf: "flex-start",
+  },
+  backText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: colors.brand,
+    letterSpacing: -0.3,
+  },
+  titleBlock: {
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+  name: {
+    ...typography.detailTitle,
+    color: colors.label,
+  },
+  meta: {
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+    marginTop: 5,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+  },
+  action: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 12,
+    backgroundColor: colors.card,
+    borderRadius: 13,
+  },
+  actionPressed: {
+    backgroundColor: "rgba(60,60,67,0.04)",
+  },
+  actionDisabled: {
+    opacity: 0.45,
+  },
+  actionLabel: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.brand,
+  },
+  actionLabelOff: {
+    color: colors.secondaryLabel,
+  },
+  contactCard: {
+    marginHorizontal: spacing.base,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+  },
+  contactName: {
+    ...typography.rowTitleLg,
+    color: colors.label,
+  },
+  contactLine: {
+    fontSize: 13.5,
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+    marginTop: 3,
+  },
+  scheduleTitle: {
+    flex: 1,
+    minWidth: 0,
+    ...typography.rowBody,
+    color: colors.label,
+  },
+  scheduleRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  due: {
+    ...typography.time,
+    color: colors.tertiaryLabel,
+  },
+  credName: {
+    flex: 1,
+    minWidth: 0,
+    ...typography.rowBody,
+    color: colors.label,
+  },
+  taskMain: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  taskTitle: {
+    ...typography.rowTitle,
+    color: colors.label,
+  },
+  taskMeta: {
+    flexDirection: "row",
   },
 });

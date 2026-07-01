@@ -1,42 +1,54 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { StyleSheet, TextInput, View } from "react-native";
-import { Building2, Search } from "lucide-react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Search } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
-import { ddayLabel } from "@/lib/dates";
 import { loadCompanies, type CompanyListItem } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { DdayPill, EmptyState, LoadingState, Row, Section } from "@/ui/Primitives";
+import {
+  Cell,
+  Chevron,
+  DdayBadge,
+  Group,
+  InlineEmpty,
+  Loading,
+} from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
-function CompanyRow({ company, onPress }: { company: CompanyListItem; onPress: () => void }) {
-  const hasDeadline = company.nearestDaysLeft !== null;
-  const companyMeta = [company.industry, company.region].filter(Boolean).join(" · ");
-  const urgent =
-    company.nearestDaysLeft !== null &&
-    company.nearestDaysLeft !== undefined &&
-    company.nearestDaysLeft <= 7;
+function CompanyCell({
+  company,
+  last,
+  onPress,
+}: {
+  company: CompanyListItem;
+  last?: boolean;
+  onPress: () => void;
+}) {
+  const sub = [company.contact_name, company.industry, company.region]
+    .filter(Boolean)
+    .join(" · ");
+  const hasDeadline = company.nearestDaysLeft !== null && company.nearestDaysLeft !== undefined;
   return (
-    <Row
-      title={company.name}
-      subtitle={company.contact_name ? `담당 ${company.contact_name}` : "담당자 미지정"}
-      meta={
-        hasDeadline
-          ? [companyMeta, `가까운 일정 ${ddayLabel(company.nearestDaysLeft)}`]
-              .filter(Boolean)
-              .join(" · ")
-          : companyMeta || "다가오는 마감 없음"
-      }
-      icon={
-        <Building2
-          size={18}
-          color={urgent ? colors.attention : colors.brand}
-        />
-      }
-      tone={urgent ? "attention" : "brand"}
-      right={hasDeadline ? <DdayPill daysLeft={company.nearestDaysLeft} /> : undefined}
-      onPress={onPress}
-    />
+    <Cell last={last} onPress={onPress}>
+      <View style={styles.main}>
+        <Text style={styles.name} numberOfLines={1}>
+          {company.name}
+        </Text>
+        {sub ? (
+          <Text style={styles.sub} numberOfLines={1}>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.right}>
+        {hasDeadline ? (
+          <DdayBadge daysLeft={company.nearestDaysLeft} />
+        ) : (
+          <DdayBadge label="없음" tone="neutral" />
+        )}
+        <Chevron />
+      </View>
+    </Cell>
   );
 }
 
@@ -49,61 +61,90 @@ export default function CompaniesScreen() {
     const q = query.trim().toLowerCase();
     if (!q) return data ?? [];
     return (data ?? []).filter((company) =>
-      [company.name, company.industry, company.contact_name, company.ceo_name]
+      [company.name, company.industry, company.region, company.contact_name, company.ceo_name]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q)),
     );
   }, [data, query]);
 
   return (
-    <Screen title="기업" subtitle="담당자와 요약 조회" refreshing={refreshing} onRefresh={refresh}>
-      <View style={styles.search}>
-        <Search size={18} color={colors.tertiaryLabel} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="기업명, 업종, 담당자 검색"
-          style={styles.searchInput}
-          autoCorrect={false}
-        />
+    <Screen title="기업" refreshing={refreshing} onRefresh={refresh}>
+      <View style={styles.searchWrap}>
+        <View style={styles.search}>
+          <Search size={16} color={colors.secondaryLabel} strokeWidth={1.7} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="검색"
+            placeholderTextColor={colors.secondaryLabel}
+            style={styles.searchInput}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+        </View>
       </View>
 
-      {loading ? <LoadingState /> : null}
-      {error ? <EmptyState title="기업을 불러오지 못했습니다" description={error} /> : null}
+      {loading && !data ? <Loading /> : null}
+      {error ? <InlineEmpty>기업을 불러오지 못했습니다</InlineEmpty> : null}
       {data ? (
-        <Section title="관리 기업" caption={`${filtered.length}개사`}>
-          {filtered.length > 0 ? (
-            filtered.map((company) => (
-              <CompanyRow
+        filtered.length > 0 ? (
+          <Group>
+            {filtered.map((company, i) => (
+              <CompanyCell
                 key={company.id}
                 company={company}
+                last={i === filtered.length - 1}
                 onPress={() => router.push(`/company/${company.id}`)}
               />
-            ))
-          ) : (
-            <EmptyState title="검색 결과가 없습니다" compact />
-          )}
-        </Section>
+            ))}
+          </Group>
+        ) : (
+          <InlineEmpty>검색 결과가 없습니다</InlineEmpty>
+        )
       ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  searchWrap: {
+    marginHorizontal: spacing.base,
+    marginTop: spacing.md,
+  },
   search: {
-    minHeight: 44,
-    borderRadius: radius.full,
-    backgroundColor: colors.canvas,
-    paddingHorizontal: spacing.base,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.searchFill,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
+    gap: 7,
   },
   searchInput: {
     flex: 1,
-    ...typography.body,
+    fontSize: 16,
+    letterSpacing: -0.3,
     color: colors.label,
+    paddingVertical: 8,
+  },
+  main: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  name: {
+    ...typography.rowTitleLg,
+    color: colors.label,
+  },
+  sub: {
+    fontSize: 13,
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+  },
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    flexShrink: 0,
   },
 });

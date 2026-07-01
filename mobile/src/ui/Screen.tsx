@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,7 +8,7 @@ import {
   type ScrollViewProps,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, spacing, typography } from "@/design/tokens";
+import { colors, typography } from "@/design/tokens";
 
 interface ScreenProps extends Omit<ScrollViewProps, "refreshControl"> {
   title: string;
@@ -35,15 +34,14 @@ export function Screen({
     <ScrollView
       style={styles.root}
       showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
       refreshControl={
         onRefresh ? (
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tertiaryLabel} />
         ) : undefined
       }
       contentContainerStyle={[
-        styles.content,
-        { paddingBottom: 110 + insets.bottom },
+        { paddingTop: insets.top + 8, paddingBottom: 96 + insets.bottom },
         contentContainerStyle,
       ]}
       {...props}
@@ -65,36 +63,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.grouped,
   },
-  content: {
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.xl,
-    gap: spacing.lg,
-  },
   head: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: spacing.base,
-    marginBottom: 2,
+    alignItems: "flex-start",
+    paddingTop: 10,
+    paddingBottom: 2,
+    paddingLeft: 20,
+    paddingRight: 16,
   },
   headText: {
     flex: 1,
+    minWidth: 0,
   },
   title: {
-    ...typography.largeTitle,
-    color: colors.inkDeep,
-    ...Platform.select({
-      web: {
-        fontWeight: "800",
-      },
-      default: {},
-    }),
+    ...typography.screenTitle,
+    color: colors.label,
   },
   subtitle: {
-    ...typography.callout,
+    ...typography.subtitle,
     color: colors.secondaryLabel,
     marginTop: 4,
   },
   action: {
-    paddingBottom: 2,
+    marginTop: 2,
+    flexShrink: 0,
   },
 });

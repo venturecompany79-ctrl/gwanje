@@ -1,178 +1,233 @@
-import type { ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
   type PressableProps,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
-import {
-  AlertTriangle,
-  ChevronRight,
-  Circle,
-  CheckCircle2,
-} from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { ddayLabel } from "@/lib/dates";
 
-type Tone = "neutral" | "brand" | "critical" | "attention" | "success" | "purple";
+type Tone = "critical" | "attention" | "success" | "neutral";
 
-export function Section({
-  title,
-  caption,
+/* ---------- Section label ---------- */
+
+export function SectionLabel({
   children,
+  style,
 }: {
-  title?: string;
-  caption?: string;
   children: ReactNode;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View>
-      {title ? (
-        <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          {caption ? <Text style={styles.sectionCaption}>{caption}</Text> : null}
-        </View>
-      ) : null}
-      <View style={styles.group}>{children}</View>
+    <View style={[styles.sectionLabel, style]}>
+      <Text style={styles.sectionLabelText}>{children}</Text>
     </View>
   );
 }
 
-export function Row({
-  title,
-  subtitle,
-  meta,
-  icon,
-  right,
-  tone = "neutral",
-  accent = false,
-  dense = false,
-  onPress,
+/* ---------- Grouped list container ---------- */
+
+export function Group({
+  children,
+  style,
 }: {
-  title: string;
-  subtitle?: string | null;
-  meta?: string | null;
-  icon?: ReactNode;
-  right?: ReactNode;
-  tone?: Tone;
-  accent?: boolean;
-  dense?: boolean;
-  onPress?: PressableProps["onPress"];
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
 }) {
-  const content = (
+  const items = Children.toArray(children).filter(isValidElement) as ReactElement<{
+    last?: boolean;
+  }>[];
+  return (
+    <View style={[styles.group, style]}>
+      {items.map((child, i) =>
+        cloneElement(child, { key: child.key ?? i, last: i === items.length - 1 }),
+      )}
+    </View>
+  );
+}
+
+/* ---------- List cell (row) ---------- */
+
+export function Cell({
+  children,
+  onPress,
+  last,
+  sepInset = 16,
+  style,
+  align = "center",
+}: {
+  children: ReactNode;
+  onPress?: PressableProps["onPress"];
+  last?: boolean;
+  sepInset?: number;
+  style?: StyleProp<ViewStyle>;
+  align?: "center" | "flex-start";
+}) {
+  const inner = (
     <>
-      {accent ? <View style={[styles.rowAccent, styles[`rowAccent_${tone}`]]} /> : null}
-      {icon ? (
-        <View style={[styles.rowIcon, styles[`rowIcon_${tone}`]]}>{icon}</View>
-      ) : null}
-      <View style={styles.rowText}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={styles.rowSub} numberOfLines={2}>
-            {subtitle}
-          </Text>
-        ) : null}
-        {meta ? <Text style={styles.rowMeta}>{meta}</Text> : null}
-      </View>
-      {right ?? (onPress ? <ChevronRight size={18} color={colors.tertiaryLabel} /> : null)}
+      {children}
+      {!last ? <View style={[styles.sep, { left: sepInset }]} /> : null}
     </>
   );
-
   if (onPress) {
     return (
       <Pressable
-        style={({ pressed }) => [
-          styles.row,
-          dense && styles.rowDense,
-          pressed && styles.pressed,
-        ]}
         onPress={onPress}
+        style={({ pressed }) => [
+          styles.cell,
+          { alignItems: align },
+          style,
+          pressed && styles.cellPressed,
+        ]}
       >
-        {content}
+        {inner}
       </Pressable>
     );
   }
-  return <View style={[styles.row, dense && styles.rowDense]}>{content}</View>;
+  return <View style={[styles.cell, { alignItems: align }, style]}>{inner}</View>;
 }
 
-export function DdayPill({ daysLeft }: { daysLeft: number | null | undefined }) {
-  const tone =
-    daysLeft === null || daysLeft === undefined
-      ? "neutral"
-      : daysLeft < 0 || daysLeft <= 3
-        ? "critical"
-        : daysLeft <= 7
-          ? "attention"
-          : "neutral";
-  return (
-    <View style={[styles.pill, styles[`pill_${tone}`]]}>
-      <Text style={[styles.pillText, styles[`pillText_${tone}`]]}>
-        {ddayLabel(daysLeft)}
-      </Text>
-    </View>
-  );
+export function Chevron() {
+  return <ChevronRight size={17} color={colors.quaternary} strokeWidth={2.1} />;
 }
 
-export function StagePill({ label, active }: { label: string; active?: boolean }) {
-  return (
-    <View style={[styles.stage, active && styles.stageActive]}>
-      {active ? (
-        <CheckCircle2 size={14} color={colors.brand} />
-      ) : (
-        <Circle size={14} color={colors.tertiaryLabel} />
-      )}
-      <Text style={[styles.stageText, active && styles.stageTextActive]}>
-        {label}
-      </Text>
-    </View>
-  );
+/* ---------- D-day badge ---------- */
+
+export function ddayTone(daysLeft: number | null | undefined): Tone {
+  if (daysLeft === null || daysLeft === undefined) return "neutral";
+  if (daysLeft < 0 || daysLeft <= 3) return "critical";
+  if (daysLeft <= 7) return "attention";
+  return "neutral";
 }
 
-export function StatusBadge({
-  children,
-  tone = "neutral",
+export function DdayBadge({
+  daysLeft,
+  label,
+  tone,
 }: {
-  children: ReactNode;
+  daysLeft?: number | null;
+  label?: string;
   tone?: Tone;
 }) {
+  const t = tone ?? ddayTone(daysLeft);
+  const text = label ?? ddayLabel(daysLeft);
   return (
-    <View style={[styles.badge, styles[`badge_${tone}`]]}>
-      <Text style={[styles.badgeText, styles[`badgeText_${tone}`]]}>
-        {children}
-      </Text>
+    <View style={[styles.dday, styles[`ddayBg_${t}`]]}>
+      <Text style={[styles.ddayText, styles[`ddayText_${t}`]]}>{text}</Text>
     </View>
   );
 }
 
-export function FilterChip({
+/* ---------- Stage badge (small, inline) ---------- */
+
+export function StageBadge({ label, done }: { label: string; done?: boolean }) {
+  return (
+    <View style={[styles.stage, done && styles.stageDone]}>
+      <Text style={[styles.stageText, done && styles.stageTextDone]}>{label}</Text>
+    </View>
+  );
+}
+
+/* ---------- Segmented control ---------- */
+
+export function Segmented<T extends string>({
+  items,
+  value,
+  onChange,
+}: {
+  items: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segment}>
+      {items.map((item) => {
+        const active = item.value === value;
+        return (
+          <Pressable
+            key={item.value}
+            onPress={() => onChange(item.value)}
+            style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+          >
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/* ---------- Chips (horizontal scroller) ---------- */
+
+export function ChipScroller({ children }: { children: ReactNode }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chipScroll}
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
+export function Chip({
   label,
   active,
   onPress,
+  variant = "dark",
 }: {
   label: string;
   active?: boolean;
   onPress?: PressableProps["onPress"];
+  variant?: "dark" | "tint";
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.filter,
-        active && styles.filterActive,
-        pressed && !active && styles.filterPressed,
+      style={[
+        styles.chip,
+        variant === "tint" && styles.chipTintPad,
+        active
+          ? variant === "dark"
+            ? styles.chipDarkActive
+            : styles.chipTintActive
+          : styles.chipInactive,
       ]}
     >
-      <Text style={[styles.filterText, active && styles.filterTextActive]}>
+      <Text
+        style={[
+          variant === "tint" ? styles.chipTextTint : styles.chipText,
+          active
+            ? variant === "dark"
+              ? styles.chipTextDarkActive
+              : styles.chipTextTintActive
+            : null,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
   );
 }
+
+/* ---------- Primary button ---------- */
 
 export function PrimaryButton({
   children,
@@ -187,37 +242,37 @@ export function PrimaryButton({
       {...props}
       style={(state) => [
         styles.button,
-        state.pressed && styles.buttonPressed,
+        state.pressed && !props.disabled && styles.buttonPressed,
         props.disabled && styles.buttonDisabled,
         typeof style === "function" ? style(state) : style,
       ]}
     >
-      <Text style={styles.buttonText}>{children}</Text>
+      <Text style={[styles.buttonText, props.disabled && styles.buttonTextDisabled]}>
+        {children}
+      </Text>
     </Pressable>
   );
 }
 
-export function EmptyState({
-  title,
-  description,
-  compact = false,
-}: {
-  title: string;
-  description?: string;
-  compact?: boolean;
-}) {
+/* ---------- States ---------- */
+
+export function EmptyText({ children }: { children: ReactNode }) {
   return (
-    <View style={[styles.empty, compact && styles.emptyCompact]}>
-      <View style={styles.emptyIcon}>
-        <AlertTriangle size={compact ? 18 : 24} color={colors.tertiaryLabel} />
-      </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {description ? <Text style={styles.emptyDesc}>{description}</Text> : null}
+    <View style={styles.emptyText}>
+      <Text style={styles.emptyTextLabel}>{children}</Text>
     </View>
   );
 }
 
-export function LoadingState() {
+export function InlineEmpty({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.inlineEmpty}>
+      <Text style={styles.emptyTextLabel}>{children}</Text>
+    </View>
+  );
+}
+
+export function Loading() {
   return (
     <View style={styles.loading}>
       <ActivityIndicator color={colors.brand} />
@@ -226,307 +281,199 @@ export function LoadingState() {
 }
 
 const styles = StyleSheet.create({
-  sectionHead: {
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
+  sectionLabel: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  sectionTitle: {
-    ...typography.footnote,
-    color: colors.charcoal,
-    fontWeight: "700",
-  },
-  sectionCaption: {
-    ...typography.footnote,
-    color: colors.stone,
+  sectionLabelText: {
+    ...typography.sectionLabel,
+    color: colors.secondaryLabel,
   },
   group: {
-    backgroundColor: colors.secondaryGrouped,
-    borderRadius: radius.xl,
+    marginHorizontal: spacing.base,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
     overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairlineSoft,
     ...Platform.select({
-      web: {
-        boxShadow: "0 4px 20px rgba(10,19,23,.035)",
-      },
+      web: { boxShadow: "0 0 0 0.5px rgba(0,0,0,0.04), 0 1px 3px rgba(10,19,23,0.04)" },
       default: {},
     }),
   },
-  row: {
-    minHeight: 66,
+  cell: {
+    minHeight: 44,
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.hairlineSoft,
+    paddingLeft: 16,
+    paddingRight: 15,
+    paddingVertical: 12,
+    gap: 12,
     position: "relative",
   },
-  rowDense: {
-    minHeight: 58,
-    paddingVertical: spacing.sm,
+  cellPressed: {
+    backgroundColor: "rgba(60,60,67,0.06)",
   },
-  pressed: {
-    backgroundColor: colors.surfaceSoft,
-  },
-  rowAccent: {
+  sep: {
     position: "absolute",
-    left: 0,
-    top: 0,
+    left: 16,
+    right: 0,
     bottom: 0,
-    width: 3,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
   },
-  rowAccent_neutral: {
-    backgroundColor: "transparent",
+  dday: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: radius.sm,
+    alignSelf: "flex-start",
   },
-  rowAccent_brand: {
-    backgroundColor: colors.brand,
-  },
-  rowAccent_critical: {
-    backgroundColor: colors.critical,
-  },
-  rowAccent_attention: {
-    backgroundColor: colors.attention,
-  },
-  rowAccent_success: {
-    backgroundColor: colors.success,
-  },
-  rowAccent_purple: {
-    backgroundColor: colors.purple,
-  },
-  rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowIcon_neutral: {
-    backgroundColor: colors.surfaceSoft,
-  },
-  rowIcon_brand: {
-    backgroundColor: colors.brandLight,
-  },
-  rowIcon_critical: {
-    backgroundColor: colors.criticalSoft,
-  },
-  rowIcon_attention: {
-    backgroundColor: colors.attentionSoft,
-  },
-  rowIcon_success: {
-    backgroundColor: colors.successSoft,
-  },
-  rowIcon_purple: {
-    backgroundColor: colors.purpleSoft,
-  },
-  rowText: {
-    flex: 1,
-    gap: 3,
-    minWidth: 0,
-  },
-  rowTitle: {
-    ...typography.bodyStrong,
-    color: colors.inkDeep,
-    fontWeight: "700",
-  },
-  rowSub: {
-    ...typography.callout,
-    color: colors.charcoal,
-  },
-  rowMeta: {
-    ...typography.footnote,
-    color: colors.stone,
-  },
-  pill: {
-    borderRadius: radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    minWidth: 50,
-    alignItems: "center",
-  },
-  pill_neutral: {
-    backgroundColor: colors.surfaceSoft,
-  },
-  pill_attention: {
-    backgroundColor: colors.attentionSoft,
-  },
-  pill_critical: {
-    backgroundColor: colors.criticalSoft,
-  },
-  pillText: {
-    ...typography.caption,
-    fontWeight: "700",
-  },
-  pillText_neutral: {
-    color: colors.secondaryLabel,
-  },
-  pillText_attention: {
-    color: colors.attention,
-  },
-  pillText_critical: {
-    color: colors.critical,
-  },
+  ddayBg_critical: { backgroundColor: colors.criticalTint },
+  ddayBg_attention: { backgroundColor: colors.attentionTint },
+  ddayBg_success: { backgroundColor: colors.successTint },
+  ddayBg_neutral: { backgroundColor: colors.fill },
+  ddayText: { ...typography.badge },
+  ddayText_critical: { color: colors.critical },
+  ddayText_attention: { color: colors.attention },
+  ddayText_success: { color: colors.success },
+  ddayText_neutral: { color: colors.secondaryLabel },
   stage: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairlineSoft,
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: radius.xs,
+    backgroundColor: colors.fill,
+    alignSelf: "flex-start",
   },
-  stageActive: {
-    backgroundColor: colors.brandLight,
-    borderColor: "rgba(0, 100, 224, 0.22)",
+  stageDone: {
+    backgroundColor: colors.successTint,
   },
   stageText: {
-    ...typography.caption,
-    color: colors.secondaryLabel,
+    ...typography.smallBadge,
+    color: colors.subText,
   },
-  stageTextActive: {
-    color: colors.brand,
-  },
-  badge: {
-    alignSelf: "flex-start",
-    borderRadius: radius.full,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  badge_neutral: {
-    backgroundColor: colors.canvas,
-    borderColor: colors.hairline,
-  },
-  badge_brand: {
-    backgroundColor: colors.brandLight,
-    borderColor: "rgba(0, 100, 224, 0.18)",
-  },
-  badge_critical: {
-    backgroundColor: colors.critical,
-    borderColor: colors.critical,
-  },
-  badge_attention: {
-    backgroundColor: colors.attentionSoft,
-    borderColor: colors.attentionBorder,
-  },
-  badge_success: {
-    backgroundColor: colors.successSoft,
-    borderColor: "rgba(20, 122, 73, 0.22)",
-  },
-  badge_purple: {
-    backgroundColor: colors.purpleSoft,
-    borderColor: "rgba(111, 63, 192, 0.2)",
-  },
-  badgeText: {
-    ...typography.caption,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: "700",
-  },
-  badgeText_neutral: {
-    color: colors.charcoal,
-  },
-  badgeText_brand: {
-    color: colors.brand,
-  },
-  badgeText_critical: {
-    color: colors.canvas,
-  },
-  badgeText_attention: {
-    color: colors.attention,
-  },
-  badgeText_success: {
+  stageTextDone: {
     color: colors.success,
   },
-  badgeText_purple: {
-    color: colors.purple,
+  segment: {
+    flexDirection: "row",
+    gap: 2,
+    padding: 2,
+    backgroundColor: colors.segmentTrack,
+    borderRadius: radius.chip,
   },
-  filter: {
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.canvas,
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
   },
-  filterActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
+  segmentBtnActive: {
+    backgroundColor: colors.canvas,
+    ...Platform.select({
+      web: { boxShadow: "0 1px 3px rgba(0,0,0,0.13)" },
+      default: {
+        shadowColor: "#000",
+        shadowOpacity: 0.13,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 1 },
+      },
+    }),
   },
-  filterPressed: {
-    backgroundColor: colors.surfaceSoft,
+  segmentText: {
+    fontSize: 13.5,
+    letterSpacing: -0.2,
+    fontWeight: "500",
+    color: colors.subText,
   },
-  filterText: {
-    ...typography.footnote,
-    color: colors.charcoal,
-    fontWeight: "700",
+  segmentTextActive: {
+    color: colors.label,
+    fontWeight: "600",
   },
-  filterTextActive: {
+  chipScroll: {
+    paddingHorizontal: spacing.base,
+    gap: spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.chip,
+  },
+  chipTintPad: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  chipInactive: {
+    backgroundColor: colors.fill,
+  },
+  chipDarkActive: {
+    backgroundColor: colors.label,
+  },
+  chipTintActive: {
+    backgroundColor: colors.brandTintStrong,
+  },
+  chipText: {
+    fontSize: 13.5,
+    letterSpacing: -0.2,
+    fontWeight: "500",
+    color: colors.chipText,
+  },
+  chipTextTint: {
+    fontSize: 13,
+    letterSpacing: -0.2,
+    fontWeight: "500",
+    color: colors.subText,
+  },
+  chipTextDarkActive: {
     color: colors.canvas,
+    fontWeight: "600",
+  },
+  chipTextTintActive: {
+    color: colors.brand,
+    fontWeight: "600",
   },
   button: {
-    minHeight: 48,
-    borderRadius: radius.full,
+    width: "100%",
+    minHeight: 52,
+    borderRadius: radius.card,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 8px 18px rgba(0,100,224,.20)",
-      },
-      default: {},
-    }),
   },
   buttonPressed: {
     backgroundColor: colors.brandDeep,
   },
   buttonDisabled: {
-    backgroundColor: colors.stone,
+    backgroundColor: colors.fillStrong,
   },
   buttonText: {
-    ...typography.bodyStrong,
+    fontSize: 16.5,
+    fontWeight: "600",
+    letterSpacing: -0.3,
     color: colors.canvas,
   },
-  empty: {
-    minHeight: 150,
+  buttonTextDisabled: {
+    color: colors.tertiaryLabel,
+  },
+  emptyText: {
+    paddingVertical: 48,
+    paddingHorizontal: spacing.lg,
     alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    padding: spacing.lg,
   },
-  emptyCompact: {
-    minHeight: 112,
-    padding: spacing.base,
-  },
-  emptyIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceSoft,
+  inlineEmpty: {
+    paddingVertical: 22,
+    paddingHorizontal: spacing.base,
     alignItems: "center",
-    justifyContent: "center",
   },
-  emptyTitle: {
-    ...typography.title3,
-    color: colors.inkDeep,
+  emptyTextLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.muted,
     textAlign: "center",
-  },
-  emptyDesc: {
-    ...typography.callout,
-    color: colors.secondaryLabel,
-    textAlign: "center",
+    letterSpacing: -0.2,
   },
   loading: {
-    minHeight: 150,
+    paddingVertical: 40,
     alignItems: "center",
     justifyContent: "center",
   },

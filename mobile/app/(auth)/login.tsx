@@ -10,13 +10,14 @@ import {
   View,
 } from "react-native";
 import { Redirect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { AlertTriangle, Eye, EyeOff } from "lucide-react-native";
+import { Lock, Mail } from "lucide-react-native";
 import { useAuth } from "@/context/AuthContext";
-import { colors, radius, spacing, typography } from "@/design/tokens";
-import { PrimaryButton } from "@/ui/Primitives";
+import { colors, radius } from "@/design/tokens";
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const { session, signIn, envReady } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,8 +26,13 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
+    if (pending) return;
     if (!envReady) {
       setError("모바일 env를 먼저 설정해 주세요.");
+      return;
+    }
+    if (!email.trim() || !password) {
+      setError("이메일과 비밀번호를 입력하세요.");
       return;
     }
     setPending(true);
@@ -53,90 +59,85 @@ export default function LoginScreen() {
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 28 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brand}>
-          <Text style={styles.mark}>관</Text>
+          <View style={styles.mark}>
+            <Text style={styles.markText}>관</Text>
+          </View>
           <Text style={styles.brandName}>관제</Text>
-          <Text style={styles.subtitle}>중소기업 인증·지원·융자 관제 데스크</Text>
+          <Text style={styles.brandCopy}>컨설턴트 운영 콘솔</Text>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>로그인</Text>
-            <Text style={styles.cardCopy}>
-              기존 웹 계정으로 모바일 운영 앱에 접속합니다.
-            </Text>
-          </View>
-
-          {!envReady ? (
-            <View style={styles.notice}>
-              <AlertTriangle size={17} color={colors.attention} />
-              <Text style={styles.noticeText}>
-                앱 설정을 확인하면 로그인할 수 있습니다.
-              </Text>
-            </View>
-          ) : null}
-
+        <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>이메일</Text>
+            <Mail size={18} color={colors.tertiaryLabel} strokeWidth={1.8} />
             <TextInput
               value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.stone}
+              onChangeText={(value) => {
+                setEmail(value);
+                setError(null);
+              }}
+              placeholder="이메일"
+              placeholderTextColor={colors.tertiaryLabel}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               style={styles.input}
             />
           </View>
-
+          <View style={styles.fieldSep} />
           <View style={styles.field}>
-            <Text style={styles.label}>비밀번호</Text>
-            <View style={styles.passwordBox}>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="비밀번호"
-                placeholderTextColor={colors.stone}
-                secureTextEntry={!showPassword}
-                style={styles.passwordInput}
-              />
-              <Pressable
-                style={styles.eyeButton}
-                onPress={() => setShowPassword((value) => !value)}
-              >
-                {showPassword ? (
-                  <EyeOff size={18} color={colors.stone} />
-                ) : (
-                  <Eye size={18} color={colors.stone} />
-                )}
-              </Pressable>
-            </View>
+            <Lock size={18} color={colors.tertiaryLabel} strokeWidth={1.8} />
+            <TextInput
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                setError(null);
+              }}
+              placeholder="비밀번호"
+              placeholderTextColor={colors.tertiaryLabel}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.input}
+            />
+            <Pressable onPress={() => setShowPassword((value) => !value)} hitSlop={8}>
+              <Text style={styles.toggle}>{showPassword ? "숨김" : "보기"}</Text>
+            </Pressable>
           </View>
-
-          {error ? (
-            <View style={styles.errorBox}>
-              <AlertTriangle size={16} color={colors.critical} />
-              <Text style={styles.error}>{error}</Text>
-            </View>
-          ) : null}
-
-          <PrimaryButton
-            disabled={pending || !email || !password}
-            onPress={submit}
-          >
-            {pending ? "확인 중..." : "로그인"}
-          </PrimaryButton>
-
-          <Pressable>
-            <Text style={styles.help}>
-              회원가입과 결제 관리는 웹에서 진행합니다.
-            </Text>
-          </Pressable>
         </View>
+
+        {!envReady ? (
+          <View style={styles.noticeRow}>
+            <View style={styles.noticeDot} />
+            <Text style={styles.noticeText}>앱 설정을 확인하면 로그인할 수 있습니다.</Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <View style={styles.errorRow}>
+            <View style={styles.errorDot} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          onPress={submit}
+          disabled={pending}
+          style={[styles.button, pending && styles.buttonPending]}
+        >
+          <Text style={styles.buttonText}>{pending ? "로그인 중…" : "로그인"}</Text>
+        </Pressable>
+
+        <View style={styles.spacer} />
+        <Text style={styles.help}>
+          회원가입과 결제 관리는 웹에서 진행합니다
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -149,141 +150,148 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: "center",
-    padding: spacing.xl,
-    gap: spacing.xl,
+    paddingHorizontal: 24,
   },
   brand: {
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 15,
+    paddingTop: "6%",
+    paddingBottom: 34,
   },
   mark: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.xl,
-    overflow: "hidden",
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
     backgroundColor: colors.brand,
-    color: colors.canvas,
-    textAlign: "center",
-    lineHeight: 56,
-    fontSize: 24,
-    fontWeight: "800",
+    alignItems: "center",
+    justifyContent: "center",
     ...Platform.select({
-      web: {
-        boxShadow: "0 6px 18px rgba(0,100,224,.28)",
+      web: { boxShadow: "0 12px 26px -10px rgba(0,100,224,0.55)" },
+      default: {
+        shadowColor: colors.brand,
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 12 },
       },
-      default: {},
     }),
+  },
+  markText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: colors.canvas,
   },
   brandName: {
     fontSize: 24,
-    lineHeight: 30,
-    fontWeight: "800",
-    color: colors.inkDeep,
-    marginTop: spacing.xs,
-  },
-  subtitle: {
-    ...typography.footnote,
-    color: colors.stone,
-    textAlign: "center",
-  },
-  card: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairlineSoft,
-    padding: spacing.xl,
-    gap: spacing.base,
-    ...Platform.select({
-      web: {
-        boxShadow: "0 4px 20px rgba(10,19,23,.06)",
-      },
-      default: {},
-    }),
-  },
-  cardHeader: {
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  cardTitle: {
-    ...typography.title2,
-    color: colors.inkDeep,
-  },
-  cardCopy: {
-    ...typography.footnote,
-    color: colors.secondaryLabel,
-  },
-  notice: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "flex-start",
-    backgroundColor: colors.attentionSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.attentionBorder,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-  },
-  noticeText: {
-    ...typography.footnote,
-    color: colors.attention,
-    flex: 1,
     fontWeight: "700",
+    letterSpacing: -0.5,
+    color: colors.label,
+  },
+  brandCopy: {
+    fontSize: 14.5,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+    marginTop: -9,
+  },
+  form: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    overflow: "hidden",
   },
   field: {
-    gap: spacing.xs,
-  },
-  label: {
-    ...typography.footnote,
-    color: colors.ink,
-    fontWeight: "700",
-  },
-  input: {
-    minHeight: 46,
-    borderRadius: radius.lg,
-    backgroundColor: colors.canvas,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.md,
-    ...typography.callout,
-    color: colors.ink,
-  },
-  passwordBox: {
-    minHeight: 46,
-    borderRadius: radius.lg,
-    backgroundColor: colors.canvas,
-    borderWidth: 1,
-    borderColor: colors.hairline,
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  passwordInput: {
+  fieldSep: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+    marginLeft: 46,
+  },
+  input: {
     flex: 1,
-    minHeight: 46,
-    paddingHorizontal: spacing.md,
-    ...typography.callout,
-    color: colors.ink,
+    fontSize: 16,
+    letterSpacing: -0.3,
+    color: colors.label,
+    padding: 0,
   },
-  eyeButton: {
-    width: 44,
-    height: 44,
+  toggle: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    color: colors.tertiaryLabel,
+    width: 32,
+    textAlign: "right",
+  },
+  noticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingTop: 11,
+  },
+  noticeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.attention,
+  },
+  noticeText: {
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.attention,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingTop: 11,
+  },
+  errorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.critical,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.critical,
+  },
+  button: {
+    marginTop: 18,
+    width: "100%",
+    paddingVertical: 15,
+    borderRadius: radius.card,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  buttonPending: {
+    backgroundColor: "rgba(0,100,224,0.55)",
   },
-  error: {
-    ...typography.footnote,
-    color: colors.critical,
-    fontWeight: "700",
-    flex: 1,
+  buttonText: {
+    fontSize: 16.5,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+    color: colors.canvas,
+  },
+  spacer: {
+    flexGrow: 1,
+    minHeight: 24,
   },
   help: {
-    ...typography.footnote,
-    color: colors.stone,
     textAlign: "center",
-    paddingTop: spacing.xs,
+    fontSize: 12,
+    fontWeight: "400",
+    letterSpacing: -0.1,
+    color: colors.tertiaryLabel,
+    paddingTop: 18,
   },
 });
