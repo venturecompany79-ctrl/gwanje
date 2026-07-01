@@ -30,6 +30,14 @@ function RootStack() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
+          name="task/new"
+          options={{
+            presentation: "transparentModal",
+            animation: "fade",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="task/[id]"
           options={{
             presentation: "transparentModal",

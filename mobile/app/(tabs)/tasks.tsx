@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
-import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Plus } from "lucide-react-native";
 import { colors, spacing, typography } from "@/design/tokens";
 import { monthDayKo } from "@/lib/dates";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
@@ -64,6 +65,15 @@ export default function TasksScreen() {
   const [filter, setFilter] = useState<StageFilter>("all");
   const { data, loading, refreshing, error, refresh } = useAsyncData(loadTasks);
 
+  // 새 Task 생성 후 돌아오면 목록을 다시 불러온다 (최초 포커스는 건너뜀)
+  const hasFocused = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (hasFocused.current) refresh();
+      else hasFocused.current = true;
+    }, [refresh]),
+  );
+
   const tasks = useMemo(() => data ?? [], [data]);
   const activeCount = tasks.filter(isActive).length;
   const overdueCount = tasks.filter(
@@ -103,6 +113,15 @@ export default function TasksScreen() {
       subtitle={`진행 ${activeCount} · 기한 지남 ${overdueCount}`}
       refreshing={refreshing}
       onRefresh={refresh}
+      action={
+        <Pressable
+          onPress={() => router.push("/task/new")}
+          hitSlop={8}
+          style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
+        >
+          <Plus size={22} color={colors.canvas} strokeWidth={2.4} />
+        </Pressable>
+      }
     >
       <View style={styles.chipWrap}>
         <ChipScroller>
@@ -140,6 +159,17 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addButtonPressed: {
+    backgroundColor: colors.brandDeep,
+  },
   chipWrap: {
     marginTop: spacing.base,
   },

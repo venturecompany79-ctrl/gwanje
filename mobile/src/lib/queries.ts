@@ -35,6 +35,23 @@ export interface CompanyListItem extends CompanyRow {
   nearestDaysLeft: number | null;
 }
 
+export interface CompanyOption {
+  id: string;
+  name: string;
+  industry: string | null;
+  region: string | null;
+}
+
+export interface CategoryOption {
+  id: string;
+  name: string;
+}
+
+export interface TaskFormOptions {
+  companies: CompanyOption[];
+  categories: CategoryOption[];
+}
+
 export interface CompanyDetailData {
   company: CompanyRow;
   credentials: CredentialRow[];
@@ -197,6 +214,25 @@ export async function loadTask(id: string): Promise<MobileTask | null> {
     companyName: company.data?.name ?? "-",
     categoryName: category.data?.name ?? null,
     daysLeft: daysFromDateString(task.data.due_date),
+  };
+}
+
+export async function loadTaskFormOptions(): Promise<TaskFormOptions> {
+  const [companies, categories] = await Promise.all([
+    supabase
+      .from("company")
+      .select("id, name, industry, region")
+      .eq("status", "active")
+      .order("name", { ascending: true }),
+    supabase
+      .from("category")
+      .select("id, name")
+      .order("sort_order", { ascending: true }),
+  ]);
+  throwIfError("작성 정보를 불러오지 못했습니다", companies.error ?? categories.error);
+  return {
+    companies: companies.data ?? [],
+    categories: categories.data ?? [],
   };
 }
 
