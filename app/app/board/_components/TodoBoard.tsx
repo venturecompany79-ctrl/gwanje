@@ -24,13 +24,8 @@ import {
   deleteTodoNote,
   updateTodoNote,
 } from "@/lib/actions/todos";
+import { dayDiffString, formatDotDateString } from "@/lib/datetime";
 import {
-  dayDiffString,
-  formatDotDateString,
-  shiftDateString,
-} from "@/lib/datetime";
-import {
-  TODO_BOARD_DAY_COUNT,
   TODO_TAGS,
   type TodoBoardData,
   type TodoNoteRow,
@@ -138,11 +133,6 @@ export function TodoBoard({
   const draftRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const handledAddRequestRef = useRef(addRequest);
   const composingTargetsRef = useRef<Set<string>>(new Set());
-
-  const minDate = useMemo(
-    () => shiftDateString(data.today, -(TODO_BOARD_DAY_COUNT - 1)),
-    [data.today],
-  );
 
   const addDraft = useCallback(
     (date: string, afterId?: string) => {
@@ -501,8 +491,6 @@ export function TodoBoard({
               type="date"
               className="todo-draft-date"
               value={draft.date}
-              min={minDate}
-              max={data.today}
               onChange={(e) => {
                 if (e.target.value) changeDraftDate(draft.id, e.target.value);
               }}
