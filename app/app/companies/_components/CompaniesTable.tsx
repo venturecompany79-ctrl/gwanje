@@ -9,7 +9,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel } from "@/components/ui/Panel";
 import { IconSearch } from "@/components/ui/icons";
 import { formatDotDateString } from "@/lib/datetime";
-import { formatRevenue } from "@/lib/format";
+import { formatDday, formatRevenue } from "@/lib/format";
 import type { CompanyListRow } from "@/lib/data/companies";
 
 type SortKey = "urgent" | "name" | "recent";
@@ -17,11 +17,11 @@ type StatusTab = "active" | "ended";
 
 /** 계약 종료일 D-day 배지 — 임박(≤30일)=attention, 만료(≤0)=critical */
 function ContractBadge({ daysLeft }: { daysLeft: number }) {
-  if (daysLeft < 0) return <Badge tone="critical">계약만료 D+{-daysLeft}</Badge>;
+  if (daysLeft < 0) {
+    return <Badge tone="critical">계약만료 {formatDday(daysLeft)}</Badge>;
+  }
   const tone = daysLeft <= 30 ? "attention" : "neutral";
-  return (
-    <Badge tone={tone}>계약 {daysLeft === 0 ? "D-day" : `D-${daysLeft}`}</Badge>
-  );
+  return <Badge tone={tone}>계약 {formatDday(daysLeft)}</Badge>;
 }
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -292,10 +292,7 @@ export function CompaniesTable({
                             <span
                               className="due-more num"
                               title={co.upcomingItems
-                                .map(
-                                  (it) =>
-                                    `${it.title} · ${it.daysLeft < 0 ? `D+${-it.daysLeft}` : it.daysLeft === 0 ? "D-day" : `D-${it.daysLeft}`}`,
-                                )
+                                .map((it) => `${it.title} · ${formatDday(it.daysLeft)}`)
                                 .join("\n")}
                             >
                               외 {co.upcomingCount - 1}건
