@@ -327,6 +327,9 @@ export async function addCredential(
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return access;
+
   const { error } = await supabase.from("credential").insert({
     tenant_id: ctx.tenantId,
     company_id: companyId,

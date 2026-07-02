@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getTenantContext } from "@/lib/actions/shared";
+import { requirePermission } from "@/lib/actions/shared";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { cancelAtPeriodEnd } from "@/lib/billing/service";
 
@@ -21,9 +21,9 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "결제 비활성" }, { status: 503 });
   }
 
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) {
-    return NextResponse.json({ ok: false, error: ctx.error }, { status: 401 });
+  const member = await requirePermission(supabase, "billing.manage");
+  if ("error" in member) {
+    return NextResponse.json({ ok: false, error: member.error }, { status: 403 });
   }
 
   const service = createServiceClient();
@@ -35,7 +35,7 @@ export async function POST() {
   }
 
   try {
-    await cancelAtPeriodEnd(service, ctx.tenantId);
+    await cancelAtPeriodEnd(service, member.tenantId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[billing/cancel]", err);

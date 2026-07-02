@@ -105,6 +105,9 @@ await step("migration: 20260701000000_gov_program_matching", read("migrations/20
 await step("migration: 20260702000000_company_region_business_condition", read("migrations/20260702000000_company_region_business_condition.sql"));
 await step("migration: 20260703000000_document_credential_link", read("migrations/20260703000000_document_credential_link.sql"));
 await step("migration: 20260704000000_ip_rights", read("migrations/20260704000000_ip_rights.sql"));
+await step("migration: 20260705000000_company_lifecycle", read("migrations/20260705000000_company_lifecycle.sql"));
+await step("migration: 20260706000000_mobile_app_push", read("migrations/20260706000000_mobile_app_push.sql"));
+await step("migration: 20260707000000_security_mobile_review_fixes", read("migrations/20260707000000_security_mobile_review_fixes.sql"));
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);

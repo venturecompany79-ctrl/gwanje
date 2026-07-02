@@ -6264,6 +6264,161 @@ body {
   }
 }
 
+/* ---- 모바일 최적화 리뷰 후속 보강 (2026-07-02) ---- */
+@media (max-width: 900px) {
+  .set-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .set-nav {
+    position: static;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .set-nav .sn {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .set-nav .sn.is-active::before {
+    display: none;
+  }
+
+  .pill-btn,
+  .abtn,
+  .cat-sw,
+  .cat-sw-opt {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .todo-check {
+    width: 28px;
+    height: 28px;
+  }
+
+  .todo-row-action {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lead-day-chip button {
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .link-btn {
+    padding: 8px 4px;
+  }
+
+  .toast {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-pill input,
+  .memo-input,
+  .cond-input,
+  .dt-input,
+  .todo-draft-date,
+  .selbox,
+  .select-pill {
+    font-size: 16px;
+  }
+
+  .cond-row {
+    flex-wrap: wrap;
+  }
+
+  .cond-row .cond-input {
+    flex: 1 1 calc(50% - 24px);
+    min-width: 0;
+  }
+
+  .cond-x {
+    margin-left: 0;
+  }
+
+  .steps {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 16px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step-conn {
+    width: 18px;
+    margin: 0 6px;
+  }
+
+  .step:not(.is-active) .step-label {
+    display: none;
+  }
+
+  .radio-row {
+    flex-direction: column;
+  }
+
+  .dt-input {
+    width: 100%;
+  }
+
+  .sum-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wz-foot {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .wz-foot .btn {
+    flex: 1 1 auto;
+  }
+
+  .task {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .task > div:first-child {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .task .tname {
+    min-width: 0;
+  }
+
+  .task > .spacer {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .n-actions {
+    display: flex;
+  }
+
+  .n-time {
+    display: none;
+  }
+}
+
 /* ============================================================================
    결제/구독 (Billing) — /app/billing, /billing/success|fail, 셸 배너
    ============================================================================ */

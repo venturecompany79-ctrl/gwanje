@@ -75,6 +75,26 @@ export async function getTenantContext(
   return { tenantId: member.tenantId, userId: member.userId };
 }
 
+export async function assertCompanyAccess(
+  supabase: Supabase,
+  companyId: string,
+  tenantId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from("company")
+    .select("id")
+    .eq("id", companyId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[assertCompanyAccess]", error.code, error.message);
+    return { ok: false, error: `기업 확인에 실패했습니다: ${error.message}` };
+  }
+  if (!data) return { ok: false, error: "기업을 찾을 수 없습니다." };
+  return { ok: true };
+}
+
 export async function getMemberContext(
   supabase: Supabase,
 ): Promise<MemberContext | { error: string }> {

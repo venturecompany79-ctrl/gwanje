@@ -11,7 +11,7 @@ import {
 import type { TaskStage } from "@/lib/database.types";
 import {
   DEMO_ERROR,
-  getTenantContext,
+  assertCompanyAccess,
   requirePermission,
   type Supabase,
   optionalText,
@@ -153,6 +153,9 @@ export async function addTask(
   const allowed = await requirePermission(supabase, "tasks.write");
   if ("error" in allowed) return { ok: false, error: allowed.error };
 
+  const access = await assertCompanyAccess(supabase, companyId, allowed.tenantId);
+  if (!access.ok) return access;
+
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
 
@@ -161,20 +164,17 @@ export async function addTask(
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) return { ok: false, error: ctx.error };
-
   const files = getTaskFiles(formData);
   const { data: createdTask, error } = await supabase
     .from("task")
     .insert({
-      tenant_id: ctx.tenantId,
+      tenant_id: allowed.tenantId,
       company_id: companyId,
       title,
       category_id: optionalText(formData, "category_id"),
       stage,
       due_date: optionalText(formData, "due_date"),
-      assignee_id: ctx.userId,
+      assignee_id: allowed.userId,
       memo: optionalText(formData, "memo"),
     })
     .select("id")
@@ -186,7 +186,7 @@ export async function addTask(
 
   const uploadResult = await uploadTaskFiles(
     supabase,
-    ctx,
+    { tenantId: allowed.tenantId, userId: allowed.userId },
     companyId,
     createdTask.id,
     files,

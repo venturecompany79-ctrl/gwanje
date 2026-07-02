@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isBillingEnabled } from "@/lib/billing/config";
 import type { Database, Json } from "@/lib/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -11,7 +12,7 @@ type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
 /**
  * POST /api/billing/webhook/toss — Toss 웹훅 수신(멱등).
- * - 서명검증: TOSS_PAYMENTS_WEBHOOK_SECRET 설정 시 본문 HMAC-SHA256 검증.
+ * - 서명검증: 결제 기능 활성 시 TOSS_PAYMENTS_WEBHOOK_SECRET 필수, 본문 HMAC-SHA256 검증.
  * - event_key(또는 paymentKey:status)로 webhook_event에 멱등 적재 → 중복이면 즉시 200.
  * - 결제 승인/취소/실패 이벤트를 payment_transaction에 반영.
  * Toss는 비-2xx면 재전송하므로, 처리 실패가 아닌 한 항상 200을 반환한다.
@@ -19,8 +20,15 @@ type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 export async function POST(request: Request) {
   const raw = await request.text();
 
-  // 서명검증(설정된 경우에만). Toss 콘솔의 서명 헤더와 일치하도록 정렬 필요.
+  // 서명검증. 결제 기능이 활성인데 시크릿이 비어 있으면 무검증 수신을 막는다.
   const secret = process.env.TOSS_PAYMENTS_WEBHOOK_SECRET;
+  if (!secret && isBillingEnabled()) {
+    console.error("[billing/webhook] TOSS_PAYMENTS_WEBHOOK_SECRET 미설정");
+    return NextResponse.json(
+      { ok: false, error: "webhook secret is not configured" },
+      { status: 503 },
+    );
+  }
   if (secret) {
     const signature =
       request.headers.get("tosspayments-webhook-signature") ??

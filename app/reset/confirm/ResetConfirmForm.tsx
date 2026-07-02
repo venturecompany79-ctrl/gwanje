@@ -15,7 +15,13 @@ type Status = "checking" | "ready" | "invalid" | "saving" | "done";
 
 export function ResetConfirmForm() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  });
   const [status, setStatus] = useState<Status>("checking");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");

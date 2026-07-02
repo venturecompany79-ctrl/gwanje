@@ -1,15 +1,18 @@
 -- =============================================================
--- 잠재고객 체험 계정 프로비저닝 — venturecompany@naver.com
--- 워크스페이스(tenant) + 프로필 + 데모 데이터 생성. (비밀번호: admin1234)
+-- 잠재고객 체험 계정 프로비저닝
+-- 워크스페이스(tenant) + 프로필 + 데모 데이터 생성.
 --
 -- 사전 조건 (대시보드에서 1회):
 --   Supabase → Authentication → Users → Add user
---     Email: venturecompany@naver.com
---     Password: admin1234
+--     Email: 체험 계정 이메일
+--     Password: 강한 임시 비밀번호(공유 저장소에 기록 금지)
 --     ✅ Auto Confirm User 체크 (이메일 인증 생략)
 --   ※ 새 auth 유저는 SQL 직삽입 대신 대시보드 생성이 안전(identities/토큰 자동 처리).
 --
--- 그 다음 이 스크립트를 SQL Editor 에서 실행. 단일 트랜잭션 — 실패 시 rollback.
+-- 그 다음 SQL Editor 에서 아래처럼 대상 이메일을 세션 설정한 뒤 실행.
+--   select set_config('app.trial_email', 'trial@example.com', false);
+--
+-- 단일 트랜잭션 — 실패 시 rollback.
 -- 멱등: 이미 프로비저닝된 계정이면(회사 데이터 존재) 중복 생성 없이 중단.
 -- =============================================================
 
@@ -17,13 +20,17 @@ begin;
 
 do $prov$
 declare
-  v_email     text := 'venturecompany@naver.com';
+  v_email     text := nullif(current_setting('app.trial_email', true), '');
   v_user_id   uuid;
   v_tenant_id uuid;
   v_existing  uuid;
   v_cat_gov uuid; v_cat_vc uuid; v_cat_lab uuid; v_cat_tax uuid; v_cat_fund uuid;
   v_co1 uuid; v_co2 uuid; v_co3 uuid; v_co4 uuid; v_co5 uuid; v_co6 uuid;
 begin
+  if v_email is null then
+    raise exception 'app.trial_email 설정이 필요합니다. 예: select set_config(''app.trial_email'', ''trial@example.com'', false);';
+  end if;
+
   -- 0) 대상 유저 확인 (대시보드에서 먼저 생성했어야 함)
   select id into v_user_id from auth.users where lower(email) = lower(v_email);
   if v_user_id is null then
