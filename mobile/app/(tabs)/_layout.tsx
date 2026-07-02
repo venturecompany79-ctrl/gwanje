@@ -17,6 +17,8 @@ const ICON_SIZE = 25;
 export default function TabLayout() {
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
+  // 웹은 insets.bottom이 0이라 최소 패딩을 보장해야 라벨이 화면 바닥에 붙지 않는다
+  const bottomInset = Math.max(insets.bottom, 8);
 
   if (!session) {
     return <Redirect href="/login" />;
@@ -32,7 +34,8 @@ export default function TabLayout() {
         tabBarIconStyle: styles.icon,
         tabBarStyle: [
           styles.tabBar,
-          { height: 52 + insets.bottom, paddingBottom: insets.bottom, paddingTop: 8 },
+          // 탭 아이템 자체 높이(패딩 10 + 아이콘 28 + 라벨 13)가 들어갈 공간 확보
+          { height: 58 + bottomInset, paddingBottom: bottomInset, paddingTop: 4 },
         ],
         tabBarBackground: () => (
           <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
@@ -94,6 +97,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: "500",
     letterSpacing: -0.1,
     marginTop: 1,
