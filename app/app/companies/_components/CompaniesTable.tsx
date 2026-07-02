@@ -3,14 +3,26 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel } from "@/components/ui/Panel";
 import { IconSearch } from "@/components/ui/icons";
+import { formatDotDateString } from "@/lib/datetime";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyListRow } from "@/lib/data/companies";
 
 type SortKey = "urgent" | "name" | "recent";
+type StatusTab = "active" | "ended";
+
+/** 계약 종료일 D-day 배지 — 임박(≤30일)=attention, 만료(≤0)=critical */
+function ContractBadge({ daysLeft }: { daysLeft: number }) {
+  if (daysLeft < 0) return <Badge tone="critical">계약만료 D+{-daysLeft}</Badge>;
+  const tone = daysLeft <= 30 ? "attention" : "neutral";
+  return (
+    <Badge tone={tone}>계약 {daysLeft === 0 ? "D-day" : `D-${daysLeft}`}</Badge>
+  );
+}
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "urgent", label: "임박순" },
@@ -39,9 +51,16 @@ export function CompaniesTable({
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [tag, setTag] = useState<string | null>(initialTag);
+  const [statusTab, setStatusTab] = useState<StatusTab>("active");
   const [sort, setSort] = useState<SortKey>(
     isSortKey(initialSort) ? initialSort : "urgent",
   );
+
+  const activeCount = useMemo(
+    () => companies.filter((co) => co.status !== "ended").length,
+    [companies],
+  );
+  const endedCount = companies.length - activeCount;
 
   // 검색·필터·정렬 상태를 URL 쿼리에 보존 — 새로고침·공유 시 복원 (GWJ-011).
   // history.replaceState로 갱신해 서버 재요청(스켈레톤) 없이 클라이언트 필터링 유지.
@@ -65,9 +84,12 @@ export function CompaniesTable({
     return [...tags].sort((a, b) => a.localeCompare(b, "ko"));
   }, [companies]);
 
+  const isEndedTab = statusTab === "ended";
+
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const filtered = companies.filter((co) => {
+      if ((co.status === "ended") !== isEndedTab) return false;
       if (tag && !co.conditionTags.includes(tag)) return false;
       if (!needle) return true;
       return (
@@ -76,7 +98,10 @@ export function CompaniesTable({
       );
     });
     const sorted = [...filtered];
-    if (sort === "name") {
+    if (isEndedTab) {
+      // 종료 기업은 최근 종료순
+      sorted.sort((a, b) => (b.endedAt ?? "").localeCompare(a.endedAt ?? ""));
+    } else if (sort === "name") {
       sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
     } else if (sort === "recent") {
       sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -88,12 +113,29 @@ export function CompaniesTable({
       );
     }
     return sorted;
-  }, [companies, query, tag, sort]);
+  }, [companies, query, tag, sort, isEndedTab]);
 
   const isFiltered = query.trim() !== "" || tag !== null;
 
   return (
     <>
+      <div className="tag-tabs" role="group" aria-label="관리 상태 필터" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`pill-tab${!isEndedTab ? " is-active" : ""}`}
+          onClick={() => setStatusTab("active")}
+        >
+          관리중 {activeCount}
+        </button>
+        <button
+          type="button"
+          className={`pill-tab${isEndedTab ? " is-active" : ""}`}
+          onClick={() => setStatusTab("ended")}
+        >
+          종료 {endedCount}
+        </button>
+      </div>
+
       <div className="filter-bar">
         <div className="search-pill">
           <IconSearch />
@@ -125,18 +167,20 @@ export function CompaniesTable({
           ))}
         </div>
         <div className="spacer" />
-        <select
-          className="select-pill"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-          aria-label="정렬"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        {isEndedTab ? null : (
+          <select
+            className="select-pill"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="정렬"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <Panel>
@@ -146,7 +190,9 @@ export function CompaniesTable({
             <p>
               {isFiltered
                 ? "조건에 맞는 기업이 없습니다"
-                : "표시할 기업이 없습니다"}
+                : isEndedTab
+                  ? "종료된 기업이 없습니다"
+                  : "표시할 기업이 없습니다"}
             </p>
             {isFiltered ? (
               <Button
@@ -172,7 +218,7 @@ export function CompaniesTable({
                 <th className="r">매출</th>
                 <th className="r">인원</th>
                 <th>보유 자격</th>
-                <th className="r">임박 항목</th>
+                <th className="r">{isEndedTab ? "종료 정보" : "임박 항목"}</th>
               </tr>
             </thead>
             <tbody>
@@ -215,8 +261,25 @@ export function CompaniesTable({
                       </span>
                     )}
                   </td>
-                  <td className="r" data-label="임박 항목">
+                  <td className="r" data-label={isEndedTab ? "종료 정보" : "임박 항목"}>
+                    {isEndedTab ? (
+                      <span className="due-cell">
+                        <Badge tone="neutral">
+                          {co.endedAt
+                            ? `${formatDotDateString(co.endedAt.slice(0, 10))} 종료`
+                            : "종료"}
+                        </Badge>
+                        {co.endedReason ? (
+                          <span className="due-more" title={co.endedReason}>
+                            {co.endedReason}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
                     <span className="due-cell">
+                      {co.contractDaysLeft !== null ? (
+                        <ContractBadge daysLeft={co.contractDaysLeft} />
+                      ) : null}
                       {co.expiredCount > 0 ? (
                         <span className="badge badge--soft-expired">
                           만료 {co.expiredCount}
@@ -239,10 +302,11 @@ export function CompaniesTable({
                             </span>
                           ) : null}
                         </>
-                      ) : co.expiredCount === 0 ? (
+                      ) : co.expiredCount === 0 && co.contractDaysLeft === null ? (
                         <span className="cell-muted">—</span>
                       ) : null}
                     </span>
+                    )}
                   </td>
                 </tr>
               ))}

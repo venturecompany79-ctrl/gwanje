@@ -956,6 +956,8 @@ export async function updateCompany(
       contact_phone: optionalText(formData, "contact_phone"),
       contact_email: optionalText(formData, "contact_email"),
       condition_tags: conditionTags,
+      contract_start_date: optionalText(formData, "contract_start_date"),
+      contract_end_date: optionalText(formData, "contract_end_date"),
       memo: optionalText(formData, "memo"),
     })
     .eq("id", companyId);
@@ -965,5 +967,149 @@ export async function updateCompany(
   }
 
   revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+/**
+ * 관리 종료(아카이브) — 데이터는 보존하고 status만 'ended'로 전환한다.
+ * deadline_item 뷰가 종료 기업을 제외하므로 대시보드·목록 D-day 집계에서 자동으로 빠진다.
+ */
+export async function endCompany(
+  companyId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const endedDate = optionalText(formData, "ended_date");
+  const endedAt = endedDate
+    ? new Date(`${endedDate}T00:00:00+09:00`).toISOString()
+    : new Date().toISOString();
+
+  const { error } = await supabase
+    .from("company")
+    .update({
+      status: "ended",
+      ended_at: endedAt,
+      ended_reason: optionalText(formData, "ended_reason"),
+      // 종료일을 입력했다면 계약 종료일도 함께 채워 기록을 일관되게 유지
+      ...(endedDate ? { contract_end_date: endedDate } : {}),
+    })
+    .eq("id", companyId)
+    .eq("tenant_id", ctx.tenantId);
+  if (error) {
+    console.error("[endCompany]", error.code, error.message);
+    return { ok: false, error: `관리 종료 처리에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+/** 관리 재개 — 종료된 기업을 다시 활성(관리중) 상태로 되돌린다. */
+export async function reactivateCompany(
+  companyId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return { ok: false, error: access.error };
+
+  const { error } = await supabase
+    .from("company")
+    .update({ status: "active", ended_at: null, ended_reason: null })
+    .eq("id", companyId)
+    .eq("tenant_id", ctx.tenantId);
+  if (error) {
+    console.error("[reactivateCompany]", error.code, error.message);
+    return { ok: false, error: `관리 재개에 실패했습니다: ${error.message}` };
+  }
+
+  revalidateCompany(companyId);
+  return { ok: true, error: null };
+}
+
+/**
+ * 완전 삭제(하드) — 잘못 등록한 기업을 자식 데이터까지 영구 삭제한다.
+ * FK on delete cascade로 credential·task·schedule·document·ip_right·notification 행이 함께 지워지고,
+ * document의 Storage 파일 본체는 cascade 대상이 아니므로 삭제 전에 best-effort로 정리한다.
+ * confirmName으로 기업명을 한 번 더 확인해 오삭제를 막는다.
+ */
+export async function deleteCompany(
+  companyId: string,
+  confirmName: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const { data: company, error: fetchError } = await supabase
+    .from("company")
+    .select("id, name")
+    .eq("id", companyId)
+    .eq("tenant_id", ctx.tenantId)
+    .maybeSingle();
+  if (fetchError) {
+    console.error("[deleteCompany:fetch]", fetchError.code, fetchError.message);
+    return { ok: false, error: `기업 확인에 실패했습니다: ${fetchError.message}` };
+  }
+  if (!company) return { ok: false, error: "기업을 찾을 수 없습니다." };
+
+  if (confirmName.trim() !== company.name.trim()) {
+    return { ok: false, error: "확인을 위해 기업명을 정확히 입력해 주세요." };
+  }
+
+  // Storage 파일 정리 (DB cascade 대상이 아님) — 실패해도 삭제는 계속(고아 파일이 고아 행보다 안전)
+  const { data: docs } = await supabase
+    .from("document")
+    .select("storage_url")
+    .eq("company_id", companyId)
+    .eq("tenant_id", ctx.tenantId);
+  const paths = (docs ?? [])
+    .map((doc) => parseCompanyDocumentStorageUrl(doc.storage_url)?.path)
+    .filter((path): path is string => Boolean(path));
+  if (paths.length > 0) {
+    const { error: removeError } = await supabase.storage
+      .from(COMPANY_DOCUMENTS_BUCKET)
+      .remove(paths);
+    if (removeError) {
+      console.error("[deleteCompany:storage]", removeError.message);
+    }
+  }
+
+  const { error } = await supabase
+    .from("company")
+    .delete()
+    .eq("id", companyId)
+    .eq("tenant_id", ctx.tenantId);
+  if (error) {
+    console.error("[deleteCompany]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+
+  revalidatePath("/app/companies");
+  revalidatePath("/app");
+  revalidatePath("/app/notifications");
   return { ok: true, error: null };
 }

@@ -1,6 +1,6 @@
 import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
 import { createClient } from "@/lib/supabase/server";
-import { todayKstDate } from "@/lib/datetime";
+import { daysFromToday, todayKstDate } from "@/lib/datetime";
 import { enabledSources } from "@/lib/gov-programs/config";
 import { demoGovPrograms } from "@/lib/gov-programs/demo-data";
 import {
@@ -62,7 +62,7 @@ export async function getCompanyProgramMatches(
   const { data: company, error: companyError } = await supabase
     .from("company")
     .select(
-      "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
+      "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, status, contract_start_date, contract_end_date, ended_at, ended_reason",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -93,6 +93,15 @@ export async function getCompanyProgramMatches(
     contactEmail: company.contact_email,
     conditionTags: company.condition_tags ?? [],
     memo: company.memo,
+    status: (company.status as CompanyProfile["status"]) ?? "active",
+    contractStartDate: company.contract_start_date,
+    contractEndDate: company.contract_end_date,
+    contractDaysLeft:
+      company.status === "active" && company.contract_end_date
+        ? daysFromToday(company.contract_end_date)
+        : null,
+    endedAt: company.ended_at,
+    endedReason: company.ended_reason,
   };
 
   const { data: programs, error } = await supabase.rpc(

@@ -98,6 +98,12 @@ create table company (
   contact_email  text,
   condition_tags text[] not null default '{}',  -- 성장기 등 컨디션 태그
   memo           text,
+  status         text not null default 'active'
+    check (status in ('active', 'ended')),       -- 관리중 / 종료
+  contract_start_date date,                       -- 계약 시작일(선택)
+  contract_end_date   date,                       -- 계약 종료일(선택)
+  ended_at            timestamptz,                -- 관리 종료 확정 시각
+  ended_reason        text,                       -- 종료 사유(선택)
   created_at     timestamptz not null default now()
 );
 
@@ -394,6 +400,7 @@ from credential c
 join company co on co.id = c.company_id
 left join category cat on cat.id = c.category_id
 where c.expires_date is not null
+  and co.status = 'active'
   and not exists (
     select 1
     from task t
@@ -420,6 +427,7 @@ join company co on co.id = t.company_id
 left join category cat on cat.id = t.category_id
 where t.due_date is not null
   and t.stage <> 'result'
+  and co.status = 'active'
 
 union all
 
@@ -438,6 +446,7 @@ select
 from schedule s
 left join company co on co.id = s.company_id
 where s.date >= (now() at time zone 'Asia/Seoul')::date - interval '30 days'
+  and (co.id is null or co.status = 'active')
 
 union all
 
@@ -456,7 +465,8 @@ select
 from ip_deadline d
 join ip_right r on r.id = d.ip_right_id
 join company co on co.id = d.company_id
-where d.is_done = false;
+where d.is_done = false
+  and co.status = 'active';
 
 -- -------------------------------------------------------------
 -- 14. RLS — 모든 tenant 종속 테이블은 tenant 격리, gov_program은 읽기 전용 공개
@@ -544,6 +554,7 @@ grant update (
 -- 16. 인덱스
 -- -------------------------------------------------------------
 create index idx_company_tenant on company (tenant_id);
+create index idx_company_status on company (tenant_id, status);
 create index idx_credential_company on credential (company_id);
 create index idx_credential_expires on credential (tenant_id, expires_date);
 create index idx_task_company on task (company_id);

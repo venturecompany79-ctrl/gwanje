@@ -41,5 +41,22 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.3.0",
     "typescript": "^5.7.0"
-  }
+  },
+  "description": "한 명의 경영컨설턴트가 다수의 중소기업을 동시에 관리하며 인증·정부지원·융자의 **만료/마감을 통합 관제**하는 B2B SaaS. 현재 단계: **단일 컨설턴트 MVP**.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/venturecompany79-ctrl/gwanje.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/venturecompany79-ctrl/gwanje/issues"
+  },
+  "homepage": "https://github.com/venturecompany79-ctrl/gwanje#readme"
 }

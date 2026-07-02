@@ -10,8 +10,13 @@ import { IpTab } from "./IpTab";
 import { TasksTab } from "./TasksTab";
 import { ScheduleTab, FilesTab } from "./ScheduleFilesTabs";
 import { EditCompanyButton } from "./EditCompanySlideOver";
+import {
+  EndCompanyButton,
+  EndedCompanyBanner,
+} from "./CompanyLifecycleControls";
 import { OverviewTab } from "./OverviewTab";
 import { RecommendTab } from "./RecommendTab";
+import { Badge } from "@/components/ui/Badge";
 
 type TabKey =
   | "overview"
@@ -49,6 +54,8 @@ function CompanyHeader({
   demo: boolean;
   showToast: (message: string) => void;
 }) {
+  const isEnded = company.status === "ended";
+  const contractDays = company.contractDaysLeft;
   const stats: [string, string][] = [
     ["설립", company.foundedDate ? company.foundedDate.slice(0, 4) : "—"],
     ["매출", formatRevenue(company.revenue)],
@@ -60,6 +67,14 @@ function CompanyHeader({
       <div className="co-top">
         <div className="co-id">
           <h1>{company.name}</h1>
+          {isEnded ? <Badge tone="neutral">종료</Badge> : null}
+          {!isEnded && contractDays !== null ? (
+            <Badge tone={contractDays < 0 ? "critical" : contractDays <= 30 ? "attention" : "neutral"}>
+              {contractDays < 0
+                ? `계약만료 D+${-contractDays}`
+                : `계약 ${contractDays === 0 ? "D-day" : `D-${contractDays}`}`}
+            </Badge>
+          ) : null}
           {company.industry ? (
             <span className="ind">{company.industry}</span>
           ) : null}
@@ -72,6 +87,9 @@ function CompanyHeader({
         </div>
         <div className="spacer" />
         <EditCompanyButton company={company} demo={demo} showToast={showToast} />
+        {isEnded ? null : (
+          <EndCompanyButton company={company} demo={demo} showToast={showToast} />
+        )}
       </div>
       <div className="co-summary">
         {stats.map(([k, v]) => (
@@ -115,6 +133,14 @@ export function CompanyDetailView({
   return (
     <>
       <CompanyHeader company={company} demo={data.demo} showToast={showToast} />
+
+      {company.status === "ended" ? (
+        <EndedCompanyBanner
+          company={company}
+          demo={data.demo}
+          showToast={showToast}
+        />
+      ) : null}
 
       <div className="tabs" role="tablist" aria-label="기업 상세 탭">
         {TAB_DEFS.map((t) => (

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getCurrentIdentity } from "@/lib/data/current-member";
 import {
   DEMO_ERROR,
   getTenantContext,
@@ -42,11 +43,11 @@ async function getRequestOrigin(): Promise<string> {
 async function getUserId(
   supabase: Supabase,
 ): Promise<{ userId: string } | { error: string }> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     return { error: "세션이 만료되었습니다. 다시 로그인해 주세요." };
   }
-  return { userId: auth.user.id };
+  return { userId: identity.userId };
 }
 
 export interface ProfileInput {
@@ -489,8 +490,8 @@ export async function acceptTeamInvite(): Promise<ActionResult> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     return { ok: false, error: "초대 세션을 확인할 수 없습니다. 초대 메일 링크로 다시 접속해 주세요." };
   }
 
@@ -502,7 +503,7 @@ export async function acceptTeamInvite(): Promise<ActionResult> {
   const { data: profile, error: profileError } = await service
     .from("profile")
     .select("status")
-    .eq("id", auth.user.id)
+    .eq("id", identity.userId)
     .maybeSingle();
   if (profileError || !profile) {
     if (profileError) console.error("[acceptTeamInvite:profile]", profileError.code, profileError.message);
@@ -519,13 +520,13 @@ export async function acceptTeamInvite(): Promise<ActionResult> {
       accepted_at: new Date().toISOString(),
       disabled_at: null,
     })
-    .eq("id", auth.user.id);
+    .eq("id", identity.userId);
   if (error) {
     console.error("[acceptTeamInvite]", error.code, error.message);
     return { ok: false, error: `초대 수락에 실패했습니다: ${error.message}` };
   }
 
-  await service.auth.admin.updateUserById(auth.user.id, {
+  await service.auth.admin.updateUserById(identity.userId, {
     ban_duration: "none",
   });
 

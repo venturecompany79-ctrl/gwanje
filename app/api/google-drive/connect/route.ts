@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/actions/shared";
+import { getCurrentIdentity } from "@/lib/data/current-member";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import { buildConsentUrl } from "@/lib/google-drive/oauth";
 
@@ -24,8 +25,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(settingsUrl);
   }
 
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     return NextResponse.redirect(new URL("/login?redirect=/app/settings", request.url));
   }
 
