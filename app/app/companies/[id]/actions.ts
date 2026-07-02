@@ -23,6 +23,7 @@ import {
   COMPANY_DOCUMENTS_BUCKET,
   COMPANY_DOCUMENTS_MAX_BYTES,
   getFileExtension,
+  normalizeCompanyDocumentMimeType,
   parseCompanyDocumentStorageUrl,
   storageUrlFromPath,
 } from "@/lib/storage";
@@ -61,8 +62,8 @@ async function assertCompanyAccess(
 
 export async function prepareDocumentUpload(
   companyId: string,
-  file: { name: string; size: number },
-): Promise<ActionResult & { bucket?: string; path?: string }> {
+  file: { name: string; size: number; type?: string },
+): Promise<ActionResult & { bucket?: string; path?: string; contentType?: string }> {
   const supabase = await createClient();
   if (!supabase) return { ok: false, error: DEMO_ERROR };
 
@@ -82,12 +83,25 @@ export async function prepareDocumentUpload(
   if (size > COMPANY_DOCUMENTS_MAX_BYTES) {
     return { ok: false, error: "파일은 50MB 이하만 업로드할 수 있습니다." };
   }
+  const contentType = normalizeCompanyDocumentMimeType(file.name, file.type);
+  if (!contentType) {
+    return {
+      ok: false,
+      error: "지원하지 않는 파일 형식입니다. PDF, 이미지, Office, HWP/HWPX, CSV 파일만 업로드할 수 있습니다.",
+    };
+  }
 
   const extension = getFileExtension(file.name);
   const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
 
   const path = `${ctx.tenantId}/${companyId}/${objectName}`;
-  return { ok: true, error: null, bucket: COMPANY_DOCUMENTS_BUCKET, path };
+  return {
+    ok: true,
+    error: null,
+    bucket: COMPANY_DOCUMENTS_BUCKET,
+    path,
+    contentType,
+  };
 }
 
 export async function registerUploadedDocument(

@@ -7,6 +7,7 @@ import {
   COMPANY_DOCUMENTS_BUCKET,
   COMPANY_DOCUMENTS_MAX_BYTES,
   getFileExtension,
+  normalizeCompanyDocumentMimeType,
 } from "@/lib/storage";
 import type { TaskStage } from "@/lib/database.types";
 import {
@@ -102,11 +103,20 @@ async function uploadTaskFiles(
   }[] = [];
 
   for (const file of files) {
+    const contentType = normalizeCompanyDocumentMimeType(file.name, file.type);
+    if (!contentType) {
+      await removeUploadedTaskFiles(supabase, uploadedPaths);
+      return {
+        ok: false,
+        error: `${file.name} 파일 형식은 지원하지 않습니다. PDF, 이미지, Office, HWP/HWPX, CSV 파일만 업로드할 수 있습니다.`,
+      };
+    }
+
     const path = taskFilePath(ctx.tenantId, companyId, taskId, file);
     const { error } = await supabase.storage
       .from(COMPANY_DOCUMENTS_BUCKET)
       .upload(path, file, {
-        contentType: file.type || "application/octet-stream",
+        contentType,
         upsert: false,
       });
 
@@ -123,7 +133,7 @@ async function uploadTaskFiles(
       file_name: file.name,
       file_path: path,
       file_size: file.size,
-      mime_type: file.type || null,
+      mime_type: contentType,
       uploaded_by: ctx.userId,
     });
   }

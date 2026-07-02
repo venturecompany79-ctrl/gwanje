@@ -108,6 +108,18 @@ await step("migration: 20260704000000_ip_rights", read("migrations/2026070400000
 await step("migration: 20260705000000_company_lifecycle", read("migrations/20260705000000_company_lifecycle.sql"));
 await step("migration: 20260706000000_mobile_app_push", read("migrations/20260706000000_mobile_app_push.sql"));
 await step("migration: 20260707000000_security_mobile_review_fixes", read("migrations/20260707000000_security_mobile_review_fixes.sql"));
+await step("migration: 20260708000000_document_mime_hardening", read("migrations/20260708000000_document_mime_hardening.sql"));
+
+const companyDocumentMime = await q(
+  "company-documents octet-stream 허용 여부",
+  `select coalesce('application/octet-stream' = any(allowed_mime_types), false) as has_octet
+   from storage.buckets
+   where id = 'company-documents'`,
+);
+assert(
+  companyDocumentMime[0]?.has_octet === false,
+  "company-documents bucket은 application/octet-stream을 허용하지 않음",
+);
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
