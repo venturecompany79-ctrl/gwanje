@@ -555,6 +555,7 @@ grant update (
 -- 16. 인덱스
 -- -------------------------------------------------------------
 create index idx_company_tenant on company (tenant_id);
+create unique index company_tenant_id_id_uniq on company (tenant_id, id);
 create index idx_company_status on company (tenant_id, status);
 create index idx_credential_company on credential (company_id);
 create index idx_credential_expires on credential (tenant_id, expires_date);
@@ -584,6 +585,39 @@ create index gov_program_support_field_idx on gov_program (support_field);
 create unique index if not exists task_source_credential_unique
   on task (source_credential_id)
   where source_credential_id is not null;
+
+alter table credential
+  add constraint credential_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table task
+  add constraint task_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table schedule
+  add constraint schedule_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table document
+  add constraint document_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table campaign_recipient
+  add constraint campaign_recipient_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table notification
+  add constraint notification_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table ip_right
+  add constraint ip_right_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table ip_deadline
+  add constraint ip_deadline_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
 
 -- -------------------------------------------------------------
 -- 17. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭

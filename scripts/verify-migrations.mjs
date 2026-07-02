@@ -48,6 +48,20 @@ function assert(cond, label) {
   }
 }
 
+async function assertSqlBlocked(label, sql) {
+  try {
+    await db.exec(sql);
+    failures++;
+    console.error(`✗ assert FAILED: ${label}`);
+  } catch (e) {
+    const blocked = /foreign key|violates|constraint|참조|키/i.test(e.message);
+    assert(blocked, label);
+    if (!blocked) {
+      console.error(`   unexpected error: ${e.message}`);
+    }
+  }
+}
+
 // ── 1. Supabase 환경 스텁 ────────────────────────────────────────────────
 await step(
   "stub: roles",
@@ -111,6 +125,7 @@ await step("migration: 20260707000000_security_mobile_review_fixes", read("migra
 await step("migration: 20260708000000_document_mime_hardening", read("migrations/20260708000000_document_mime_hardening.sql"));
 await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
 await step("migration: 20260710000000_document_version_unique", read("migrations/20260710000000_document_version_unique.sql"));
+await step("migration: 20260711000000_company_tenant_consistency", read("migrations/20260711000000_company_tenant_consistency.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -299,6 +314,92 @@ await step(
      insert into profile (id, tenant_id, name) values ('${USER_B}', v_tb, 'B컨설턴트');
      insert into company (tenant_id, name) values (v_tb, 'B사 전용기업');
    end $$;`,
+);
+
+const tenantCompanyFkRows = await q(
+  "company tenant 복합 FK 제약",
+  `select conname
+   from pg_constraint
+   where conname in (
+     'credential_tenant_company_fk',
+     'task_tenant_company_fk',
+     'schedule_tenant_company_fk',
+     'document_tenant_company_fk',
+     'campaign_recipient_tenant_company_fk',
+     'notification_tenant_company_fk',
+     'ip_right_tenant_company_fk',
+     'ip_deadline_tenant_company_fk'
+   )
+   order by conname`,
+);
+assert(tenantCompanyFkRows.length === 8, "company_id 보유 테이블 8곳에 tenant 복합 FK가 존재");
+
+await assertSqlBlocked(
+  "credential는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into credential (tenant_id, company_id, type)
+   select a.tenant_id, b.company_id, 'tenant mismatch' from a, b;`,
+);
+await assertSqlBlocked(
+  "task는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into task (tenant_id, company_id, title)
+   select a.tenant_id, b.company_id, 'tenant mismatch' from a, b;`,
+);
+await assertSqlBlocked(
+  "schedule은 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into schedule (tenant_id, company_id, title, date)
+   select a.tenant_id, b.company_id, 'tenant mismatch', current_date from a, b;`,
+);
+await assertSqlBlocked(
+  "document는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into document (tenant_id, company_id, name, uploaded_by)
+   select a.tenant_id, b.company_id, 'tenant-mismatch.pdf', 'consultant'::document_uploader from a, b;`,
+);
+await assertSqlBlocked(
+  "campaign_recipient는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        campaign_a as (
+          insert into campaign (tenant_id, title)
+          select tenant_id, 'tenant mismatch campaign' from a
+          returning id, tenant_id
+        ),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into campaign_recipient (tenant_id, campaign_id, company_id)
+   select campaign_a.tenant_id, campaign_a.id, b.company_id from campaign_a, b;`,
+);
+await assertSqlBlocked(
+  "notification은 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into notification (tenant_id, type, title, company_id)
+   select a.tenant_id, 'deadline'::notification_type, 'tenant mismatch', b.company_id from a, b;`,
+);
+await assertSqlBlocked(
+  "ip_right는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into ip_right (tenant_id, company_id, kind, title)
+   select a.tenant_id, b.company_id, 'patent'::ip_right_kind, 'tenant mismatch' from a, b;`,
+);
+await assertSqlBlocked(
+  "ip_deadline은 다른 tenant 회사 참조를 차단",
+  `with b_company as (select id, tenant_id from company where name='B사 전용기업'),
+        b_right as (
+          insert into ip_right (tenant_id, company_id, kind, title)
+          select tenant_id, id, 'patent'::ip_right_kind, 'B right' from b_company
+          returning id, company_id
+        ),
+        a as (select tenant_id from profile where id='${USER_A}')
+   insert into ip_deadline (tenant_id, company_id, ip_right_id, type, title, due_date)
+   select a.tenant_id, b_right.company_id, b_right.id, 'etc'::ip_deadline_type, 'tenant mismatch', current_date
+   from a, b_right;`,
 );
 // 사용자 A로 RLS 적용 조회 → B사 기업이 보이면 안 됨.
 // set local + role 전환은 트랜잭션으로 격리(끝나면 rollback으로 원복).
