@@ -175,6 +175,11 @@ function demoCompany(
     headcount,
     conditionTags,
     createdAt: dateAfter(-createdDaysAgo),
+    status: "active",
+    contractEndDate: null,
+    contractDaysLeft: null,
+    endedAt: null,
+    endedReason: null,
     credentialTypes,
     nearestDaysLeft,
     upcomingCount,
@@ -347,6 +352,12 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
     memo: isTechnova
       ? "벤처확인 갱신이 최우선. 2026년 디딤돌 R&D 신규 과제 희망."
       : null,
+    status: base.status,
+    contractStartDate: base.contractEndDate ? dateAfter(-365) : null,
+    contractEndDate: base.contractEndDate,
+    contractDaysLeft: base.contractDaysLeft,
+    endedAt: base.endedAt,
+    endedReason: base.endedReason,
   };
 
   const companyTasks = DEMO_TASKS().filter((t) => t.companyId === id);

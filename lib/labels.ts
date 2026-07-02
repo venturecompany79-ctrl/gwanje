@@ -64,6 +64,13 @@ export const CREDENTIAL_STATUS_LABEL: Record<CredentialStatus, string> = {
   expired: "만료",
 };
 
+export type CompanyStatus = "active" | "ended";
+
+export const COMPANY_STATUS_LABEL: Record<CompanyStatus, string> = {
+  active: "관리중",
+  ended: "종료",
+};
+
 export const IP_RIGHT_KIND_LABEL: Record<IpRightKind, string> = {
   patent: "특허",
   trademark: "상표",

@@ -202,6 +202,7 @@ export async function getSegmentCompanies(): Promise<SegmentCompaniesData> {
     supabase
       .from("company")
       .select("id, name, industry, revenue, condition_tags, contact_name")
+      .eq("status", "active")
       .order("name"),
     supabase.from("credential").select("company_id, type"),
     supabase

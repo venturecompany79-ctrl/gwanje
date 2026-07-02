@@ -1,4 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  getCurrentIdentity,
+  readCurrentMemberProfile,
+} from "@/lib/data/current-member";
 import { DEMO_SETTINGS } from "@/lib/demo-data";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import {
@@ -88,13 +92,13 @@ export async function getSettingsData(): Promise<SettingsData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_SETTINGS();
 
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     throw new Error("세션이 만료되었습니다. 다시 로그인해 주세요.");
   }
 
-  const [profileRes, categoriesRes, driveRes, driveFailedRes] = await Promise.all([
-    supabase.from("profile").select("*").eq("id", auth.user.id).maybeSingle(),
+  const [profile, categoriesRes, driveRes, driveFailedRes] = await Promise.all([
+    readCurrentMemberProfile(supabase, identity.userId),
     supabase
       .from("category")
       .select("id, name, color, sort_order")
@@ -111,11 +115,10 @@ export async function getSettingsData(): Promise<SettingsData> {
       .eq("status", "failed"),
   ]);
 
-  const firstError = profileRes.error ?? categoriesRes.error;
+  const firstError = categoriesRes.error;
   if (firstError) {
     throw new Error(`설정을 불러오지 못했습니다: ${firstError.message}`);
   }
-  const profile = profileRes.data;
   if (!profile) {
     throw new Error(
       "프로필 정보를 찾을 수 없습니다. seed.sql 적용 여부를 확인해 주세요.",
@@ -179,7 +182,7 @@ export async function getSettingsData(): Promise<SettingsData> {
       failedCount: driveFailedRes.count ?? 0,
     },
     currentMember: {
-      id: auth.user.id,
+      id: identity.userId,
       role: profile.role,
       permissions: currentPermissions,
       status: profile.status,
@@ -204,7 +207,7 @@ export async function getSettingsData(): Promise<SettingsData> {
           invitedAt: member.invited_at,
           acceptedAt: member.accepted_at,
           disabledAt: member.disabled_at,
-          isCurrentUser: member.id === auth.user.id,
+          isCurrentUser: member.id === identity.userId,
         },
       ];
     }),

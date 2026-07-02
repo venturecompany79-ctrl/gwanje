@@ -1,6 +1,10 @@
 // 서버 액션 공용 헬퍼 — "use server" 파일은 async 함수만 export 가능하므로 분리
 import type { createClient } from "@/lib/supabase/server";
 import {
+  getCurrentIdentity,
+  readCurrentMemberProfile,
+} from "@/lib/data/current-member";
+import {
   hasPermission,
   isMemberRole,
   isMemberStatus,
@@ -74,17 +78,12 @@ export async function getTenantContext(
 export async function getMemberContext(
   supabase: Supabase,
 ): Promise<MemberContext | { error: string }> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     return { error: "세션이 만료되었습니다. 다시 로그인해 주세요." };
   }
-  const { data: profile, error } = await supabase
-    .from("profile")
-    .select("tenant_id, role, permissions, status")
-    .eq("id", auth.user.id)
-    .single();
-  if (error || !profile) {
-    if (error) console.error("[getTenantContext]", error.code, error.message);
+  const profile = await readCurrentMemberProfile(supabase, identity.userId);
+  if (!profile) {
     return { error: "프로필 정보를 찾을 수 없습니다. seed.sql 적용 여부를 확인해 주세요." };
   }
   if (!isMemberStatus(profile.status)) {
@@ -98,7 +97,7 @@ export async function getMemberContext(
   }
   return {
     tenantId: profile.tenant_id,
-    userId: auth.user.id,
+    userId: identity.userId,
     role: profile.role,
     permissions: profile.permissions ?? [],
     status: profile.status,

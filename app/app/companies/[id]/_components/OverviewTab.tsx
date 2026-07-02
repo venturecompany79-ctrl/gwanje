@@ -41,6 +41,15 @@ export function OverviewTab({ company }: { company: CompanyProfile }) {
         <Item label="설립일" value={foundedDateValue(company.foundedDate)} />
         <Item label="지역명" value={company.region} />
         <Item
+          label="계약기간"
+          value={
+            company.contractStartDate || company.contractEndDate
+              ? `${company.contractStartDate ?? "—"} ~ ${company.contractEndDate ?? "—"}`
+              : null
+          }
+          full
+        />
+        <Item
           label="연 매출"
           value={company.revenue !== null ? formatRevenue(company.revenue) : null}
         />

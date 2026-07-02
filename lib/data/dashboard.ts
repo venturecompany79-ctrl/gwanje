@@ -231,7 +231,10 @@ export async function getDashboardKpi(): Promise<DashboardKpiResult> {
 
   const [companyCount, due7, expire30, activeTasks, overdueTop, urgentTop] =
     await Promise.all([
-      supabase.from("company").select("id", { count: "exact", head: true }),
+      supabase
+        .from("company")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active"),
       supabase
         .from("deadline_item")
         .select("id", { count: "exact", head: true })

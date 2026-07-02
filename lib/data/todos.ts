@@ -1,4 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  getCurrentIdentity,
+  readCurrentMemberProfile,
+} from "@/lib/data/current-member";
 import { shiftDateString, todayKstDate } from "@/lib/datetime";
 import { isMemberRole } from "@/lib/permissions";
 import {
@@ -70,18 +74,13 @@ export async function getTodoBoardData(
   const supabase = await createClient();
   if (!supabase) return DEMO_TODOS(today);
 
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
+  const identity = await getCurrentIdentity(supabase);
+  if (!identity) {
     throw new Error("세션이 만료되었습니다. 다시 로그인해 주세요.");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profile")
-    .select("id, tenant_id, name, role, status")
-    .eq("id", auth.user.id)
-    .maybeSingle();
-  if (profileError || !profile) {
-    if (profileError) console.error("[getTodoBoardData:profile]", profileError.code, profileError.message);
+  const profile = await readCurrentMemberProfile(supabase, identity.userId);
+  if (!profile) {
     throw new Error("프로필 정보를 불러오지 못했습니다.");
   }
   if (!isMemberRole(profile.role) || profile.status !== "active") {
@@ -107,7 +106,7 @@ export async function getTodoBoardData(
         id: member.id,
         name: member.name,
       }))
-    : [{ id: auth.user.id, name: profile.name }];
+    : [{ id: identity.userId, name: profile.name }];
   const memberName = new Map(members.map((member) => [member.id, member.name]));
 
   const requestedUser =
@@ -120,11 +119,11 @@ export async function getTodoBoardData(
         ? requestedUser
         : "me";
   const selectedUserId =
-    effectiveSelected === "me" ? auth.user.id : effectiveSelected;
+    effectiveSelected === "me" ? identity.userId : effectiveSelected;
   const selectedLabel =
     effectiveSelected === "all"
       ? "전체 팀원"
-      : selectedUserId === auth.user.id
+      : selectedUserId === identity.userId
         ? "내 업무일지"
         : (memberName.get(selectedUserId) ?? "팀원");
 
@@ -153,11 +152,11 @@ export async function getTodoBoardData(
   return {
     demo: false,
     today,
-    currentUserId: auth.user.id,
+    currentUserId: identity.userId,
     selectedUserId: effectiveSelected,
     selectedLabel,
     canViewTeam,
-    canCreate: effectiveSelected === "me" || selectedUserId === auth.user.id,
+    canCreate: effectiveSelected === "me" || selectedUserId === identity.userId,
     members,
     notes: (data ?? []).map((note) => ({
       id: note.id,
@@ -170,7 +169,7 @@ export async function getTodoBoardData(
       sortOrder: note.sort_order,
       createdAt: note.created_at,
       updatedAt: note.updated_at,
-      editable: note.user_id === auth.user.id,
+      editable: note.user_id === identity.userId,
     })),
   };
 }

@@ -28,6 +28,10 @@ export default async function NewCampaignPage() {
         <span className="cur">새 일괄안내</span>
       </nav>
 
+      <div className="page-head">
+        <h1>새 일괄안내</h1>
+      </div>
+
       <CampaignWizard companies={data.companies} />
     </>
   );

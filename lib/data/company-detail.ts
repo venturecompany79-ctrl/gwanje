@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
 import { daysFromToday } from "@/lib/datetime";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
+import type { CompanyStatus } from "@/lib/labels";
 import type {
   CredentialStatus,
   DocumentUploader,
@@ -31,6 +32,14 @@ export interface CompanyProfile {
   contactEmail: string | null;
   conditionTags: string[];
   memo: string | null;
+  /** 관리 상태 — active(관리중) / ended(종료) */
+  status: CompanyStatus;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  /** 계약 종료일까지 남은 일수 (활성·계약종료일 있을 때만) */
+  contractDaysLeft: number | null;
+  endedAt: string | null;
+  endedReason: string | null;
 }
 
 /** 자격에 명시 연결(credential_id)된 첨부 자료 — 기업 '자료' 탭의 document와 동일 행 */
@@ -205,7 +214,7 @@ export async function getCompanyDetail(
       supabase
         .from("company")
         .select(
-          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo",
+          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, status, contract_start_date, contract_end_date, ended_at, ended_reason",
         )
         .eq("id", companyId)
         .maybeSingle(),
@@ -470,6 +479,15 @@ export async function getCompanyDetail(
       contactEmail: company.data.contact_email,
       conditionTags: company.data.condition_tags ?? [],
       memo: company.data.memo,
+      status: (company.data.status as CompanyStatus) ?? "active",
+      contractStartDate: company.data.contract_start_date,
+      contractEndDate: company.data.contract_end_date,
+      contractDaysLeft:
+        company.data.status === "active" && company.data.contract_end_date
+          ? daysFromToday(company.data.contract_end_date)
+          : null,
+      endedAt: company.data.ended_at,
+      endedReason: company.data.ended_reason,
     },
     credentials: credentialRows,
     ipRights: ipRightRows,

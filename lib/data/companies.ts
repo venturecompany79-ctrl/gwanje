@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANIES } from "@/lib/demo-data";
-import { todayKstDate } from "@/lib/datetime";
+import { daysFromToday, todayKstDate } from "@/lib/datetime";
+import type { CompanyStatus } from "@/lib/labels";
 
 export interface CompanyListRow {
   id: string;
@@ -11,6 +12,16 @@ export interface CompanyListRow {
   headcount: number | null;
   conditionTags: string[];
   createdAt: string;
+  /** 관리 상태 — active(관리중) / ended(종료) */
+  status: CompanyStatus;
+  /** 계약 종료일 (없으면 null) */
+  contractEndDate: string | null;
+  /** 계약 종료일까지 남은 일수 (활성·계약종료일 있을 때만, 없으면 null) */
+  contractDaysLeft: number | null;
+  /** 관리 종료 확정 시각 (종료 기업만) */
+  endedAt: string | null;
+  /** 관리 종료 사유 (종료 기업만) */
+  endedReason: string | null;
   /** 보유 자격·인증 종류명 (칩 표시용) */
   credentialTypes: string[];
   /** 다가오는 항목 중 가장 임박한 D-day — deadline_item 뷰 기준, 없으면 null */
@@ -40,7 +51,7 @@ export async function getCompaniesData(): Promise<CompaniesData> {
       supabase
         .from("company")
         .select(
-          "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at",
+          "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at, status, contract_end_date, ended_at, ended_reason",
         )
         .order("name"),
       supabase.from("credential").select("company_id, type"),
@@ -99,6 +110,14 @@ export async function getCompaniesData(): Promise<CompaniesData> {
       headcount: co.headcount,
       conditionTags: co.condition_tags,
       createdAt: co.created_at,
+      status: (co.status as CompanyStatus) ?? "active",
+      contractEndDate: co.contract_end_date,
+      contractDaysLeft:
+        co.status === "active" && co.contract_end_date
+          ? daysFromToday(co.contract_end_date)
+          : null,
+      endedAt: co.ended_at,
+      endedReason: co.ended_reason,
       credentialTypes: credsByCompany.get(co.id) ?? [],
       nearestDaysLeft: upcomingItems.get(co.id)?.[0]?.daysLeft ?? null,
       upcomingCount: upcomingItems.get(co.id)?.length ?? 0,

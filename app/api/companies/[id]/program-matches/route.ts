@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentIdentity } from "@/lib/data/current-member";
 import { getCompanyProgramMatches } from "@/lib/data/company-programs";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,11 +11,8 @@ export async function GET(
 ) {
   const supabase = await createClient();
   if (supabase) {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-    if (error || !user) {
+    const identity = await getCurrentIdentity(supabase);
+    if (!identity) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
   }

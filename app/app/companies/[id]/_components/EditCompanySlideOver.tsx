@@ -121,6 +121,24 @@ export function EditCompanyButton({
                 />
                 <div className="form-grid2">
                   <InputField
+                    label="계약 시작일"
+                    name="contract_start_date"
+                    type="date"
+                    className="input--date"
+                    fieldClassName="field--date"
+                    defaultValue={company.contractStartDate ?? ""}
+                  />
+                  <InputField
+                    label="계약 종료일"
+                    name="contract_end_date"
+                    type="date"
+                    className="input--date"
+                    fieldClassName="field--date"
+                    defaultValue={company.contractEndDate ?? ""}
+                  />
+                </div>
+                <div className="form-grid2">
+                  <InputField
                     label="연 매출 (억 원)"
                     name="revenue"
                     type="number"
