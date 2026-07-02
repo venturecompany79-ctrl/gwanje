@@ -16,8 +16,11 @@ import {
   optionalText,
   parseEokToWon,
   parseNonNegativeInt,
+  parseOptionalDate,
+  parseRequiredDate,
   requirePermission,
   type ActionResult,
+  validateDateOrder,
 } from "@/lib/actions/shared";
 import {
   COMPANY_DOCUMENTS_BUCKET,
@@ -338,6 +341,18 @@ export async function addCredential(
     return { ok: false, error: "갱신 준비 기간은 0 이상의 숫자(일)로 입력해 주세요." };
   }
 
+  const issuedDate = parseOptionalDate(formData, "issued_date", "발급일");
+  if (!issuedDate.ok) return { ok: false, error: issuedDate.error };
+  const expiresDate = parseOptionalDate(formData, "expires_date", "만료일");
+  if (!expiresDate.ok) return { ok: false, error: expiresDate.error };
+  const dateOrder = validateDateOrder(
+    issuedDate.value,
+    expiresDate.value,
+    "발급일",
+    "만료일",
+  );
+  if (!dateOrder.ok) return dateOrder;
+
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
@@ -349,8 +364,8 @@ export async function addCredential(
     company_id: companyId,
     type,
     category_id: optionalText(formData, "category_id"),
-    issued_date: optionalText(formData, "issued_date"),
-    expires_date: optionalText(formData, "expires_date"),
+    issued_date: issuedDate.value,
+    expires_date: expiresDate.value,
     renew_lead_days: renewLeadDays,
     memo: optionalText(formData, "memo"),
   });
@@ -384,6 +399,18 @@ export async function updateCredential(
     return { ok: false, error: "갱신 준비 기간은 0 이상의 숫자(일)로 입력해 주세요." };
   }
 
+  const issuedDate = parseOptionalDate(formData, "issued_date", "발급일");
+  if (!issuedDate.ok) return { ok: false, error: issuedDate.error };
+  const expiresDate = parseOptionalDate(formData, "expires_date", "만료일");
+  if (!expiresDate.ok) return { ok: false, error: expiresDate.error };
+  const dateOrder = validateDateOrder(
+    issuedDate.value,
+    expiresDate.value,
+    "발급일",
+    "만료일",
+  );
+  if (!dateOrder.ok) return dateOrder;
+
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
@@ -392,8 +419,8 @@ export async function updateCredential(
     .update({
       type,
       category_id: optionalText(formData, "category_id"),
-      issued_date: optionalText(formData, "issued_date"),
-      expires_date: optionalText(formData, "expires_date"),
+      issued_date: issuedDate.value,
+      expires_date: expiresDate.value,
       renew_lead_days: renewLeadDays,
       memo: optionalText(formData, "memo"),
     })
@@ -549,6 +576,18 @@ function readIpRightForm(formData: FormData):
     return { ok: false, error: "진행상태 값이 올바르지 않습니다." };
   }
 
+  const appliedDate = parseOptionalDate(formData, "applied_date", "출원일");
+  if (!appliedDate.ok) return { ok: false, error: appliedDate.error };
+  const registeredDate = parseOptionalDate(formData, "registered_date", "등록일");
+  if (!registeredDate.ok) return { ok: false, error: registeredDate.error };
+  const dateOrder = validateDateOrder(
+    appliedDate.value,
+    registeredDate.value,
+    "출원일",
+    "등록일",
+  );
+  if (!dateOrder.ok) return dateOrder;
+
   return {
     ok: true,
     value: {
@@ -558,8 +597,8 @@ function readIpRightForm(formData: FormData):
       registrationNo: optionalText(formData, "registration_no"),
       agentName: optionalText(formData, "agent_name"),
       status: statusRaw as IpRightStatus,
-      appliedDate: optionalText(formData, "applied_date"),
-      registeredDate: optionalText(formData, "registered_date"),
+      appliedDate: appliedDate.value,
+      registeredDate: registeredDate.value,
       memo: optionalText(formData, "memo"),
     },
   };
@@ -584,9 +623,10 @@ function readIpDeadlineForm(formData: FormData):
   }
 
   const title = optionalText(formData, "deadline_title");
-  const dueDate = optionalText(formData, "deadline_due_date");
-  if (title && !dueDate) return { ok: false, error: "기한일을 선택해 주세요." };
-  if (dueDate && !title) return { ok: false, error: "기한명을 입력해 주세요." };
+  const dueDate = parseOptionalDate(formData, "deadline_due_date", "기한일");
+  if (!dueDate.ok) return { ok: false, error: dueDate.error };
+  if (title && !dueDate.value) return { ok: false, error: "기한일을 선택해 주세요." };
+  if (dueDate.value && !title) return { ok: false, error: "기한명을 입력해 주세요." };
 
   return {
     ok: true,
@@ -594,7 +634,7 @@ function readIpDeadlineForm(formData: FormData):
       id: optionalText(formData, "deadline_id"),
       type: typeRaw as IpDeadlineType,
       title,
-      dueDate,
+      dueDate: dueDate.value,
       isDone: formData.get("deadline_is_done") === "on",
       memo: optionalText(formData, "deadline_memo"),
     },
@@ -684,8 +724,8 @@ export async function addSchedule(
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "일정명을 입력해 주세요." };
 
-  const date = optionalText(formData, "date");
-  if (!date) return { ok: false, error: "날짜를 선택해 주세요." };
+  const date = parseRequiredDate(formData, "date", "날짜");
+  if (!date.ok) return { ok: false, error: date.error };
 
   const typeRaw = String(formData.get("type") ?? "etc");
   const type: ScheduleTypeValue = isScheduleType(typeRaw) ? typeRaw : "etc";
@@ -700,7 +740,7 @@ export async function addSchedule(
     tenant_id: ctx.tenantId,
     company_id: companyId,
     title,
-    date,
+    date: date.value,
     type,
     memo: optionalText(formData, "memo"),
   });
@@ -952,6 +992,30 @@ export async function updateCompany(
   const headcount = parseNonNegativeInt(formData, "headcount", "인원");
   if (!headcount.ok) return { ok: false, error: headcount.error };
 
+  const foundedDate = parseOptionalDate(formData, "founded_date", "설립일");
+  if (!foundedDate.ok) return { ok: false, error: foundedDate.error };
+  const contractStartDate = parseOptionalDate(
+    formData,
+    "contract_start_date",
+    "계약 시작일",
+  );
+  if (!contractStartDate.ok) {
+    return { ok: false, error: contractStartDate.error };
+  }
+  const contractEndDate = parseOptionalDate(
+    formData,
+    "contract_end_date",
+    "계약 종료일",
+  );
+  if (!contractEndDate.ok) return { ok: false, error: contractEndDate.error };
+  const contractOrder = validateDateOrder(
+    contractStartDate.value,
+    contractEndDate.value,
+    "계약 시작일",
+    "계약 종료일",
+  );
+  if (!contractOrder.ok) return contractOrder;
+
   const conditionTags = (optionalText(formData, "condition_tags") ?? "")
     .split(",")
     .map((tag) => tag.trim())
@@ -965,7 +1029,7 @@ export async function updateCompany(
       industry: optionalText(formData, "industry"),
       business_condition: optionalText(formData, "business_condition"),
       region: optionalText(formData, "region"),
-      founded_date: optionalText(formData, "founded_date"),
+      founded_date: foundedDate.value,
       revenue: revenue.value,
       headcount: headcount.value,
       ceo_name: optionalText(formData, "ceo_name"),
@@ -973,8 +1037,8 @@ export async function updateCompany(
       contact_phone: optionalText(formData, "contact_phone"),
       contact_email: optionalText(formData, "contact_email"),
       condition_tags: conditionTags,
-      contract_start_date: optionalText(formData, "contract_start_date"),
-      contract_end_date: optionalText(formData, "contract_end_date"),
+      contract_start_date: contractStartDate.value,
+      contract_end_date: contractEndDate.value,
       memo: optionalText(formData, "memo"),
     })
     .eq("id", companyId);
@@ -1007,9 +1071,10 @@ export async function endCompany(
   const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
   if (!access.ok) return { ok: false, error: access.error };
 
-  const endedDate = optionalText(formData, "ended_date");
-  const endedAt = endedDate
-    ? new Date(`${endedDate}T00:00:00+09:00`).toISOString()
+  const endedDate = parseOptionalDate(formData, "ended_date", "종료일");
+  if (!endedDate.ok) return { ok: false, error: endedDate.error };
+  const endedAt = endedDate.value
+    ? new Date(`${endedDate.value}T00:00:00+09:00`).toISOString()
     : new Date().toISOString();
 
   const { error } = await supabase
@@ -1019,7 +1084,7 @@ export async function endCompany(
       ended_at: endedAt,
       ended_reason: optionalText(formData, "ended_reason"),
       // 종료일을 입력했다면 계약 종료일도 함께 채워 기록을 일관되게 유지
-      ...(endedDate ? { contract_end_date: endedDate } : {}),
+      ...(endedDate.value ? { contract_end_date: endedDate.value } : {}),
     })
     .eq("id", companyId)
     .eq("tenant_id", ctx.tenantId);

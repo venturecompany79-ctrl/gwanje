@@ -4,6 +4,7 @@ import {
   getCurrentIdentity,
   readCurrentMemberProfile,
 } from "@/lib/data/current-member";
+import { isValidDateString } from "@/lib/datetime";
 import {
   hasPermission,
   isMemberRole,
@@ -24,6 +25,62 @@ export const DEMO_ERROR =
 export function optionalText(formData: FormData, key: string): string | null {
   const value = String(formData.get(key) ?? "").trim();
   return value === "" ? null : value;
+}
+
+export type ParsedDate =
+  | { ok: true; value: string | null }
+  | { ok: false; error: string };
+
+export type ParsedRequiredDate =
+  | { ok: true; value: string }
+  | { ok: false; error: string };
+
+export type ValidationResult =
+  | { ok: true; error: null }
+  | { ok: false; error: string };
+
+export function parseOptionalDate(
+  formData: FormData,
+  key: string,
+  label: string,
+): ParsedDate {
+  const value = optionalText(formData, key);
+  if (value === null) return { ok: true, value: null };
+  if (!isValidDateString(value)) {
+    return {
+      ok: false,
+      error: `${label}은(는) YYYY-MM-DD 형식의 올바른 날짜로 입력해 주세요.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+export function parseRequiredDate(
+  formData: FormData,
+  key: string,
+  label: string,
+): ParsedRequiredDate {
+  const parsed = parseOptionalDate(formData, key, label);
+  if (!parsed.ok) return parsed;
+  if (parsed.value === null) {
+    return { ok: false, error: `${label}을(를) 선택해 주세요.` };
+  }
+  return { ok: true, value: parsed.value };
+}
+
+export function validateDateOrder(
+  startDate: string | null,
+  endDate: string | null,
+  startLabel: string,
+  endLabel: string,
+): ValidationResult {
+  if (startDate && endDate && startDate > endDate) {
+    return {
+      ok: false,
+      error: `${endLabel}은(는) ${startLabel}보다 빠를 수 없습니다.`,
+    };
+  }
+  return { ok: true, error: null };
 }
 
 export type ParsedNumber =

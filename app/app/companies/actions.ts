@@ -9,6 +9,7 @@ import {
   optionalText,
   parseEokToWon,
   parseNonNegativeInt,
+  parseOptionalDate,
   requirePermission,
   type ActionResult,
 } from "@/lib/actions/shared";
@@ -16,6 +17,7 @@ import {
   COMPANY_DOCUMENTS_BUCKET,
   COMPANY_DOCUMENTS_MAX_BYTES,
   getFileExtension,
+  normalizeCompanyDocumentMimeType,
   storageUrlFromPath,
 } from "@/lib/storage";
 import {
@@ -82,6 +84,14 @@ async function saveBusinessLicenseDocument({
   file: File;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const extension = getFileExtension(file.name);
+  const contentType = normalizeCompanyDocumentMimeType(file.name, file.type);
+  if (!contentType) {
+    return {
+      ok: false,
+      error: "지원하지 않는 파일 형식입니다. PDF, 이미지, Office, HWP/HWPX, CSV 파일만 업로드할 수 있습니다.",
+    };
+  }
+
   const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
   const path = `${tenantId}/${companyId}/${objectName}`;
   const name = file.name.trim() || "사업자등록증";
@@ -89,7 +99,7 @@ async function saveBusinessLicenseDocument({
   const { error: uploadError } = await supabase.storage
     .from(COMPANY_DOCUMENTS_BUCKET)
     .upload(path, file, {
-      contentType: file.type || undefined,
+      contentType,
       upsert: false,
     });
   if (uploadError) {
@@ -113,6 +123,7 @@ async function saveBusinessLicenseDocument({
     .select("id")
     .single();
   if (documentError) {
+    await supabase.storage.from(COMPANY_DOCUMENTS_BUCKET).remove([path]);
     console.error(
       "[addCompany:businessLicenseDocument]",
       documentError.code,
@@ -131,7 +142,7 @@ async function saveBusinessLicenseDocument({
       storageBucket: COMPANY_DOCUMENTS_BUCKET,
       storagePath: path,
       fileName: name,
-      mimeType: file.type || null,
+      mimeType: contentType,
       sizeBytes: file.size,
     });
     // 즉시 트리거(B안) — 응답 후 백그라운드 동기화
@@ -156,6 +167,9 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
 
   const headcount = parseNonNegativeInt(formData, "headcount", "인원");
   if (!headcount.ok) return { ok: false, error: headcount.error };
+
+  const foundedDate = parseOptionalDate(formData, "founded_date", "설립일");
+  if (!foundedDate.ok) return { ok: false, error: foundedDate.error };
 
   const businessLicenseFile = getBusinessLicenseFile(formData);
   if (businessLicenseFile && businessLicenseFile.size > COMPANY_DOCUMENTS_MAX_BYTES) {
@@ -240,7 +254,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
       industry: optionalText(formData, "industry"),
       business_condition: optionalText(formData, "business_condition"),
       region: optionalText(formData, "region"),
-      founded_date: optionalText(formData, "founded_date"),
+      founded_date: foundedDate.value,
       revenue: revenue.value,
       headcount: headcount.value,
       ceo_name: optionalText(formData, "ceo_name"),

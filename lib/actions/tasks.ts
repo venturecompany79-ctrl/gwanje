@@ -13,6 +13,7 @@ import type { TaskStage } from "@/lib/database.types";
 import {
   DEMO_ERROR,
   assertCompanyAccess,
+  parseOptionalDate,
   requirePermission,
   type Supabase,
   optionalText,
@@ -174,6 +175,9 @@ export async function addTask(
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
+  const dueDate = parseOptionalDate(formData, "due_date", "마감일");
+  if (!dueDate.ok) return { ok: false, error: dueDate.error };
+
   const files = getTaskFiles(formData);
   const { data: createdTask, error } = await supabase
     .from("task")
@@ -183,7 +187,7 @@ export async function addTask(
       title,
       category_id: optionalText(formData, "category_id"),
       stage,
-      due_date: optionalText(formData, "due_date"),
+      due_date: dueDate.value,
       assignee_id: allowed.userId,
       memo: optionalText(formData, "memo"),
     })

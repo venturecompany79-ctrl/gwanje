@@ -4,6 +4,7 @@
 // (CLAUDE.md 7절 deadline_item 뷰도 동일하게 KST로 맞춘다 — supabase 마이그레이션 참고)
 
 const KST = "Asia/Seoul";
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 interface KstParts {
   year: number;
@@ -51,6 +52,18 @@ export function daysFromToday(dateStr: string): number {
   const [y, m, d] = dateStr.split("-").map(Number);
   return Math.round(
     (Date.UTC(y, m - 1, d) - kstDayNumber(new Date())) / 86_400_000,
+  );
+}
+
+/** 실제 달력에 존재하는 "YYYY-MM-DD" 날짜인지 검증한다. */
+export function isValidDateString(dateStr: string): boolean {
+  if (!ISO_DATE_PATTERN.test(dateStr)) return false;
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
   );
 }
 

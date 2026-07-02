@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { TaskStage } from "@/lib/database.types";
+import { isValidDateString } from "@/lib/datetime";
 import {
   mobileError,
   mobileJson,
@@ -8,7 +9,6 @@ import {
 } from "@/lib/mobile/api";
 
 const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 interface CreateTaskBody {
   companyId?: string;
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   let dueDate: string | null = null;
   if (body?.dueDate) {
-    if (!DATE_PATTERN.test(body.dueDate)) {
+    if (!isValidDateString(body.dueDate)) {
       return mobileError("마감일 형식이 올바르지 않습니다.");
     }
     dueDate = body.dueDate;
