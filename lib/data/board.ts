@@ -6,7 +6,6 @@ import {
 } from "@/lib/data/current-member";
 import { DEMO_BOARD } from "@/lib/demo-data";
 import {
-  PERMISSION_KEYS,
   hasPermission,
   normalizePermissions,
 } from "@/lib/permissions";
@@ -35,18 +34,36 @@ export interface BoardData {
   canWriteTasks: boolean;
 }
 
+const TASK_COLUMNS =
+  "id, title, category_id, stage, due_date, assignee_id, memo, company_id";
+const ACTIVE_TASK_LIMIT = 500;
+const COMPLETED_TASK_LIMIT = 100;
+
 export async function getBoardData(): Promise<BoardData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_BOARD();
 
   const identity = await getCurrentIdentity(supabase);
-  const [tasks, companies, categories, profiles, currentProfile] = await Promise.all([
-    // 보드 카드에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019 ③)
+  const [
+    activeTasks,
+    completedTasks,
+    companies,
+    categories,
+    profiles,
+    currentProfile,
+  ] = await Promise.all([
     supabase
       .from("task")
-      .select(
-        "id, title, category_id, stage, due_date, assignee_id, memo, company_id",
-      ),
+      .select(TASK_COLUMNS)
+      .neq("stage", "result")
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(ACTIVE_TASK_LIMIT),
+    supabase
+      .from("task")
+      .select(TASK_COLUMNS)
+      .eq("stage", "result")
+      .order("updated_at", { ascending: false })
+      .limit(COMPLETED_TASK_LIMIT),
     supabase.from("company").select("id, name").order("name"),
     supabase.from("category").select("id, name").order("sort_order"),
     supabase.from("profile").select("id, name"),
@@ -56,7 +73,8 @@ export async function getBoardData(): Promise<BoardData> {
   ]);
 
   const firstError =
-    tasks.error ??
+    activeTasks.error ??
+    completedTasks.error ??
     companies.error ??
     categories.error ??
     profiles.error;
@@ -69,13 +87,11 @@ export async function getBoardData(): Promise<BoardData> {
     (categories.data ?? []).map((c) => [c.id, c.name]),
   );
   const profileName = new Map((profiles.data ?? []).map((p) => [p.id, p.name]));
-  const role = currentProfile?.role ?? (identity ? "owner" : "viewer");
+  const role = currentProfile?.role ?? "viewer";
   const permissions = currentProfile
     ? normalizePermissions(role, currentProfile.permissions)
-    : identity
-      ? [...PERMISSION_KEYS]
-      : [];
-  const status = currentProfile?.status ?? (identity ? "active" : "disabled");
+    : [];
+  const status = currentProfile?.status ?? "disabled";
 
   return {
     demo: false,
@@ -83,7 +99,7 @@ export async function getBoardData(): Promise<BoardData> {
       { role, permissions, status },
       "tasks.write",
     ),
-    tasks: (tasks.data ?? [])
+    tasks: [...(activeTasks.data ?? []), ...(completedTasks.data ?? [])]
       .map((t) => ({
         id: t.id,
         title: t.title,

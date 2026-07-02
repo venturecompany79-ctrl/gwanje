@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import {
@@ -66,7 +67,7 @@ function normalizeProfile(
   };
 }
 
-export async function getCurrentIdentity(
+async function getCurrentIdentityImpl(
   supabase: AppSupabaseClient,
 ): Promise<CurrentIdentity | null> {
   const [authRes, claimsRes] = await Promise.all([
@@ -89,7 +90,7 @@ export async function getCurrentIdentity(
   };
 }
 
-export async function readCurrentMemberProfile(
+async function readCurrentMemberProfileImpl(
   supabase: AppSupabaseClient,
   userId: string,
 ): Promise<CurrentMemberProfile | null> {
@@ -129,3 +130,6 @@ export async function readCurrentMemberProfile(
 
   return normalizeProfile(serviceProfile.data);
 }
+
+export const getCurrentIdentity = cache(getCurrentIdentityImpl);
+export const readCurrentMemberProfile = cache(readCurrentMemberProfileImpl);

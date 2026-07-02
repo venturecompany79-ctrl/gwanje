@@ -38,6 +38,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/configuration-error", request.url));
   }
 
+  const isPrefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("purpose") === "prefetch" ||
+    request.headers.get("sec-purpose") === "prefetch";
+  if (isPrefetch) return NextResponse.next();
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(url, anonKey, {
@@ -59,9 +65,12 @@ export async function middleware(request: NextRequest) {
 
   const { data: claims } = await supabase.auth.getClaims();
   const isAuthenticated = Boolean(claims?.claims.sub);
+  const isAuthEntry =
+    pathname === "/" || pathname === "/login" || pathname === "/signup";
+  const isAppPath = pathname.startsWith("/app");
 
   let profileStatus: string | null = null;
-  if (isAuthenticated) {
+  if (isAuthenticated && (isAuthEntry || isAppPath)) {
     const { data: profile } = await supabase
       .from("profile")
       .select("status")
@@ -71,20 +80,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const isActiveMember = profileStatus === "active";
-  const isAuthEntry =
-    pathname === "/" || pathname === "/login" || pathname === "/signup";
 
   if (isAuthenticated && isAuthEntry && isActiveMember) {
     return NextResponse.redirect(new URL("/app", request.url));
   }
 
-  if (!isAuthenticated && pathname.startsWith("/app")) {
+  if (!isAuthenticated && isAppPath) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthenticated && pathname.startsWith("/app") && !isActiveMember) {
+  if (isAuthenticated && isAppPath && !isActiveMember) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("status", "inactive");
     return NextResponse.redirect(loginUrl);
@@ -95,7 +102,7 @@ export async function middleware(request: NextRequest) {
   if (
     isAuthenticated &&
     isBillingEnabled() &&
-    pathname.startsWith("/app") &&
+    isAppPath &&
     !pathname.startsWith("/app/billing") &&
     !pathname.startsWith("/app/settings")
   ) {

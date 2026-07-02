@@ -40,44 +40,74 @@ export interface CompaniesData {
   companies: CompanyListRow[];
 }
 
+const COMPANY_LIST_LIMIT = 500;
+const COMPANY_DETAIL_LIMIT = 2_000;
+const UPCOMING_DEADLINE_WINDOW_DAYS = 365;
+
 export async function getCompaniesData(): Promise<CompaniesData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_COMPANIES();
 
   const today = todayKstDate();
-  const [companies, credentials, upcomingDeadlines, expiredCredentials] =
-    await Promise.all([
-      // 목록 표시에 필요한 컬럼만 — 전량(select *) 조회 축소 (GWJ-019)
+  const companies = await supabase
+    .from("company")
+    .select(
+      "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at, status, contract_end_date, ended_at, ended_reason",
+    )
+    .order("name")
+    .limit(COMPANY_LIST_LIMIT);
+
+  if (companies.error) {
+    throw new Error(`기업 목록을 불러오지 못했습니다: ${companies.error.message}`);
+  }
+
+  const companyIds = (companies.data ?? []).map((company) => company.id);
+  let credentialRows: { company_id: string; type: string }[] = [];
+  let upcomingDeadlineRows: {
+    company_id: string | null;
+    days_left: number | null;
+    title: string | null;
+  }[] = [];
+  let expiredCredentialRows: { company_id: string | null }[] = [];
+
+  if (companyIds.length > 0) {
+    const [credentials, upcomingDeadlines, expiredCredentials] = await Promise.all([
       supabase
-        .from("company")
-        .select(
-          "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at, status, contract_end_date, ended_at, ended_reason",
-        )
-        .order("name"),
-      supabase.from("credential").select("company_id, type"),
+        .from("credential")
+        .select("company_id, type")
+        .in("company_id", companyIds)
+        .limit(COMPANY_DETAIL_LIMIT),
       supabase
         .from("deadline_item")
         .select("company_id, days_left, title")
         .gte("due_date", today)
-        .order("due_date", { ascending: true }),
+        .gte("days_left", 0)
+        .lte("days_left", UPCOMING_DEADLINE_WINDOW_DAYS)
+        .in("company_id", companyIds)
+        .order("due_date", { ascending: true })
+        .limit(COMPANY_DETAIL_LIMIT),
       supabase
         .from("deadline_item")
         .select("company_id")
         .eq("source", "credential")
-        .lt("due_date", today),
+        .lt("due_date", today)
+        .in("company_id", companyIds)
+        .limit(COMPANY_DETAIL_LIMIT),
     ]);
 
-  const firstError =
-    companies.error ??
-    credentials.error ??
-    upcomingDeadlines.error ??
-    expiredCredentials.error;
-  if (firstError) {
-    throw new Error(`기업 목록을 불러오지 못했습니다: ${firstError.message}`);
+    const firstError =
+      credentials.error ?? upcomingDeadlines.error ?? expiredCredentials.error;
+    if (firstError) {
+      throw new Error(`기업 목록을 불러오지 못했습니다: ${firstError.message}`);
+    }
+
+    credentialRows = credentials.data ?? [];
+    upcomingDeadlineRows = upcomingDeadlines.data ?? [];
+    expiredCredentialRows = expiredCredentials.data ?? [];
   }
 
   const credsByCompany = new Map<string, string[]>();
-  for (const cred of credentials.data ?? []) {
+  for (const cred of credentialRows) {
     const list = credsByCompany.get(cred.company_id) ?? [];
     list.push(cred.type);
     credsByCompany.set(cred.company_id, list);
@@ -85,13 +115,13 @@ export async function getCompaniesData(): Promise<CompaniesData> {
 
   const upcomingItems = new Map<string, { title: string; daysLeft: number }[]>();
   const expired = new Map<string, number>();
-  for (const item of upcomingDeadlines.data ?? []) {
+  for (const item of upcomingDeadlineRows) {
     if (!item.company_id || item.days_left === null) continue;
     const list = upcomingItems.get(item.company_id) ?? [];
     list.push({ title: item.title ?? "항목", daysLeft: item.days_left });
     upcomingItems.set(item.company_id, list);
   }
-  for (const item of expiredCredentials.data ?? []) {
+  for (const item of expiredCredentialRows) {
     if (!item.company_id) continue;
     expired.set(item.company_id, (expired.get(item.company_id) ?? 0) + 1);
   }
