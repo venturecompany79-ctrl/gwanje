@@ -17,6 +17,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { SlideOver } from "@/components/ui/SlideOver";
 import {
   IconAlert,
   IconAward,
@@ -370,14 +371,7 @@ function CredentialSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside
-        className="slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? "자격 수정" : "자격 추가"}
-      >
+    <SlideOver ariaLabel={isEdit ? "자격 수정" : "자격 추가"} onClose={onClose}>
         <div className="slideover-head">
           <h2>{isEdit ? "자격 수정" : "자격 추가"}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -499,8 +493,7 @@ function CredentialSlideOver({
             ) : null}
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 

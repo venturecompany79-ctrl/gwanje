@@ -10,6 +10,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { IconAlert, IconCalendar, IconDownload, IconFile, IconLink, IconPlus, IconRefresh, IconTrash, IconX } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
@@ -53,9 +54,7 @@ function AddScheduleSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside className="slideover" role="dialog" aria-modal="true" aria-label="일정 추가">
+    <SlideOver ariaLabel="일정 추가" onClose={onClose}>
         <div className="slideover-head">
           <h2>일정 추가</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -119,8 +118,7 @@ function AddScheduleSlideOver({
             </Button>
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 

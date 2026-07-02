@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { CategorySelect } from "@/components/ui/CategorySelect";
 import { InputField } from "@/components/ui/Input";
+import { SlideOver } from "@/components/ui/SlideOver";
 import {
   IconAlert,
   IconBuilding,
@@ -85,14 +86,7 @@ export function TaskSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside
-        className="slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Task 상세"
-      >
+    <SlideOver ariaLabel="Task 상세" onClose={onClose}>
         <div className="slideover-head">
           <div style={{ flex: 1, minWidth: 0 }}>
             {companyName ? (
@@ -184,8 +178,7 @@ export function TaskSlideOver({
             </Button>
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 
@@ -247,9 +240,7 @@ export function AddTaskSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside className="slideover" role="dialog" aria-modal="true" aria-label="Task 추가">
+    <SlideOver ariaLabel="Task 추가" onClose={onClose}>
         <div className="slideover-head">
           <h2>Task 추가</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -369,7 +360,6 @@ export function AddTaskSlideOver({
             </Button>
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }

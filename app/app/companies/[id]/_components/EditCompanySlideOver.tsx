@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/Input";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { IconAlert, IconEdit, IconX } from "@/components/ui/icons";
 import type { CompanyProfile } from "@/lib/data/company-detail";
 import { updateCompany } from "../actions";
@@ -49,14 +50,7 @@ export function EditCompanyButton({
       </Button>
 
       {open ? (
-        <div className="slideover-root">
-          <div className="slideover-backdrop" onClick={close} />
-          <aside
-            className="slideover"
-            role="dialog"
-            aria-modal="true"
-            aria-label="기업 정보 편집"
-          >
+        <SlideOver ariaLabel="기업 정보 편집" onClose={close}>
             <div className="slideover-head">
               <h2>기업 정보 편집</h2>
               <button type="button" className="icon-btn" onClick={close} aria-label="닫기">
@@ -206,8 +200,7 @@ export function EditCompanyButton({
                 </Button>
               </div>
             </form>
-          </aside>
-        </div>
+        </SlideOver>
       ) : null}
     </>
   );
