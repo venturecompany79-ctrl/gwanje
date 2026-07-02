@@ -36,6 +36,13 @@ import {
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 
+type Supabase = NonNullable<Awaited<ReturnType<typeof createClient>>>;
+type DocumentInsertResult =
+  | { ok: true; error: null; documentId: string }
+  | { ok: false; error: string };
+
+const DOCUMENT_VERSION_INSERT_ATTEMPTS = 3;
+
 function revalidateCompany(companyId: string) {
   revalidatePath(`/app/companies/${companyId}`);
   revalidatePath("/app/companies");
@@ -44,7 +51,7 @@ function revalidateCompany(companyId: string) {
 }
 
 async function assertCompanyAccess(
-  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  supabase: Supabase,
   companyId: string,
   tenantId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -61,6 +68,76 @@ async function assertCompanyAccess(
   }
   if (!data) return { ok: false, error: "기업을 찾을 수 없습니다." };
   return { ok: true };
+}
+
+async function nextDocumentVersion(
+  supabase: Supabase,
+  companyId: string,
+  name: string,
+): Promise<{ ok: true; version: number } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from("document")
+    .select("version")
+    .eq("company_id", companyId)
+    .eq("name", name)
+    .order("version", { ascending: false })
+    .limit(1);
+  if (error) {
+    console.error("[registerUploadedDocument:latest]", error.code, error.message);
+    return { ok: false, error: `버전 확인에 실패했습니다: ${error.message}` };
+  }
+  return { ok: true, version: (data?.[0]?.version ?? 0) + 1 };
+}
+
+async function insertDocumentWithVersionRetry(
+  supabase: Supabase,
+  input: {
+    tenantId: string;
+    companyId: string;
+    credentialId: string | null;
+    ipRightId: string | null;
+    name: string;
+    docCategory: string | null;
+    storagePath: string;
+    fileType: string;
+    sizeBytes: number | null;
+  },
+): Promise<DocumentInsertResult> {
+  for (let attempt = 0; attempt < DOCUMENT_VERSION_INSERT_ATTEMPTS; attempt += 1) {
+    const next = await nextDocumentVersion(supabase, input.companyId, input.name);
+    if (!next.ok) return { ok: false, error: next.error };
+
+    const { data, error } = await supabase
+      .from("document")
+      .insert({
+        tenant_id: input.tenantId,
+        company_id: input.companyId,
+        credential_id: input.credentialId,
+        ip_right_id: input.ipRightId,
+        name: input.name,
+        doc_category: input.docCategory,
+        version: next.version,
+        uploaded_by: "consultant",
+        storage_url: storageUrlFromPath(input.storagePath),
+        file_type: input.fileType,
+        size_bytes: input.sizeBytes,
+      })
+      .select("id")
+      .single();
+
+    if (!error) return { ok: true, error: null, documentId: data.id };
+    if (error.code === "23505" && attempt < DOCUMENT_VERSION_INSERT_ATTEMPTS - 1) {
+      continue;
+    }
+
+    console.error("[registerUploadedDocument]", error.code, error.message);
+    return { ok: false, error: `자료 저장에 실패했습니다: ${error.message}` };
+  }
+
+  return {
+    ok: false,
+    error: "동시에 같은 자료명이 등록되고 있습니다. 잠시 후 다시 시도해 주세요.",
+  };
 }
 
 export async function prepareDocumentUpload(
@@ -168,43 +245,21 @@ export async function registerUploadedDocument(
     if (!right) return { ok: false, error: "연결할 지식재산권을 찾을 수 없습니다." };
   }
 
-  const { data: latest, error: latestError } = await supabase
-    .from("document")
-    .select("version")
-    .eq("company_id", companyId)
-    .eq("name", name)
-    .order("version", { ascending: false })
-    .limit(1);
-  if (latestError) {
-    console.error("[registerUploadedDocument:latest]", latestError.code, latestError.message);
-    return { ok: false, error: `버전 확인에 실패했습니다: ${latestError.message}` };
-  }
-
-  const version = (latest?.[0]?.version ?? 0) + 1;
   const fileType =
     optionalText(formData, "file_type") ?? getFileExtension(name) ?? "file";
 
-  const { data: inserted, error } = await supabase
-    .from("document")
-    .insert({
-      tenant_id: ctx.tenantId,
-      company_id: companyId,
-      credential_id: credentialId,
-      ip_right_id: ipRightId,
-      name,
-      doc_category: optionalText(formData, "doc_category"),
-      version,
-      uploaded_by: "consultant",
-      storage_url: storageUrlFromPath(path),
-      file_type: fileType,
-      size_bytes: sizeBytes,
-    })
-    .select("id")
-    .single();
-  if (error) {
-    console.error("[registerUploadedDocument]", error.code, error.message);
-    return { ok: false, error: `자료 저장에 실패했습니다: ${error.message}` };
-  }
+  const inserted = await insertDocumentWithVersionRetry(supabase, {
+    tenantId: ctx.tenantId,
+    companyId,
+    credentialId,
+    ipRightId,
+    name,
+    docCategory: optionalText(formData, "doc_category"),
+    storagePath: path,
+    fileType,
+    sizeBytes,
+  });
+  if (!inserted.ok) return inserted;
 
   // Supabase 저장 성공이 1차 완료 — 이 사용자가 Drive를 연결했다면 동기화 잡을 적재한다.
   // 적재 실패는 자료 저장 결과에 영향을 주지 않는다(보조 기능).
@@ -213,7 +268,7 @@ export async function registerUploadedDocument(
     const enqueued = await enqueueSyncJob(supabase, {
       tenantId: ctx.tenantId,
       userId: ctx.userId,
-      documentId: inserted.id,
+      documentId: inserted.documentId,
       storageBucket: COMPANY_DOCUMENTS_BUCKET,
       storagePath: path,
       fileName: name,
@@ -225,7 +280,7 @@ export async function registerUploadedDocument(
   }
 
   revalidateCompany(companyId);
-  return { ok: true, error: null, documentId: inserted.id };
+  return { ok: true, error: null, documentId: inserted.documentId };
 }
 
 export async function createDocumentDownloadUrl(
@@ -642,7 +697,7 @@ function readIpDeadlineForm(formData: FormData):
 }
 
 async function savePrimaryIpDeadline(
-  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  supabase: Supabase,
   input: {
     tenantId: string;
     companyId: string;

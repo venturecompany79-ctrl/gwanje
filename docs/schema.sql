@@ -563,6 +563,7 @@ create index idx_task_due on task (tenant_id, due_date);
 create index idx_task_stage on task (tenant_id, stage);
 create index idx_schedule_date on schedule (tenant_id, date);
 create index idx_document_company on document (company_id);
+create unique index document_company_name_version_uniq on document (company_id, name, version);
 create index idx_document_credential on document (credential_id);
 create index idx_document_ip_right on document (ip_right_id);
 create index idx_ip_right_company on ip_right (company_id);

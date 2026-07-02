@@ -110,6 +110,7 @@ await step("migration: 20260706000000_mobile_app_push", read("migrations/2026070
 await step("migration: 20260707000000_security_mobile_review_fixes", read("migrations/20260707000000_security_mobile_review_fixes.sql"));
 await step("migration: 20260708000000_document_mime_hardening", read("migrations/20260708000000_document_mime_hardening.sql"));
 await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
+await step("migration: 20260710000000_document_version_unique", read("migrations/20260710000000_document_version_unique.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -125,6 +126,28 @@ assert(
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
 await step("seed: auth.users 1명", `insert into auth.users (id, email) values ('${USER_A}','owner@test.dev');`);
 await step("seed: seed.sql", read("seed.sql"));
+
+// ── 3-0. 자료 버전 유니크 — 동시 업로드 version race 방어 ───────────────
+await step(
+  "document: version 유니크 기준 행 삽입",
+  `with c as (select id, tenant_id from company order by created_at limit 1)
+   insert into document (tenant_id, company_id, name, version, uploaded_by)
+   select tenant_id, id, '버전경합테스트.pdf', 1, 'consultant'::document_uploader from c;`,
+);
+let duplicateDocumentVersionBlocked = false;
+try {
+  await db.exec(
+    `with c as (select id, tenant_id from company order by created_at limit 1)
+     insert into document (tenant_id, company_id, name, version, uploaded_by)
+     select tenant_id, id, '버전경합테스트.pdf', 1, 'consultant'::document_uploader from c;`,
+  );
+} catch (e) {
+  duplicateDocumentVersionBlocked = /unique|duplicate|중복/i.test(e.message);
+}
+assert(
+  duplicateDocumentVersionBlocked,
+  "동일 기업·자료명·version 중복 document는 유니크 인덱스로 차단",
+);
 
 // ── 3-1. 정부지원사업 공개 풀 + 후보 조회 ────────────────────────────────
 await step(
