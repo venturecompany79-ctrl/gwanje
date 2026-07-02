@@ -35,6 +35,7 @@ import {
   getActiveConnection,
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
+import { normalizeConditionTags } from "@/lib/company-tags";
 
 type Supabase = NonNullable<Awaited<ReturnType<typeof createClient>>>;
 type DocumentInsertResult =
@@ -1071,10 +1072,7 @@ export async function updateCompany(
   );
   if (!contractOrder.ok) return contractOrder;
 
-  const conditionTags = (optionalText(formData, "condition_tags") ?? "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  const conditionTags = normalizeConditionTags(optionalText(formData, "condition_tags"));
 
   const { error } = await supabase
     .from("company")

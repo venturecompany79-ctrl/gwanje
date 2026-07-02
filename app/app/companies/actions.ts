@@ -25,6 +25,7 @@ import {
   getActiveConnection,
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
+import { normalizeConditionTags } from "@/lib/company-tags";
 
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
@@ -36,21 +37,6 @@ export type AddCompanyResult = ActionResult & {
 /** 공백·대소문자 무시 정규화 (상호 유사중복 비교용) */
 function normalizeName(value: string): string {
   return value.replace(/\s+/g, "").toLowerCase();
-}
-
-// 성장 단계 표기 통일 (GWJ-010) — 변형/오타 라벨을 표준값으로 매핑
-const GROWTH_STAGE_CANON: Record<string, string> = {
-  얼라스테이징: "초기",
-  창업기: "초기",
-  초창기: "초기",
-  초기단계: "초기",
-  성장단계: "성장기",
-  성숙단계: "성숙기",
-  성숙: "성숙기",
-};
-
-function normalizeGrowthStageTag(tag: string): string {
-  return GROWTH_STAGE_CANON[tag] ?? tag;
 }
 
 function optionalList(formData: FormData, key: string): string[] {
@@ -204,10 +190,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
 
   // 성장 단계는 표준 select 값으로 받고, 자유 태그와 합쳐 condition_tags에 저장 (GWJ-010)
   const growthStage = optionalText(formData, "growth_stage");
-  const freeTags = (optionalText(formData, "condition_tags") ?? "")
-    .split(",")
-    .map((tag) => normalizeGrowthStageTag(tag.trim()))
-    .filter(Boolean);
+  const freeTags = normalizeConditionTags(optionalText(formData, "condition_tags"));
   const conditionTags = [...new Set([growthStage, ...freeTags].filter(Boolean))] as string[];
 
   const matchingProfileLines: string[] = [];
