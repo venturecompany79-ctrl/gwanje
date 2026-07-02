@@ -405,6 +405,7 @@ where c.expires_date is not null
     select 1
     from task t
     where t.source_credential_id = c.id
+      and t.due_date is not null
       and t.stage <> 'result'
   )
 

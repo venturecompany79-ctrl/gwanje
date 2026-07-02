@@ -109,6 +109,7 @@ await step("migration: 20260705000000_company_lifecycle", read("migrations/20260
 await step("migration: 20260706000000_mobile_app_push", read("migrations/20260706000000_mobile_app_push.sql"));
 await step("migration: 20260707000000_security_mobile_review_fixes", read("migrations/20260707000000_security_mobile_review_fixes.sql"));
 await step("migration: 20260708000000_document_mime_hardening", read("migrations/20260708000000_document_mime_hardening.sql"));
+await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -229,6 +230,17 @@ await q(
   `with c as (select id, tenant_id, company_id from credential limit 1)
    insert into task (tenant_id, company_id, title, source_credential_id)
    select tenant_id, company_id, '유니크테스트 갱신', id from c returning id`,
+);
+const credentialVisibleWithUndatedTask = await q(
+  "deadline_item: due_date 없는 갱신 과제는 자격 D-day를 숨기지 않음",
+  `with c as (select id from credential limit 1)
+   select count(*)::int as n
+   from deadline_item d
+   join c on d.source = 'credential' and d.id = c.id`,
+);
+assert(
+  (credentialVisibleWithUndatedTask[0]?.n ?? 0) === 1,
+  "source_credential_id가 있어도 task.due_date가 null이면 credential deadline_item 유지",
 );
 let dupBlocked = false;
 try {
