@@ -19,7 +19,8 @@ import { colors, radius } from "@/design/tokens";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { session, signIn, signInWithGoogle, envReady } = useAuth();
+  const { session, signIn, signInWithGoogle, gateError, clearGateError, envReady } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +28,8 @@ export default function LoginScreen() {
   const [googlePending, setGooglePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = pending || googlePending;
+  // 웹 리다이렉트 복귀 시 게이트 안내(예: 미가입 계정), 로컬 에러가 없을 때만 노출
+  const shownError = error ?? gateError;
 
   async function submit() {
     if (busy) return;
@@ -40,6 +43,7 @@ export default function LoginScreen() {
     }
     setPending(true);
     setError(null);
+    clearGateError();
     try {
       await signIn(email, password);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -59,6 +63,7 @@ export default function LoginScreen() {
     }
     setGooglePending(true);
     setError(null);
+    clearGateError();
     try {
       await signInWithGoogle();
     } catch (err) {
@@ -141,10 +146,10 @@ export default function LoginScreen() {
           </View>
         ) : null}
 
-        {error ? (
+        {shownError ? (
           <View style={styles.errorRow}>
             <View style={styles.errorDot} />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{shownError}</Text>
           </View>
         ) : null}
 

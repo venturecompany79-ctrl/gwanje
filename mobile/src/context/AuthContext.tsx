@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Platform } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, hasMobileEnv, hasWebApiBaseUrl } from "@/lib/supabase";
 import { signInWithGoogleOAuth } from "@/lib/oauth";
@@ -17,28 +18,35 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** 온보딩 게이트에서 막힌 경우의 안내(웹 리다이렉트 복귀 시 표시) */
+  gateError: string | null;
+  clearGateError: () => void;
   envReady: boolean;
 }
 
 // 앱에는 온보딩 화면이 없다 — 웹에서 아직 프로비저닝(가입 완료)되지 않은 계정은
-// 세션이 생겨도 tenant가 없어 빈 화면이 된다. 이런 계정은 로그아웃시키고 안내한다.
-async function assertProvisionedOrSignOut(userId: string) {
-  const { data: profile } = await supabase
+// 세션이 생겨도 tenant가 없어 빈 화면이 된다. 이런 계정은 로그인시키지 않는다.
+type GateResult = "ok" | "unprovisioned" | "inactive" | "unknown";
+
+async function checkProfileGate(userId: string): Promise<GateResult> {
+  const { data, error } = await supabase
     .from("profile")
     .select("status")
     .eq("id", userId)
     .maybeSingle();
+  if (error) return "unknown"; // 판정 불가 — 통과(fail-open, 기존 동작 유지)
+  if (!data) return "unprovisioned";
+  return data.status === "active" ? "ok" : "inactive";
+}
 
-  if (!profile) {
-    await supabase.auth.signOut();
-    throw new Error(
-      "웹에서 회원가입을 먼저 완료해 주세요. (gwanje.vercel.app)",
-    );
+function gateMessage(result: GateResult): string | null {
+  if (result === "unprovisioned") {
+    return "웹에서 회원가입을 먼저 완료해 주세요. (gwanje.vercel.app)";
   }
-  if (profile.status !== "active") {
-    await supabase.auth.signOut();
-    throw new Error("비활성화되었거나 초대 수락 전인 계정입니다.");
+  if (result === "inactive") {
+    return "비활성화되었거나 초대 수락 전인 계정입니다.";
   }
+  return null; // ok / unknown → 통과
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,13 +54,29 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gateError, setGateError] = useState<string | null>(null);
   const envReady = hasMobileEnv && hasWebApiBaseUrl;
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
-      setSession(data.session);
+      const current = data.session;
+      // 웹: Google 리다이렉트 복귀 시 detectSessionInUrl이 세션을 만들지만
+      // signInWithGoogle의 게이트를 거치지 않으므로 여기서 프로비저닝을 검증한다.
+      if (current && Platform.OS === "web") {
+        const message = gateMessage(await checkProfileGate(current.user.id));
+        if (!mounted) return;
+        if (message) {
+          await supabase.auth.signOut();
+          if (!mounted) return;
+          setGateError(message);
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+      }
+      setSession(current);
       setLoading(false);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -76,6 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       loading,
       envReady,
+      gateError,
+      clearGateError() {
+        setGateError(null);
+      },
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -86,16 +114,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signInWithGoogle() {
         const { cancelled } = await signInWithGoogleOAuth();
         if (cancelled) return;
+        // 웹은 위에서 페이지가 리다이렉트되므로 여기 도달하지 않는다(네이티브 전용 게이트).
         const { data } = await supabase.auth.getUser();
         const userId = data.user?.id;
         if (!userId) throw new Error("로그인에 실패했습니다. 다시 시도해 주세요.");
-        await assertProvisionedOrSignOut(userId);
+        const message = gateMessage(await checkProfileGate(userId));
+        if (message) {
+          await supabase.auth.signOut();
+          throw new Error(message);
+        }
       },
       async signOut() {
         await supabase.auth.signOut();
       },
     }),
-    [envReady, loading, session],
+    [envReady, gateError, loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
