@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { LinkButton } from "@/components/ui/Button";
 import { IconMenu, IconX } from "@/components/ui/icons";
@@ -19,7 +20,14 @@ export default function LandingNav() {
     <header className="lnav">
       <div className="lnav-in">
         <Link href="/" className="lp-logo">
-          <span className="brand-mark">관</span>관제
+          <Image
+            src="/brand/gwanje-logo.png"
+            alt="관제"
+            width={1597}
+            height={280}
+            priority
+            className="brand-logo"
+          />
         </Link>
         <nav className="lp-nav-menu">
           {MENU.map((m) => (

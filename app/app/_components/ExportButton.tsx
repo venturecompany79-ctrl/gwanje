@@ -46,7 +46,7 @@ export function ExportButton() {
         disabled={pending || busy}
         title="다가오는·지난 마감/만료 전체 목록을 CSV 파일로 저장합니다"
       >
-        <IconDownload /> {busy ? "내보내는 중…" : "마감목록 CSV 내보내기"}
+        <IconDownload /> {busy ? "내보내는 중…" : "CSV 내보내기"}
       </Button>
       <Toast message={toast} />
     </>

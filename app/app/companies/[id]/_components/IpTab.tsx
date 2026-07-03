@@ -14,6 +14,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { SlideOver } from "@/components/ui/SlideOver";
 import {
   IconAlert,
   IconDownload,
@@ -489,14 +490,10 @@ function IpSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside
-        className="slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? "특허·상표 수정" : "특허·상표 추가"}
-      >
+    <SlideOver
+      ariaLabel={isEdit ? "특허·상표 수정" : "특허·상표 추가"}
+      onClose={onClose}
+    >
         <div className="slideover-head">
           <h2>{isEdit ? "특허·상표 수정" : "특허·상표 추가"}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -664,8 +661,7 @@ function IpSlideOver({
             ) : null}
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 

@@ -17,6 +17,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { SlideOver } from "@/components/ui/SlideOver";
 import {
   IconAlert,
   IconAward,
@@ -370,14 +371,7 @@ function CredentialSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside
-        className="slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? "자격 수정" : "자격 추가"}
-      >
+    <SlideOver ariaLabel={isEdit ? "자격 수정" : "자격 추가"} onClose={onClose}>
         <div className="slideover-head">
           <h2>{isEdit ? "자격 수정" : "자격 추가"}</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -499,8 +493,7 @@ function CredentialSlideOver({
             ) : null}
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 
@@ -545,7 +538,7 @@ export function CertsTab({
             }
           />
         ) : (
-          <table className="dlist">
+          <table className="dlist dlist--cards">
             <thead>
               <tr>
                 <th>자격종류</th>
@@ -579,7 +572,7 @@ export function CertsTab({
                     }
                   }}
                 >
-                  <td className="name">
+                  <td className="name" data-label="자격종류">
                     {c.type}
                     {c.attachments.length > 0 ? (
                       <span
@@ -590,16 +583,20 @@ export function CertsTab({
                       </span>
                     ) : null}
                   </td>
-                  <td>
+                  <td data-label="분류">
                     {c.categoryName ? (
                       <CategoryChip name={c.categoryName} />
                     ) : (
                       <span className="cell-muted">—</span>
                     )}
                   </td>
-                  <td className="date num">{c.issuedDate ?? "—"}</td>
-                  <td className="date num">{c.expiresDate ?? "—"}</td>
-                  <td>
+                  <td className="date num" data-label="발급일">
+                    {c.issuedDate ?? "—"}
+                  </td>
+                  <td className="date num" data-label="만료일">
+                    {c.expiresDate ?? "—"}
+                  </td>
+                  <td data-label="상태">
                     {c.status ? (
                       <Badge tone={STATUS_TONE[c.status]}>
                         {CREDENTIAL_STATUS_LABEL[c.status]}
@@ -608,7 +605,7 @@ export function CertsTab({
                       <span className="cell-muted">—</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label="D-day">
                     {c.daysLeft !== null ? (
                       <DdayBadge daysLeft={c.daysLeft} />
                     ) : (
@@ -617,6 +614,7 @@ export function CertsTab({
                   </td>
                   <td
                     className="r"
+                    data-label="액션"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >

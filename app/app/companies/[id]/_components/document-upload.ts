@@ -21,15 +21,16 @@ export async function uploadDocumentVersion(
   const prepared = await prepareDocumentUpload(companyId, {
     name: file.name,
     size: file.size,
+    type: file.type,
   });
-  if (!prepared.ok || !prepared.bucket || !prepared.path) {
+  if (!prepared.ok || !prepared.bucket || !prepared.path || !prepared.contentType) {
     return { ok: false, error: prepared.error ?? "업로드 준비에 실패했습니다." };
   }
 
   const { error: uploadError } = await supabase.storage
     .from(prepared.bucket)
     .upload(prepared.path, file, {
-      contentType: file.type || "application/octet-stream",
+      contentType: prepared.contentType,
       upsert: false,
     });
   if (uploadError) {
@@ -41,7 +42,7 @@ export async function uploadDocumentVersion(
   formData.set("path", prepared.path);
   formData.set("size_bytes", String(file.size));
   formData.set("file_type", file.name.split(".").pop()?.toLowerCase() ?? "file");
-  formData.set("mime_type", file.type || "application/octet-stream");
+  formData.set("mime_type", prepared.contentType);
   if (options?.docCategory) formData.set("doc_category", options.docCategory);
   if (options?.credentialId) formData.set("credential_id", options.credentialId);
   if (options?.ipRightId) formData.set("ip_right_id", options.ipRightId);

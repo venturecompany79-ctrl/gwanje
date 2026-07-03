@@ -760,35 +760,17 @@ h4 {
 }
 .brand {
   display: flex;
-  align-items: center;
-  gap: 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 4px 8px 24px;
 }
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-full);
-  flex: none;
-  background: radial-gradient(
-    circle at 30% 30%,
-    var(--color-primary-soft),
-    var(--color-primary) 55%,
-    var(--color-primary-deep)
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
+.brand-logo {
+  height: auto;
+  width: auto;
 }
-.brand b {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--color-ink-deep);
-  line-height: 1.1;
-  display: block;
+.brand .brand-logo {
+  height: 22px;
 }
 .brand small {
   display: block;
@@ -3465,16 +3447,8 @@ table.dlist .name {
   gap: 12px;
   text-align: center;
 }
-.auth-brand .brand-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-xl);
-  font-size: 24px;
-  box-shadow: 0 6px 18px rgba(0, 100, 224, 0.28);
-}
-.auth-brand b {
-  font-size: 22px;
-  color: var(--color-ink-deep);
+.auth-brand .brand-logo {
+  height: 48px;
 }
 .auth-brand span {
   font-size: 13px;
@@ -4947,10 +4921,8 @@ input.cond-input {
   color: var(--color-ink-deep);
   text-decoration: none;
 }
-.lp-logo .brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+.lp-logo .brand-logo {
+  height: 28px;
 }
 .lp-nav-menu {
   display: flex;
@@ -5700,11 +5672,9 @@ body {
   }
 
   .brand {
-    justify-content: center;
-    padding: 2px 0 22px;
+    display: none;
   }
 
-  .brand > div:not(.brand-mark),
   .nav-sec,
   .nav-foot .who {
     display: none;
@@ -6261,6 +6231,161 @@ body {
   .dlist--cards tbody tr {
     padding-left: 13px;
     padding-right: 13px;
+  }
+}
+
+/* ---- 모바일 최적화 리뷰 후속 보강 (2026-07-02) ---- */
+@media (max-width: 900px) {
+  .set-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .set-nav {
+    position: static;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .set-nav .sn {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .set-nav .sn.is-active::before {
+    display: none;
+  }
+
+  .pill-btn,
+  .abtn,
+  .cat-sw,
+  .cat-sw-opt {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .todo-check {
+    width: 28px;
+    height: 28px;
+  }
+
+  .todo-row-action {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lead-day-chip button {
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .link-btn {
+    padding: 8px 4px;
+  }
+
+  .toast {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-pill input,
+  .memo-input,
+  .cond-input,
+  .dt-input,
+  .todo-draft-date,
+  .selbox,
+  .select-pill {
+    font-size: 16px;
+  }
+
+  .cond-row {
+    flex-wrap: wrap;
+  }
+
+  .cond-row .cond-input {
+    flex: 1 1 calc(50% - 24px);
+    min-width: 0;
+  }
+
+  .cond-x {
+    margin-left: 0;
+  }
+
+  .steps {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 16px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step-conn {
+    width: 18px;
+    margin: 0 6px;
+  }
+
+  .step:not(.is-active) .step-label {
+    display: none;
+  }
+
+  .radio-row {
+    flex-direction: column;
+  }
+
+  .dt-input {
+    width: 100%;
+  }
+
+  .sum-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wz-foot {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .wz-foot .btn {
+    flex: 1 1 auto;
+  }
+
+  .task {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .task > div:first-child {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .task .tname {
+    min-width: 0;
+  }
+
+  .task > .spacer {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .n-actions {
+    display: flex;
+  }
+
+  .n-time {
+    display: none;
   }
 }
 

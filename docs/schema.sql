@@ -405,6 +405,7 @@ where c.expires_date is not null
     select 1
     from task t
     where t.source_credential_id = c.id
+      and t.due_date is not null
       and t.stage <> 'result'
   )
 
@@ -554,6 +555,7 @@ grant update (
 -- 16. 인덱스
 -- -------------------------------------------------------------
 create index idx_company_tenant on company (tenant_id);
+create unique index company_tenant_id_id_uniq on company (tenant_id, id);
 create index idx_company_status on company (tenant_id, status);
 create index idx_credential_company on credential (company_id);
 create index idx_credential_expires on credential (tenant_id, expires_date);
@@ -562,6 +564,7 @@ create index idx_task_due on task (tenant_id, due_date);
 create index idx_task_stage on task (tenant_id, stage);
 create index idx_schedule_date on schedule (tenant_id, date);
 create index idx_document_company on document (company_id);
+create unique index document_company_name_version_uniq on document (company_id, name, version);
 create index idx_document_credential on document (credential_id);
 create index idx_document_ip_right on document (ip_right_id);
 create index idx_ip_right_company on ip_right (company_id);
@@ -582,6 +585,39 @@ create index gov_program_support_field_idx on gov_program (support_field);
 create unique index if not exists task_source_credential_unique
   on task (source_credential_id)
   where source_credential_id is not null;
+
+alter table credential
+  add constraint credential_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table task
+  add constraint task_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table schedule
+  add constraint schedule_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table document
+  add constraint document_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table campaign_recipient
+  add constraint campaign_recipient_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table notification
+  add constraint notification_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table ip_right
+  add constraint ip_right_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table ip_deadline
+  add constraint ip_deadline_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
 
 -- -------------------------------------------------------------
 -- 17. 알림 자동 생성 잡 (F4) — deadline_item × profile.notify_lead_days 매칭

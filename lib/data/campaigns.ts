@@ -66,6 +66,9 @@ export interface SegmentCompaniesData {
   companies: SegmentCompany[];
 }
 
+const CAMPAIGN_LIST_LIMIT = 200;
+const CAMPAIGN_RECIPIENT_LIMIT = 5_000;
+
 /** 응답 먼저(응답 시각순) → 도달 → 미도달 순으로 정렬 */
 function sortRecipients(recipients: RecipientRow[]): RecipientRow[] {
   return [...recipients].sort((a, b) => {
@@ -82,22 +85,35 @@ export async function getCampaignsData(): Promise<CampaignsData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_CAMPAIGNS();
 
-  const [campaigns, recipients] = await Promise.all([
-    supabase
-      .from("campaign")
-      .select("id, title, status, segment, sent_at, scheduled_at")
-      .order("created_at", { ascending: false }),
-    supabase.from("campaign_recipient").select("campaign_id, responded"),
-  ]);
+  const campaigns = await supabase
+    .from("campaign")
+    .select("id, title, status, segment, sent_at, scheduled_at")
+    .order("created_at", { ascending: false })
+    .limit(CAMPAIGN_LIST_LIMIT);
 
-  const firstError = campaigns.error ?? recipients.error;
-  if (firstError) {
-    throw new Error(`캠페인 목록을 불러오지 못했습니다: ${firstError.message}`);
+  if (campaigns.error) {
+    throw new Error(`캠페인 목록을 불러오지 못했습니다: ${campaigns.error.message}`);
+  }
+
+  const campaignIds = (campaigns.data ?? []).map((campaign) => campaign.id);
+  let recipientRows: { campaign_id: string; responded: boolean }[] = [];
+  if (campaignIds.length > 0) {
+    const recipients = await supabase
+      .from("campaign_recipient")
+      .select("campaign_id, responded")
+      .in("campaign_id", campaignIds)
+      .limit(CAMPAIGN_RECIPIENT_LIMIT);
+    if (recipients.error) {
+      throw new Error(
+        `캠페인 목록을 불러오지 못했습니다: ${recipients.error.message}`,
+      );
+    }
+    recipientRows = recipients.data ?? [];
   }
 
   const total = new Map<string, number>();
   const responded = new Map<string, number>();
-  for (const r of recipients.data ?? []) {
+  for (const r of recipientRows) {
     total.set(r.campaign_id, (total.get(r.campaign_id) ?? 0) + 1);
     if (r.responded) {
       responded.set(r.campaign_id, (responded.get(r.campaign_id) ?? 0) + 1);

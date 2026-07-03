@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
   IconGear,
   IconGrid,
   IconKanban,
+  IconSend,
 } from "@/components/ui/icons";
 import { hasPermission, type MemberRole, type PermissionKey } from "@/lib/permissions";
 
@@ -15,6 +17,7 @@ const NAV_ITEMS = [
   { href: "/app", label: "대시보드", icon: IconGrid },
   { href: "/app/companies", label: "기업", icon: IconBuilding, permission: "companies.read" },
   { href: "/app/board", label: "Task 보드", icon: IconKanban, permission: "tasks.read" },
+  { href: "/app/campaigns", label: "일괄안내", icon: IconSend, permission: "campaigns.read" },
   { href: "/app/notifications", label: "알림", icon: IconBell, permission: "notifications.read" },
   { href: "/app/settings", label: "설정", icon: IconGear },
 ] as const;
@@ -38,11 +41,15 @@ export function Sidebar({
   return (
     <nav className="shell-nav">
       <div className="brand">
-        <div className="brand-mark">관</div>
-        <div>
-          <b>관제</b>
-          <small>Compliance Desk</small>
-        </div>
+        <Image
+          src="/brand/gwanje-logo.png"
+          alt="관제"
+          width={1597}
+          height={280}
+          priority
+          className="brand-logo"
+        />
+        <small>Compliance Desk</small>
       </div>
       <div className="nav-sec">메뉴</div>
       {NAV_ITEMS.filter((item) =>

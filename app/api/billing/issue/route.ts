@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getTenantContext } from "@/lib/actions/shared";
+import { requirePermission } from "@/lib/actions/shared";
 import { isBillingEnabled, isTossConfigured } from "@/lib/billing/config";
 import { issueAndStoreBillingKey } from "@/lib/billing/service";
 
@@ -23,9 +23,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) {
-    return NextResponse.json({ ok: false, error: ctx.error }, { status: 401 });
+  const member = await requirePermission(supabase, "billing.manage");
+  if ("error" in member) {
+    return NextResponse.json({ ok: false, error: member.error }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -50,12 +50,12 @@ export async function POST(request: Request) {
   try {
     const { paymentMethodId } = await issueAndStoreBillingKey(
       service,
-      ctx.tenantId,
+      member.tenantId,
       body.authKey,
       body.customerKey,
     );
     console.info(
-      `[billing/issue] tenant=${ctx.tenantId} paymentMethod=${paymentMethodId}`,
+      `[billing/issue] tenant=${member.tenantId} paymentMethod=${paymentMethodId}`,
     );
     return NextResponse.json({ ok: true, paymentMethodId });
   } catch (err) {

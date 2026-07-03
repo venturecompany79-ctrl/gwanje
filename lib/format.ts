@@ -20,6 +20,12 @@ export function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}MB`;
 }
 
+export function formatDday(daysLeft: number): string {
+  if (daysLeft < 0) return `D+${Math.abs(daysLeft)}`;
+  if (daysLeft === 0) return "D-day";
+  return `D-${daysLeft}`;
+}
+
 // ── 입력 마스킹 (GWJ-002 / GWJ-003) ──────────────────────────
 // 사업자등록번호·전화번호 자동 하이픈. 입력 중 실시간 적용하므로 부분 입력도
 // 자연스럽게 마스킹된다(붙여넣기 시 숫자만 추출). 저장값도 이 표준 포맷으로 통일.

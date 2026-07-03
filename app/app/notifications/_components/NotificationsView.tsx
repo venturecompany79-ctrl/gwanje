@@ -20,6 +20,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/actions/notifications";
+import { formatDday } from "@/lib/format";
 import { NOTIFICATION_TYPE_LABEL } from "@/lib/labels";
 import type { NotificationType } from "@/lib/database.types";
 import type {
@@ -71,13 +72,7 @@ function typeIcon(type: NotificationType) {
 function Ddi({ daysLeft }: { daysLeft: number }) {
   const tone =
     daysLeft <= 3 ? "ddi--red" : daysLeft <= 7 ? "ddi--amber" : "ddi--gray";
-  const label =
-    daysLeft < 0
-      ? `D+${-daysLeft}`
-      : daysLeft === 0
-        ? "D-day"
-        : `D-${daysLeft}`;
-  return <span className={`ddi num ${tone}`}>{label}</span>;
+  return <span className={`ddi num ${tone}`}>{formatDday(daysLeft)}</span>;
 }
 
 function NotifRow({

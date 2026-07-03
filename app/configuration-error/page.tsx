@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -9,8 +10,13 @@ export default function ConfigurationErrorPage() {
   return (
     <main className="auth-stage">
       <div className="auth-brand">
-        <div className="brand-mark">관</div>
-        <b>관제</b>
+        <Image
+          src="/brand/gwanje-logo.png"
+          alt="관제"
+          width={1597}
+          height={280}
+          className="brand-logo"
+        />
         <span>중소기업 인증·지원·융자 관제 데스크</span>
       </div>
 

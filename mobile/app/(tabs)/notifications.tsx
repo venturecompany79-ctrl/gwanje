@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
   filterWrap: {
     marginHorizontal: spacing.base,
     marginTop: spacing.base,
+    marginBottom: spacing.sm,
   },
   readAll: {
     fontSize: 14.5,

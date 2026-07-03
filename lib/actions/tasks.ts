@@ -7,11 +7,13 @@ import {
   COMPANY_DOCUMENTS_BUCKET,
   COMPANY_DOCUMENTS_MAX_BYTES,
   getFileExtension,
+  normalizeCompanyDocumentMimeType,
 } from "@/lib/storage";
 import type { TaskStage } from "@/lib/database.types";
 import {
   DEMO_ERROR,
-  getTenantContext,
+  assertCompanyAccess,
+  parseOptionalDate,
   requirePermission,
   type Supabase,
   optionalText,
@@ -102,11 +104,20 @@ async function uploadTaskFiles(
   }[] = [];
 
   for (const file of files) {
+    const contentType = normalizeCompanyDocumentMimeType(file.name, file.type);
+    if (!contentType) {
+      await removeUploadedTaskFiles(supabase, uploadedPaths);
+      return {
+        ok: false,
+        error: `${file.name} 파일 형식은 지원하지 않습니다. PDF, 이미지, Office, HWP/HWPX, CSV 파일만 업로드할 수 있습니다.`,
+      };
+    }
+
     const path = taskFilePath(ctx.tenantId, companyId, taskId, file);
     const { error } = await supabase.storage
       .from(COMPANY_DOCUMENTS_BUCKET)
       .upload(path, file, {
-        contentType: file.type || "application/octet-stream",
+        contentType,
         upsert: false,
       });
 
@@ -123,7 +134,7 @@ async function uploadTaskFiles(
       file_name: file.name,
       file_path: path,
       file_size: file.size,
-      mime_type: file.type || null,
+      mime_type: contentType,
       uploaded_by: ctx.userId,
     });
   }
@@ -153,6 +164,9 @@ export async function addTask(
   const allowed = await requirePermission(supabase, "tasks.write");
   if ("error" in allowed) return { ok: false, error: allowed.error };
 
+  const access = await assertCompanyAccess(supabase, companyId, allowed.tenantId);
+  if (!access.ok) return access;
+
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
 
@@ -161,20 +175,20 @@ export async function addTask(
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) return { ok: false, error: ctx.error };
+  const dueDate = parseOptionalDate(formData, "due_date", "마감일");
+  if (!dueDate.ok) return { ok: false, error: dueDate.error };
 
   const files = getTaskFiles(formData);
   const { data: createdTask, error } = await supabase
     .from("task")
     .insert({
-      tenant_id: ctx.tenantId,
+      tenant_id: allowed.tenantId,
       company_id: companyId,
       title,
       category_id: optionalText(formData, "category_id"),
       stage,
-      due_date: optionalText(formData, "due_date"),
-      assignee_id: ctx.userId,
+      due_date: dueDate.value,
+      assignee_id: allowed.userId,
       memo: optionalText(formData, "memo"),
     })
     .select("id")
@@ -186,7 +200,7 @@ export async function addTask(
 
   const uploadResult = await uploadTaskFiles(
     supabase,
-    ctx,
+    { tenantId: allowed.tenantId, userId: allowed.userId },
     companyId,
     createdTask.id,
     files,

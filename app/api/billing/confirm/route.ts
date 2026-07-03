@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getTenantContext } from "@/lib/actions/shared";
+import { requirePermission } from "@/lib/actions/shared";
 import { isBillingEnabled, isTossConfigured } from "@/lib/billing/config";
 import {
   issueAndStoreBillingKey,
@@ -27,9 +27,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "결제 비활성" }, { status: 503 });
   }
 
-  const ctx = await getTenantContext(supabase);
-  if ("error" in ctx) {
-    return NextResponse.json({ ok: false, error: ctx.error }, { status: 401 });
+  const member = await requirePermission(supabase, "billing.manage");
+  if ("error" in member) {
+    return NextResponse.json({ ok: false, error: member.error }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -54,11 +54,11 @@ export async function POST(request: Request) {
   try {
     await issueAndStoreBillingKey(
       service,
-      ctx.tenantId,
+      member.tenantId,
       body.authKey,
       body.customerKey,
     );
-    const result = await chargeAndActivate(service, ctx.tenantId, "initial");
+    const result = await chargeAndActivate(service, member.tenantId, "initial");
     if (!result.ok) {
       return NextResponse.json(
         { ok: false, error: result.message, code: result.code },

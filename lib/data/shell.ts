@@ -6,7 +6,6 @@ import {
   type CurrentMemberProfile,
 } from "@/lib/data/current-member";
 import {
-  PERMISSION_KEYS,
   isMemberRole,
   normalizePermissions,
   type MemberRole,
@@ -82,14 +81,10 @@ export async function getShellData(): Promise<ShellData> {
   const role =
     profile?.role && isMemberRole(profile.role)
       ? profile.role
-      : identity
-        ? "owner"
-        : "viewer";
+      : "viewer";
   const permissions = profile?.permissions?.length
     ? normalizePermissions(role, profile.permissions)
-    : role === "owner"
-      ? [...PERMISSION_KEYS]
-      : [];
+    : [];
   const orgName = await readTenantNameById(profile?.tenant_id);
 
   return {

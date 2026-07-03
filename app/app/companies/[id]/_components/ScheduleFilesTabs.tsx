@@ -10,6 +10,7 @@ import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InputField } from "@/components/ui/Input";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { IconAlert, IconCalendar, IconDownload, IconFile, IconLink, IconPlus, IconRefresh, IconTrash, IconX } from "@/components/ui/icons";
 import { DOCUMENT_UPLOADER_LABEL, SCHEDULE_TYPE_LABEL } from "@/lib/labels";
 import { formatBytes } from "@/lib/format";
@@ -53,9 +54,7 @@ function AddScheduleSlideOver({
   }
 
   return (
-    <div className="slideover-root">
-      <div className="slideover-backdrop" onClick={onClose} />
-      <aside className="slideover" role="dialog" aria-modal="true" aria-label="일정 추가">
+    <SlideOver ariaLabel="일정 추가" onClose={onClose}>
         <div className="slideover-head">
           <h2>일정 추가</h2>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -119,8 +118,7 @@ function AddScheduleSlideOver({
             </Button>
           </div>
         </form>
-      </aside>
-    </div>
+    </SlideOver>
   );
 }
 
@@ -167,7 +165,7 @@ export function ScheduleTab({
           }
         />
       ) : (
-        <table className="dlist">
+        <table className="dlist dlist--cards">
           <thead>
             <tr>
               <th>일정</th>
@@ -180,15 +178,19 @@ export function ScheduleTab({
           <tbody>
             {schedules.map((s) => (
               <tr key={s.id}>
-                <td className="name">{s.title}</td>
-                <td>
+                <td className="name" data-label="일정">
+                  {s.title}
+                </td>
+                <td data-label="유형">
                   <Badge tone="neutral">{SCHEDULE_TYPE_LABEL[s.type]}</Badge>
                 </td>
-                <td className="date num">{s.date}</td>
-                <td>
+                <td className="date num" data-label="날짜">
+                  {s.date}
+                </td>
+                <td data-label="D-day">
                   <DdayBadge daysLeft={s.daysLeft} />
                 </td>
-                <td>
+                <td data-label="연결 과제">
                   {s.relatedTaskTitle ? (
                     <CategoryChip name={s.relatedTaskTitle} />
                   ) : (
@@ -523,7 +525,7 @@ export function FilesTab({
           action={<UploadDocumentButton companyId={companyId} />}
         />
       ) : (
-        <table className="dlist">
+        <table className="dlist dlist--cards">
           <thead>
             <tr>
               <th>자료명</th>
@@ -539,7 +541,7 @@ export function FilesTab({
           <tbody>
             {documents.map((d) => (
               <tr key={d.id}>
-                <td className="name">
+                <td className="name" data-label="자료명">
                   <span
                     style={{ display: "inline-flex", alignItems: "center", gap: 10 }}
                   >
@@ -547,19 +549,25 @@ export function FilesTab({
                     {d.name}
                   </span>
                 </td>
-                <td>
+                <td data-label="분류">
                   {d.docCategory ? (
                     <CategoryChip name={d.docCategory} />
                   ) : (
                     <span className="cell-muted">—</span>
                   )}
                 </td>
-                <td className="r num">v{d.version}</td>
-                <td>{DOCUMENT_UPLOADER_LABEL[d.uploadedBy]}</td>
-                <td className="r num">{formatBytes(d.sizeBytes)}</td>
-                <td className="date num">{formatKstDate(d.createdAt)}</td>
+                <td className="r num" data-label="버전">
+                  v{d.version}
+                </td>
+                <td data-label="업로더">{DOCUMENT_UPLOADER_LABEL[d.uploadedBy]}</td>
+                <td className="r num" data-label="크기">
+                  {formatBytes(d.sizeBytes)}
+                </td>
+                <td className="date num" data-label="등록일">
+                  {formatKstDate(d.createdAt)}
+                </td>
                 {driveConnected ? (
-                  <td>
+                  <td data-label="드라이브">
                     <DriveSyncCell
                       companyId={companyId}
                       document={d}
@@ -567,7 +575,7 @@ export function FilesTab({
                     />
                   </td>
                 ) : null}
-                <td className="r">
+                <td className="r" data-label="관리">
                   <span className="doc-actions">
                     <DocumentDownloadButton document={d} />
                     <DocumentUpdateButton

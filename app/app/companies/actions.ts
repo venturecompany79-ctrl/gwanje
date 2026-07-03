@@ -9,6 +9,7 @@ import {
   optionalText,
   parseEokToWon,
   parseNonNegativeInt,
+  parseOptionalDate,
   requirePermission,
   type ActionResult,
 } from "@/lib/actions/shared";
@@ -16,6 +17,7 @@ import {
   COMPANY_DOCUMENTS_BUCKET,
   COMPANY_DOCUMENTS_MAX_BYTES,
   getFileExtension,
+  normalizeCompanyDocumentMimeType,
   storageUrlFromPath,
 } from "@/lib/storage";
 import {
@@ -23,6 +25,7 @@ import {
   getActiveConnection,
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
+import { normalizeConditionTags } from "@/lib/company-tags";
 
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
@@ -34,21 +37,6 @@ export type AddCompanyResult = ActionResult & {
 /** 공백·대소문자 무시 정규화 (상호 유사중복 비교용) */
 function normalizeName(value: string): string {
   return value.replace(/\s+/g, "").toLowerCase();
-}
-
-// 성장 단계 표기 통일 (GWJ-010) — 변형/오타 라벨을 표준값으로 매핑
-const GROWTH_STAGE_CANON: Record<string, string> = {
-  얼라스테이징: "초기",
-  창업기: "초기",
-  초창기: "초기",
-  초기단계: "초기",
-  성장단계: "성장기",
-  성숙단계: "성숙기",
-  성숙: "성숙기",
-};
-
-function normalizeGrowthStageTag(tag: string): string {
-  return GROWTH_STAGE_CANON[tag] ?? tag;
 }
 
 function optionalList(formData: FormData, key: string): string[] {
@@ -82,6 +70,14 @@ async function saveBusinessLicenseDocument({
   file: File;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const extension = getFileExtension(file.name);
+  const contentType = normalizeCompanyDocumentMimeType(file.name, file.type);
+  if (!contentType) {
+    return {
+      ok: false,
+      error: "지원하지 않는 파일 형식입니다. PDF, 이미지, Office, HWP/HWPX, CSV 파일만 업로드할 수 있습니다.",
+    };
+  }
+
   const objectName = `${randomUUID()}${extension ? `.${extension}` : ""}`;
   const path = `${tenantId}/${companyId}/${objectName}`;
   const name = file.name.trim() || "사업자등록증";
@@ -89,7 +85,7 @@ async function saveBusinessLicenseDocument({
   const { error: uploadError } = await supabase.storage
     .from(COMPANY_DOCUMENTS_BUCKET)
     .upload(path, file, {
-      contentType: file.type || undefined,
+      contentType,
       upsert: false,
     });
   if (uploadError) {
@@ -113,6 +109,7 @@ async function saveBusinessLicenseDocument({
     .select("id")
     .single();
   if (documentError) {
+    await supabase.storage.from(COMPANY_DOCUMENTS_BUCKET).remove([path]);
     console.error(
       "[addCompany:businessLicenseDocument]",
       documentError.code,
@@ -131,7 +128,7 @@ async function saveBusinessLicenseDocument({
       storageBucket: COMPANY_DOCUMENTS_BUCKET,
       storagePath: path,
       fileName: name,
-      mimeType: file.type || null,
+      mimeType: contentType,
       sizeBytes: file.size,
     });
     // 즉시 트리거(B안) — 응답 후 백그라운드 동기화
@@ -156,6 +153,9 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
 
   const headcount = parseNonNegativeInt(formData, "headcount", "인원");
   if (!headcount.ok) return { ok: false, error: headcount.error };
+
+  const foundedDate = parseOptionalDate(formData, "founded_date", "설립일");
+  if (!foundedDate.ok) return { ok: false, error: foundedDate.error };
 
   const businessLicenseFile = getBusinessLicenseFile(formData);
   if (businessLicenseFile && businessLicenseFile.size > COMPANY_DOCUMENTS_MAX_BYTES) {
@@ -190,10 +190,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
 
   // 성장 단계는 표준 select 값으로 받고, 자유 태그와 합쳐 condition_tags에 저장 (GWJ-010)
   const growthStage = optionalText(formData, "growth_stage");
-  const freeTags = (optionalText(formData, "condition_tags") ?? "")
-    .split(",")
-    .map((tag) => normalizeGrowthStageTag(tag.trim()))
-    .filter(Boolean);
+  const freeTags = normalizeConditionTags(optionalText(formData, "condition_tags"));
   const conditionTags = [...new Set([growthStage, ...freeTags].filter(Boolean))] as string[];
 
   const matchingProfileLines: string[] = [];
@@ -240,7 +237,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
       industry: optionalText(formData, "industry"),
       business_condition: optionalText(formData, "business_condition"),
       region: optionalText(formData, "region"),
-      founded_date: optionalText(formData, "founded_date"),
+      founded_date: foundedDate.value,
       revenue: revenue.value,
       headcount: headcount.value,
       ceo_name: optionalText(formData, "ceo_name"),

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { daysFromToday, todayKstDate } from "@/lib/datetime";
+import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
 import { TODO_BOARD_DAY_COUNT, isTodoTag, type TodoTag } from "@/lib/todos";
 import {
   mobileError,
@@ -14,8 +14,6 @@ interface CreateTodoBody {
   noteDate?: string;
 }
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function cleanContent(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -26,7 +24,7 @@ function normalizeTag(value: unknown): TodoTag | null {
 
 function resolveNoteDate(value: string | undefined): string | null {
   if (value === undefined) return todayKstDate();
-  if (!DATE_PATTERN.test(value)) return null;
+  if (!isValidDateString(value)) return null;
   const offset = daysFromToday(value);
   if (offset > 0 || offset < -(TODO_BOARD_DAY_COUNT - 1)) return null;
   return value;

@@ -29,7 +29,7 @@ export function DeadlinePanel({
             전체 보기 ✕
           </Link>
         ) : null}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button type="button" className="pill-tab is-active">
             <IconList /> D-day 리스트
           </button>

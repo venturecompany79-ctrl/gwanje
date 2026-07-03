@@ -98,7 +98,7 @@ export default async function CampaignDetailPage({
             description="발송이 완료되면 기업별 도달·응답 현황이 여기에 집계됩니다."
           />
         ) : (
-          <table className="dlist">
+          <table className="dlist dlist--cards">
             <thead>
               <tr>
                 <th>기업명</th>
@@ -111,27 +111,29 @@ export default async function CampaignDetailPage({
             <tbody>
               {recipients.map((r) => (
                 <tr key={r.id}>
-                  <td className="co">{r.companyName}</td>
-                  <td className="c">
+                  <td className="co" data-label="기업명">
+                    {r.companyName}
+                  </td>
+                  <td className="c" data-label="도달">
                     <span className={`yn ${r.delivered ? "yn--ok" : "yn--no"}`}>
                       <span className="d" />
                       {r.delivered ? "도달" : "미도달"}
                     </span>
                   </td>
-                  <td className="c">
+                  <td className="c" data-label="응답">
                     <span className={`yn ${r.responded ? "yn--ok" : "yn--no"}`}>
                       <span className="d" />
                       {r.responded ? "응답" : "미응답"}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="응답 내용">
                     {r.responseNote ? (
                       <span className="ans">“{r.responseNote}”</span>
                     ) : (
                       <span className="cell-muted">–</span>
                     )}
                   </td>
-                  <td className="date num">
+                  <td className="date num" data-label="응답 시각">
                     {formatShortDateTime(r.respondedAt)}
                   </td>
                 </tr>

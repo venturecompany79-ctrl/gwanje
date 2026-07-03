@@ -3,6 +3,7 @@
 // 대시보드 "내보내기" — D-day 통합 목록(deadline_item)을 CSV로 산출 (F17)
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_DASHBOARD } from "@/lib/demo-data";
+import { formatDday } from "@/lib/format";
 import type { DeadlineItem } from "@/lib/database.types";
 
 const SOURCE_LABEL: Record<DeadlineItem["source"], string> = {
@@ -11,12 +12,6 @@ const SOURCE_LABEL: Record<DeadlineItem["source"], string> = {
   task: "과제",
   schedule: "일정",
 };
-
-function ddayLabel(daysLeft: number): string {
-  if (daysLeft < 0) return `D+${-daysLeft}`;
-  if (daysLeft === 0) return "D-day";
-  return `D-${daysLeft}`;
-}
 
 function csvCell(value: string | number | null): string {
   const s = value === null ? "" : String(value);
@@ -36,7 +31,7 @@ function toCsv(rows: DeadlineItem[]): string {
         r.title,
         r.category_name ?? "",
         r.due_date,
-        ddayLabel(r.days_left),
+        formatDday(r.days_left),
       ]
         .map(csvCell)
         .join(","),
