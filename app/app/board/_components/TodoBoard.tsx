@@ -85,6 +85,11 @@ function groupLabel(offset: number): string {
   return `${offset}일 전`;
 }
 
+function autoResizeTextarea(el: HTMLTextAreaElement) {
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 function TagCommandMenu({
   activeIndex,
   onSelect,
@@ -130,7 +135,7 @@ export function TodoBoard({
   const [tagMenuIndex, setTagMenuIndex] = useState(0);
   const [focusDraftId, setFocusDraftId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const draftRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const draftRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const handledAddRequestRef = useRef(addRequest);
   const composingTargetsRef = useRef<Set<string>>(new Set());
 
@@ -219,7 +224,7 @@ export function TodoBoard({
   }
 
   function handleTagMenuKeys(
-    e: ReactKeyboardEvent<HTMLInputElement>,
+    e: ReactKeyboardEvent<HTMLTextAreaElement>,
     target: TagMenuTarget,
     onSelect: (tag: TodoTag) => void,
   ): boolean {
@@ -250,7 +255,7 @@ export function TodoBoard({
   }
 
   function isComposingInput(
-    e: ReactKeyboardEvent<HTMLInputElement>,
+    e: ReactKeyboardEvent<HTMLTextAreaElement>,
     target: TagMenuTarget,
   ): boolean {
     return (
@@ -277,6 +282,21 @@ export function TodoBoard({
 
   function changeDraftDate(id: string, date: string) {
     updateDraft(id, { date });
+  }
+
+  function changeNoteDate(note: TodoNoteRow, date: string) {
+    if (date === note.noteDate) return;
+    const previousDate = note.noteDate;
+    applyNoteLocal(note.id, { noteDate: date });
+    startTransition(async () => {
+      const result = await updateTodoNote(note.id, { noteDate: date });
+      if (!result.ok) {
+        applyNoteLocal(note.id, { noteDate: previousDate });
+        showToast(result.error ?? "날짜 변경에 실패했습니다.");
+        return;
+      }
+      router.refresh();
+    });
   }
 
   function saveDrafts(date: string) {
@@ -411,6 +431,18 @@ export function TodoBoard({
         </button>
         <div className="todo-item-body">
           <div className="todo-edit-row">
+            <input
+              type="date"
+              className="todo-draft-date"
+              value={note.noteDate}
+              onChange={(e) => {
+                if (note.editable && e.target.value) {
+                  changeNoteDate(note, e.target.value);
+                }
+              }}
+              disabled={!note.editable}
+              aria-label="노트 날짜"
+            />
             {data.canViewTeam ? (
               <span className="todo-author">{note.userName}</span>
             ) : null}
@@ -424,11 +456,16 @@ export function TodoBoard({
             >
               {note.tag ? `[${note.tag}]` : "태그"}
             </button>
-            <input
+            <textarea
+              ref={(node) => {
+                if (node) autoResizeTextarea(node);
+              }}
               className="todo-text-input"
+              rows={1}
               value={note.content}
               onChange={(e) => {
                 if (!note.editable) return;
+                autoResizeTextarea(e.currentTarget);
                 applyNoteLocal(note.id, { content: e.target.value });
                 markNoteDirty(note.id);
               }}
@@ -452,7 +489,7 @@ export function TodoBoard({
                   openTagMenu(target);
                   return;
                 }
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   e.currentTarget.blur();
                 }
@@ -503,15 +540,18 @@ export function TodoBoard({
             >
               {draft.tag ? `[${draft.tag}]` : "태그"}
             </button>
-            <input
+            <textarea
               ref={(node) => {
                 draftRefs.current[draft.id] = node;
+                if (node) autoResizeTextarea(node);
               }}
               className="todo-text-input"
+              rows={1}
               value={draft.content}
-              onChange={(e) =>
-                updateDraft(draft.id, { content: e.target.value })
-              }
+              onChange={(e) => {
+                autoResizeTextarea(e.currentTarget);
+                updateDraft(draft.id, { content: e.target.value });
+              }}
               onCompositionStart={() => handleCompositionStart(target)}
               onCompositionEnd={() => handleCompositionEnd(target)}
               onKeyDown={(e) => {
@@ -526,7 +566,7 @@ export function TodoBoard({
                   openTagMenu(target);
                   return;
                 }
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   const content = e.currentTarget.value;
                   updateDraft(draft.id, { content });
@@ -648,6 +688,18 @@ export function TodoBoard({
             >
               {group.notes.map(renderNote)}
               {groupDrafts.map(renderDraft)}
+              {groupDrafts.length > 0 ? (
+                <div className="todo-draft-footer">
+                  <button
+                    type="button"
+                    className="todo-add-note"
+                    onClick={() => addDraft(group.date)}
+                  >
+                    <IconPlus /> 노트 추가
+                  </button>
+                  <span className="todo-draft-hint">Shift+Enter 줄바꿈</span>
+                </div>
+              ) : null}
               {itemCount === 0 ? (
                 <button
                   type="button"

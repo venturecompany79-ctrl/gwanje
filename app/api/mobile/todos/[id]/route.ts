@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { isTodoTag, type TodoTag } from "@/lib/todos";
+import { cleanTodoContent, isTodoTag, type TodoTag } from "@/lib/todos";
 import {
   mobileError,
   mobileJson,
@@ -11,10 +11,6 @@ interface UpdateTodoBody {
   content?: string;
   tag?: TodoTag | null;
   completed?: boolean;
-}
-
-function cleanContent(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
 }
 
 function normalizeTag(value: unknown): TodoTag | null {
@@ -44,7 +40,7 @@ export async function PATCH(
   };
 
   if (body.content !== undefined) {
-    const content = cleanContent(body.content);
+    const content = cleanTodoContent(body.content);
     if (!content) return mobileError("빈 노트는 저장할 수 없습니다.");
     update.content = content;
   }

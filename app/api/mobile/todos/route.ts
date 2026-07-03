@@ -1,6 +1,11 @@
 import type { NextRequest } from "next/server";
 import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
-import { TODO_BOARD_DAY_COUNT, isTodoTag, type TodoTag } from "@/lib/todos";
+import {
+  TODO_BOARD_DAY_COUNT,
+  cleanTodoContent,
+  isTodoTag,
+  type TodoTag,
+} from "@/lib/todos";
 import {
   mobileError,
   mobileJson,
@@ -12,10 +17,6 @@ interface CreateTodoBody {
   content?: string;
   tag?: TodoTag | null;
   noteDate?: string;
-}
-
-function cleanContent(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
 }
 
 function normalizeTag(value: unknown): TodoTag | null {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (ctx instanceof Response) return ctx;
 
   const body = await mobileJson<CreateTodoBody>(request);
-  const content = cleanContent(body?.content ?? "");
+  const content = cleanTodoContent(body?.content ?? "");
   if (!content) return mobileError("노트 내용을 입력해 주세요.");
 
   const noteDate = resolveNoteDate(body?.noteDate);

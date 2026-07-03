@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
-import { TODO_BOARD_DAY_COUNT, isTodoTag, type TodoTag } from "@/lib/todos";
+import {
+  TODO_BOARD_DAY_COUNT,
+  cleanTodoContent,
+  isTodoTag,
+  type TodoTag,
+} from "@/lib/todos";
 import {
   DEMO_ERROR,
   getTenantContext,
@@ -19,15 +24,12 @@ interface TodoPatchInput {
   content?: string;
   tag?: TodoTag | null;
   completed?: boolean;
+  noteDate?: string;
 }
 
 function normalizeTag(value: TodoTag | null | undefined): TodoTag | null {
   if (value === null || value === undefined) return null;
   return isTodoTag(value) ? value : null;
-}
-
-function cleanContent(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
 }
 
 /**
@@ -61,7 +63,7 @@ export async function createTodoNotes(
 
   const cleaned = drafts
     .map((draft) => ({
-      content: cleanContent(draft.content),
+      content: cleanTodoContent(draft.content),
       tag: normalizeTag(draft.tag),
     }))
     .filter((draft) => draft.content.length > 0);
@@ -115,18 +117,24 @@ export async function updateTodoNote(
     content?: string;
     tag?: TodoTag | null;
     completed?: boolean;
+    note_date?: string;
     updated_at: string;
   } = {
     updated_at: new Date().toISOString(),
   };
 
   if (patch.content !== undefined) {
-    const content = cleanContent(patch.content);
+    const content = cleanTodoContent(patch.content);
     if (!content) return { ok: false, error: "빈 노트는 저장할 수 없습니다." };
     update.content = content;
   }
   if (patch.tag !== undefined) update.tag = normalizeTag(patch.tag);
   if (patch.completed !== undefined) update.completed = patch.completed;
+  if (patch.noteDate !== undefined) {
+    const noteDate = resolveNoteDate(patch.noteDate);
+    if (!noteDate) return { ok: false, error: "작성할 수 없는 날짜입니다." };
+    update.note_date = noteDate;
+  }
 
   const { error } = await supabase
     .from("todo_note")

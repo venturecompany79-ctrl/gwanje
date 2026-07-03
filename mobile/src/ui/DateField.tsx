@@ -18,15 +18,19 @@ function formatDate(raw: string): string {
 export function DateField({
   value,
   onChange,
+  max,
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** 선택 가능한 최대 날짜(YYYY-MM-DD) — 웹 데이트피커에만 적용 */
+  max?: string;
 }) {
   if (Platform.OS === "web") {
     return (
       <input
         type="date"
         value={value}
+        max={max}
         onChange={(event) => onChange((event.target as { value: string }).value)}
         style={{
           border: "none",
