@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -66,10 +67,11 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brand}>
-          <View style={styles.mark}>
-            <Text style={styles.markText}>관</Text>
-          </View>
-          <Text style={styles.brandName}>관제</Text>
+          <Image
+            source={require("../../assets/images/gwanje-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandCopy}>컨설턴트 운영 콘솔</Text>
         </View>
 
@@ -158,33 +160,9 @@ const styles = StyleSheet.create({
     paddingTop: "6%",
     paddingBottom: 34,
   },
-  mark: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.lg,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-    ...Platform.select({
-      web: { boxShadow: "0 12px 26px -10px rgba(0,100,224,0.55)" },
-      default: {
-        shadowColor: colors.brand,
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 12 },
-      },
-    }),
-  },
-  markText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: colors.canvas,
-  },
-  brandName: {
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    color: colors.label,
+  logo: {
+    width: 274,
+    height: 48,
   },
   brandCopy: {
     fontSize: 14.5,

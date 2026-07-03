@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -12,7 +12,11 @@ function RootStack() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <Text style={styles.mark}>관</Text>
+        <Image
+          source={require("../assets/images/gwanje-logo.png")}
+          style={styles.mark}
+          resizeMode="contain"
+        />
         <Text style={styles.loadingText}>관제 준비 중</Text>
       </View>
     );
@@ -103,16 +107,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mark: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: colors.brand,
-    color: colors.canvas,
-    textAlign: "center",
-    lineHeight: 56,
-    fontSize: 24,
-    fontWeight: "700",
+    width: 228,
+    height: 40,
   },
   loadingText: {
     ...typography.callout,

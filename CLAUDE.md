@@ -11,7 +11,7 @@
 
 ## 1. 제품 한 줄 정의
 한 명의 경영컨설턴트가 다수의 중소기업을 동시에 관리하며, 인증·정부지원·융자의 **만료/마감을 통합 관제**하고, **관리포인트를 추천**받고, 공통 이벤트를 **조건별 일괄 안내**하는 B2B SaaS.
-현재 단계: **단일 컨설턴트 MVP** (멀티테넌트 준비 완료, 회원가입은 추후 활성화).
+현재 단계: 멀티테넌트 + **회원가입(Google OAuth·이메일 즉시 가입)** (서버 플래그 `SIGNUP_ENABLED`로 개방 제어).
 
 ## 2. 기술 스택
 - **Next.js (App Router)** + TypeScript, Vercel
@@ -22,7 +22,10 @@
 ```
 app/
   page.tsx                      / 랜딩(공개)
-  login/ signup/ reset/         인증 (signup 현재 비활성 노출)
+  login/ signup/ reset/         인증 (signup은 Google OAuth + 이메일 즉시 가입 — SIGNUP_ENABLED로 제어)
+  signup/complete/              가입 온보딩(워크스페이스 프로비저닝)
+  auth/callback/                Google OAuth PKCE 콜백 (route.ts)
+  terms/ privacy/               이용약관·개인정보 처리방침(공개, 문안 초안)
   app/
     layout.tsx                  ★ 앱 셸: 사이드바(240px)+상단바 — 모든 솔루션 화면 공유
     page.tsx                    /app 대시보드
@@ -37,9 +40,11 @@ docs/                           schema.sql / design.md / wireframes / 화면설�
 ```
 
 ## 4. 라우팅 규칙 (이미 `middleware.ts`에 구현 — 깨지 말 것)
-- 세션 **있음** + `/`·`/login`·`/signup` → `/app` 자동 진입
+- 세션 **있음(active)** + `/`·`/login`·`/signup` → `/app` 자동 진입
 - 세션 **없음** + `/app/*` → `/login` (복귀용 `?redirect=`)
-- 그 외 공개 페이지는 통과
+- 세션 있음 + **profile 없음**(Google OAuth 가입 직후) → `/signup/complete` 온보딩으로 고정 (가입 OFF면 `/login?status=inactive`)
+- `/auth/callback`(OAuth 코드 교환)은 middleware matcher에서 제외 — 콜백 라우트가 자체 분기
+- 그 외 공개 페이지(`/terms`·`/privacy` 포함)는 통과
 
 ## 5. 디자인 시스템 — **Meta DS** (★ 핵심 / 권위: `/docs/design.md`)
 Meta의 커머스(Quest·Ray-Ban) 디자인 시스템 기반. **라이트 테마, cobalt 액센트, 풀 pill 버튼**이 시그니처.
@@ -139,6 +144,5 @@ npx supabase gen types typescript --local > lib/database.types.ts
 ```
 
 ## 11. 범위 밖 (자리만 / 건드리지 말 것)
-- 회원가입·온보딩 노출 — 단일 사용자 MVP라 **비활성**(화면만)
 - 룰엔진 추천(기업상세 추천 탭) — Phase2, 테이블만
 - 고객사 포털 — Phase3 / 구독·팀 권한 — Phase4

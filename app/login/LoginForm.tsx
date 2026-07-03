@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { InputField } from "@/components/ui/Input";
@@ -11,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
-export function LoginForm() {
+export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // open redirect 방지 — 내부 절대경로(`/app...`)만 허용, 외부 URL·스킴·`//host`는 폴백
@@ -37,6 +38,14 @@ export function LoginForm() {
     searchParams.get("status") === "inactive"
       ? "비활성화되었거나 초대 수락 전인 계정입니다. 최고관리자에게 문의해 주세요."
       : null;
+  // /auth/callback에서 넘어오는 OAuth 실패/가입 닫힘 안내
+  const oauthParam = searchParams.get("error");
+  const oauthMessage =
+    oauthParam === "oauth"
+      ? "Google 로그인에 실패했습니다. 다시 시도해 주세요."
+      : oauthParam === "signup_disabled"
+        ? "아직 회원가입이 열리지 않았습니다. 기존 계정으로 로그인해 주세요."
+        : null;
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -91,6 +100,22 @@ export function LoginForm() {
           <IconAlert />
           {statusMessage}
         </div>
+      ) : null}
+
+      {oauthMessage ? (
+        <div className="auth-error" role="alert">
+          <IconAlert />
+          {oauthMessage}
+        </div>
+      ) : null}
+
+      {signupEnabled && !demo ? (
+        <>
+          <GoogleAuthButton label="Google로 로그인" next={redirectTo} />
+          <div className="auth-divider">
+            <span>또는</span>
+          </div>
+        </>
       ) : null}
 
       <InputField
