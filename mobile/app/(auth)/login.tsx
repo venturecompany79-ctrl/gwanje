@@ -19,15 +19,17 @@ import { colors, radius } from "@/design/tokens";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { session, signIn, envReady } = useAuth();
+  const { session, signIn, signInWithGoogle, envReady } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const busy = pending || googlePending;
 
   async function submit() {
-    if (pending) return;
+    if (busy) return;
     if (!envReady) {
       setError("모바일 env를 먼저 설정해 주세요.");
       return;
@@ -46,6 +48,24 @@ export default function LoginScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setPending(false);
+    }
+  }
+
+  async function submitGoogle() {
+    if (busy) return;
+    if (!envReady) {
+      setError("모바일 env를 먼저 설정해 주세요.");
+      return;
+    }
+    setGooglePending(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google 로그인에 실패했습니다.");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setGooglePending(false);
     }
   }
 
@@ -130,10 +150,27 @@ export default function LoginScreen() {
 
         <Pressable
           onPress={submit}
-          disabled={pending}
+          disabled={busy}
           style={[styles.button, pending && styles.buttonPending]}
         >
           <Text style={styles.buttonText}>{pending ? "로그인 중…" : "로그인"}</Text>
+        </Pressable>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>또는</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable
+          onPress={submitGoogle}
+          disabled={busy}
+          style={[styles.googleButton, googlePending && styles.googleButtonPending]}
+        >
+          <Text style={styles.googleG}>G</Text>
+          <Text style={styles.googleText}>
+            {googlePending ? "Google 인증 중…" : "Google로 로그인"}
+          </Text>
         </Pressable>
 
         <View style={styles.spacer} />
@@ -259,6 +296,50 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: -0.3,
     color: colors.canvas,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+  },
+  dividerText: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.tertiaryLabel,
+  },
+  googleButton: {
+    marginTop: 18,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    paddingVertical: 14,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.separatorStrong,
+  },
+  googleButtonPending: {
+    opacity: 0.6,
+  },
+  googleG: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.brand,
+  },
+  googleText: {
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+    color: colors.label,
   },
   spacer: {
     flexGrow: 1,
