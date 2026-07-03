@@ -4,11 +4,24 @@ import { AuthStage } from "@/components/auth/AuthStage";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { InputField } from "@/components/ui/Input";
+import { isSignupEnabled } from "@/lib/auth/config";
+import { SignupForm } from "./SignupForm";
 
 export const metadata: Metadata = { title: "회원가입" };
 
-// 단일 사용자 MVP — 회원가입은 비활성 (폼은 화면만 노출, CLAUDE.md 11절)
+// SIGNUP_ENABLED=true → Google OAuth + 이메일 직접 가입. OFF → 비활성 플레이스홀더.
 export default function SignupPage() {
+  if (!isSignupEnabled()) return <SignupDisabledPlaceholder />;
+
+  return (
+    <AuthStage>
+      <SignupForm />
+    </AuthStage>
+  );
+}
+
+// 가입이 닫힌 동안 노출되는 비활성 화면
+function SignupDisabledPlaceholder() {
   return (
     <AuthStage>
       <div className="auth-card">
@@ -18,8 +31,8 @@ export default function SignupPage() {
         </div>
 
         <div className="auth-notice">
-          현재는 단일 사용자(본인) MVP 기준입니다. 회원가입은
-          멀티테넌트(팀·다중 워크스페이스) 확장 시 활성화됩니다.
+          아직 회원가입이 열리지 않았습니다. 오픈 준비가 끝나면 이 화면에서 바로
+          가입할 수 있습니다.
         </div>
 
         <InputField label="이름" placeholder="이름" disabled />

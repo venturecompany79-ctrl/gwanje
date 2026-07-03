@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 // 인증 화면 공통 스테이지 — 브랜드 로고 + 카드 슬롯 + 푸터 (login/signup/reset 공유)
@@ -18,7 +19,8 @@ export function AuthStage({ children }: { children: ReactNode }) {
       </div>
       {children}
       <span className="auth-legal">
-        © 2026 관제 · Compliance Desk · 이용약관 · 개인정보처리방침
+        © 2026 관제 · Compliance Desk · <Link href="/terms">이용약관</Link> ·{" "}
+        <Link href="/privacy">개인정보처리방침</Link>
       </span>
     </div>
   );
