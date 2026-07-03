@@ -50,9 +50,10 @@ export const supabase = createClient<Database>(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
-      // Google OAuth(웹브라우저 콜백)에서 code를 직접 교환하므로 PKCE 사용.
-      // 이메일+비밀번호 로그인은 flowType의 영향을 받지 않는다.
+      // 웹: Google 리다이렉트 복귀 시 URL의 ?code=를 자동 교환.
+      // 네이티브: URL 개념이 없어 oauth.ts가 code를 직접 교환하므로 false.
+      detectSessionInUrl: Platform.OS === "web",
+      // Google OAuth code 교환에 PKCE 사용(이메일+비밀번호 로그인엔 영향 없음).
       flowType: "pkce",
       lock: processLock,
     },
