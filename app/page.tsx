@@ -97,7 +97,13 @@ const PLAN = {
 function Logo() {
   return (
     <div className="lp-logo">
-      <span className="brand-mark">관</span>관제
+      <Image
+        src="/brand/gwanje-logo.png"
+        alt="관제"
+        width={1597}
+        height={280}
+        className="brand-logo"
+      />
     </div>
   );
 }

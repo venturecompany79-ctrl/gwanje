@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -40,11 +41,15 @@ export function Sidebar({
   return (
     <nav className="shell-nav">
       <div className="brand">
-        <div className="brand-mark">관</div>
-        <div>
-          <b>관제</b>
-          <small>Compliance Desk</small>
-        </div>
+        <Image
+          src="/brand/gwanje-logo.png"
+          alt="관제"
+          width={1597}
+          height={280}
+          priority
+          className="brand-logo"
+        />
+        <small>Compliance Desk</small>
       </div>
       <div className="nav-sec">메뉴</div>
       {NAV_ITEMS.filter((item) =>

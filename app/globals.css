@@ -760,35 +760,17 @@ h4 {
 }
 .brand {
   display: flex;
-  align-items: center;
-  gap: 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 4px 8px 24px;
 }
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-full);
-  flex: none;
-  background: radial-gradient(
-    circle at 30% 30%,
-    var(--color-primary-soft),
-    var(--color-primary) 55%,
-    var(--color-primary-deep)
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
+.brand-logo {
+  height: auto;
+  width: auto;
 }
-.brand b {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--color-ink-deep);
-  line-height: 1.1;
-  display: block;
+.brand .brand-logo {
+  height: 22px;
 }
 .brand small {
   display: block;
@@ -3465,16 +3447,8 @@ table.dlist .name {
   gap: 12px;
   text-align: center;
 }
-.auth-brand .brand-mark {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-xl);
-  font-size: 24px;
-  box-shadow: 0 6px 18px rgba(0, 100, 224, 0.28);
-}
-.auth-brand b {
-  font-size: 22px;
-  color: var(--color-ink-deep);
+.auth-brand .brand-logo {
+  height: 48px;
 }
 .auth-brand span {
   font-size: 13px;
@@ -4947,10 +4921,8 @@ input.cond-input {
   color: var(--color-ink-deep);
   text-decoration: none;
 }
-.lp-logo .brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+.lp-logo .brand-logo {
+  height: 28px;
 }
 .lp-nav-menu {
   display: flex;
@@ -5700,11 +5672,9 @@ body {
   }
 
   .brand {
-    justify-content: center;
-    padding: 2px 0 22px;
+    display: none;
   }
 
-  .brand > div:not(.brand-mark),
   .nav-sec,
   .nav-foot .who {
     display: none;
