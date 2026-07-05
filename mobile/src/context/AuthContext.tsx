@@ -123,7 +123,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signInWithGoogle() {
         const { cancelled } = await signInWithGoogleOAuth();
         if (cancelled) return;
-        // 웹은 위에서 페이지가 리다이렉트되므로 여기 도달하지 않는다(네이티브 전용 게이트).
+        // 웹은 전체 페이지 리다이렉트가 진행 중 — location 변경은 비동기라 이 뒤 코드가
+        // 언로드 전에 실행된다. 아직 세션이 없어 getUser()가 null을 반환하므로 여기서
+        // 게이트를 돌리면 안 된다(잘못된 "로그인 실패" 표시). 웹 게이트는 복귀 시
+        // 부트스트랩(getSession)이 처리한다. 아래는 네이티브 전용.
+        if (Platform.OS === "web") return;
         const { data } = await supabase.auth.getUser();
         const userId = data.user?.id;
         if (!userId) throw new Error("로그인에 실패했습니다. 다시 시도해 주세요.");
