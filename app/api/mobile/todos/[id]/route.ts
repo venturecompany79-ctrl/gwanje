@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { cleanTodoContent, isTodoTag, type TodoTag } from "@/lib/todos";
+import { cleanTodoContent, isAcceptedTodoTag } from "@/lib/todos";
 import {
   mobileError,
   mobileJson,
@@ -9,12 +9,13 @@ import {
 
 interface UpdateTodoBody {
   content?: string;
-  tag?: TodoTag | null;
+  tag?: string | null;
   completed?: boolean;
 }
 
-function normalizeTag(value: unknown): TodoTag | null {
-  return typeof value === "string" && isTodoTag(value) ? value : null;
+// 웹·모바일 태그 합집합만 저장하고 그 외 값은 버린다(태그 없이 저장).
+function normalizeTag(value: unknown): string | null {
+  return typeof value === "string" && isAcceptedTodoTag(value) ? value : null;
 }
 
 export async function PATCH(
@@ -32,7 +33,7 @@ export async function PATCH(
 
   const update: {
     content?: string;
-    tag?: TodoTag | null;
+    tag?: string | null;
     completed?: boolean;
     updated_at: string;
   } = {

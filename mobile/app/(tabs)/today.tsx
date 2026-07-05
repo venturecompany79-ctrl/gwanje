@@ -8,10 +8,10 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Check } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { longKstDate, monthDayKo, todayKstDate } from "@/lib/dates";
+import { longKstDate, monthDayKo, shiftDateString, todayKstDate } from "@/lib/dates";
 import { TODO_TAGS, type TodoTag } from "@/lib/labels";
 import { loadNotesForDate, type TodoNoteRow } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
@@ -20,6 +20,10 @@ import { Cell, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives
 import { Screen } from "@/ui/Screen";
 
 const FULL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// 서버(app/api/mobile/todos + lib/todos.ts TODO_BOARD_DAY_COUNT)와 동일하게
+// 오늘을 포함한 최근 30일까지 작성/조회를 허용한다.
+const NOTE_HISTORY_DAYS = 30;
 
 function NoteCell({
   note,
@@ -63,6 +67,7 @@ export default function TodayScreen() {
   const [noteDate, setNoteDate] = useState(todayKstDate());
   const [saveError, setSaveError] = useState<string | null>(null);
   const today = todayKstDate();
+  const minDate = shiftDateString(today, -(NOTE_HISTORY_DAYS - 1));
   // 네이티브 입력 중(부분 입력)에는 오늘 날짜 목록을 유지한다.
   const listDate = FULL_DATE.test(noteDate) ? noteDate : today;
   const loadNotes = useCallback(() => loadNotesForDate(listDate), [listDate]);
@@ -70,6 +75,16 @@ export default function TodayScreen() {
 
   const isToday = listDate === today;
   const canAdd = draft.trim().length > 0;
+  // ◀▶ 하루 이동. YYYY-MM-DD 문자열은 사전식 비교가 곧 날짜 순서라 그대로 범위 판정에 쓴다.
+  const canPrev = listDate > minDate;
+  const canNext = listDate < today;
+
+  function stepDay(delta: number) {
+    const next = shiftDateString(listDate, delta);
+    if (next < minDate || next > today) return;
+    setNoteDate(next);
+    void Haptics.selectionAsync();
+  }
 
   async function addNote() {
     const content = draft.trim();
@@ -121,7 +136,42 @@ export default function TodayScreen() {
         <View style={styles.composerSep} />
         <View style={styles.dateRow}>
           <Text style={styles.dateLabel}>작성 날짜</Text>
-          <DateField value={noteDate} onChange={setNoteDate} max={today} />
+          <View style={styles.dateControls}>
+            <Pressable
+              onPress={() => stepDay(-1)}
+              disabled={!canPrev}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="전날로 이동"
+              style={[styles.stepBtn, !canPrev && styles.stepBtnOff]}
+            >
+              <ChevronLeft
+                size={18}
+                color={canPrev ? colors.brand : colors.quaternary}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+            <DateField
+              value={noteDate}
+              onChange={setNoteDate}
+              min={minDate}
+              max={today}
+            />
+            <Pressable
+              onPress={() => stepDay(1)}
+              disabled={!canNext}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="다음날로 이동"
+              style={[styles.stepBtn, !canNext && styles.stepBtnOff]}
+            >
+              <ChevronRight
+                size={18}
+                color={canNext ? colors.brand : colors.quaternary}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          </View>
         </View>
         <View style={styles.composerSep} />
         <View style={styles.composerFooter}>
@@ -225,6 +275,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: -0.2,
     color: colors.secondaryLabel,
+  },
+  dateControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  stepBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBtnOff: {
+    opacity: 0.4,
   },
   saveError: {
     paddingHorizontal: 15,
