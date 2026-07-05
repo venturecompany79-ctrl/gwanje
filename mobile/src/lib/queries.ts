@@ -165,19 +165,18 @@ export async function loadNotifications(): Promise<NotificationItem[]> {
   }));
 }
 
-export async function loadTodayNotes(): Promise<TodoNoteRow[]> {
+export async function loadNotesForDate(date: string): Promise<TodoNoteRow[]> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("로그인이 필요합니다.");
-  const today = todayKstDate();
   const notes = await supabase
     .from("todo_note")
     .select("*")
-    .eq("note_date", today)
+    .eq("note_date", date || todayKstDate())
     .eq("user_id", user.id)
     .order("sort_order", { ascending: true });
-  throwIfError("오늘 업무를 불러오지 못했습니다", notes.error);
+  throwIfError("업무일지를 불러오지 못했습니다", notes.error);
   return notes.data ?? [];
 }
 

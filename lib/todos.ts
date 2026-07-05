@@ -37,3 +37,14 @@ export interface TodoBoardData {
 export function isTodoTag(value: string | null): value is TodoTag {
   return TODO_TAGS.some((tag) => tag === value);
 }
+
+/** 노트 내용 정리 — 줄바꿈은 보존하고 줄 내 공백만 정리한다. */
+export function cleanTodoContent(value: string): string {
+  return value
+    .replace(/[^\S\n]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

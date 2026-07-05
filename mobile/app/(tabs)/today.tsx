@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -11,12 +11,15 @@ import * as Haptics from "expo-haptics";
 import { Check } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { longKstDate, todayKstDate } from "@/lib/dates";
+import { longKstDate, monthDayKo, todayKstDate } from "@/lib/dates";
 import { TODO_TAGS, type TodoTag } from "@/lib/labels";
-import { loadTodayNotes, type TodoNoteRow } from "@/lib/queries";
+import { loadNotesForDate, type TodoNoteRow } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
+import { DateField } from "@/ui/DateField";
 import { Cell, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
+
+const FULL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function NoteCell({
   note,
@@ -57,20 +60,37 @@ function NoteCell({
 export default function TodayScreen() {
   const [draft, setDraft] = useState("");
   const [tag, setTag] = useState<TodoTag>("상담");
-  const { data, loading, refreshing, error, refresh } =
-    useAsyncData(loadTodayNotes);
+  const [noteDate, setNoteDate] = useState(todayKstDate());
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const today = todayKstDate();
+  // 네이티브 입력 중(부분 입력)에는 오늘 날짜 목록을 유지한다.
+  const listDate = FULL_DATE.test(noteDate) ? noteDate : today;
+  const loadNotes = useCallback(() => loadNotesForDate(listDate), [listDate]);
+  const { data, loading, refreshing, error, refresh } = useAsyncData(loadNotes);
 
+  const isToday = listDate === today;
   const canAdd = draft.trim().length > 0;
 
   async function addNote() {
     const content = draft.trim();
     if (!content) return;
-    await mobileApi("/api/mobile/todos", {
-      body: { content, tag, noteDate: todayKstDate() },
-    });
-    setDraft("");
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    refresh();
+    if (!FULL_DATE.test(noteDate)) {
+      setSaveError("날짜를 YYYY-MM-DD 형식으로 입력해 주세요.");
+      return;
+    }
+    try {
+      setSaveError(null);
+      await mobileApi("/api/mobile/todos", {
+        body: { content, tag, noteDate },
+      });
+      setDraft("");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      refresh();
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "노트 저장에 실패했습니다.",
+      );
+    }
   }
 
   async function toggle(note: TodoNoteRow) {
@@ -98,6 +118,11 @@ export default function TodayScreen() {
           style={styles.input}
           multiline
         />
+        <View style={styles.composerSep} />
+        <View style={styles.dateRow}>
+          <Text style={styles.dateLabel}>작성 날짜</Text>
+          <DateField value={noteDate} onChange={setNoteDate} max={today} />
+        </View>
         <View style={styles.composerSep} />
         <View style={styles.composerFooter}>
           <ScrollView
@@ -130,11 +155,14 @@ export default function TodayScreen() {
             </Text>
           </Pressable>
         </View>
+        {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
       </View>
 
-      <SectionLabel>오늘의 노트</SectionLabel>
+      <SectionLabel>
+        {isToday ? "오늘의 노트" : `${monthDayKo(listDate)} 노트`}
+      </SectionLabel>
       {loading && !data ? <Loading /> : null}
-      {error ? <InlineEmpty>오늘 업무를 불러오지 못했습니다</InlineEmpty> : null}
+      {error ? <InlineEmpty>업무일지를 불러오지 못했습니다</InlineEmpty> : null}
       {data ? (
         data.length > 0 ? (
           <Group>
@@ -149,7 +177,11 @@ export default function TodayScreen() {
           </Group>
         ) : (
           <Group>
-            <InlineEmpty>아직 오늘의 메모가 없습니다</InlineEmpty>
+            <InlineEmpty>
+              {isToday
+                ? "아직 오늘의 메모가 없습니다"
+                : "이 날짜에 남긴 메모가 없습니다"}
+            </InlineEmpty>
           </Group>
         )
       ) : null}
@@ -179,6 +211,27 @@ const styles = StyleSheet.create({
   composerSep: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.separator,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+    gap: 10,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+  },
+  saveError: {
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    fontSize: 12.5,
+    letterSpacing: -0.2,
+    color: colors.critical,
   },
   composerFooter: {
     flexDirection: "row",
