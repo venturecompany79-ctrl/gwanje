@@ -51,9 +51,10 @@ type TagMenuTarget =
   | { kind: "draft"; id: string };
 
 const TODO_TAG_TONE: Record<TodoTag, string> = {
-  업무: "work",
+  상담: "consult",
   미팅: "meeting",
-  기록: "record",
+  서류: "doc",
+  기타: "etc",
 };
 
 function makeDraftId(): string {

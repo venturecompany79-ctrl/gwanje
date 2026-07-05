@@ -57,11 +57,11 @@ function DEMO_TODOS(today: string): TodoBoardData {
       { id: "demo-user-member", name: "이팀원" },
     ],
     notes: [
-      demoNote("demo-todo-1", "demo-user-owner", "김컨설턴트", today, "세금계산서 발행 확인", "업무", false, 0),
+      demoNote("demo-todo-1", "demo-user-owner", "김컨설턴트", today, "세금계산서 발행 확인", "서류", false, 0),
       demoNote("demo-todo-2", "demo-user-owner", "김컨설턴트", today, "바실로바이오 KOICA 미팅 준비", "미팅", false, 1),
-      demoNote("demo-todo-3", "demo-user-manager", "박매니저", today, "고객사 요청사항 정리", "기록", true, 2),
-      demoNote("demo-todo-4", "demo-user-owner", "김컨설턴트", yesterday, "정책자금 제출 서류 체크", "업무", true, 0),
-      demoNote("demo-todo-5", "demo-user-member", "이팀원", yesterday, "오후 상담 내용 요약", "기록", false, 1),
+      demoNote("demo-todo-3", "demo-user-manager", "박매니저", today, "고객사 요청사항 정리", "기타", true, 2),
+      demoNote("demo-todo-4", "demo-user-owner", "김컨설턴트", yesterday, "정책자금 제출 서류 체크", "서류", true, 0),
+      demoNote("demo-todo-5", "demo-user-member", "이팀원", yesterday, "오후 상담 내용 요약", "상담", false, 1),
       demoNote("demo-todo-6", "demo-user-owner", "김컨설턴트", twoDaysAgo, "월간 운영 미팅 메모", "미팅", true, 0),
     ],
   };
