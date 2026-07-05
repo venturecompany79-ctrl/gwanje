@@ -231,17 +231,22 @@ export async function updateTask(
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("task")
     .update({
       stage,
       memo: optionalText(formData, "memo"),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", taskId);
+    .eq("id", taskId)
+    .eq("company_id", companyId)
+    .select("id");
   if (error) {
     console.error("[updateTask]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "과제를 찾을 수 없습니다." };
   }
 
   revalidateTaskScreens(companyId);
@@ -264,13 +269,18 @@ export async function updateTaskStage(
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("task")
     .update({ stage, updated_at: new Date().toISOString() })
-    .eq("id", taskId);
+    .eq("id", taskId)
+    .eq("company_id", companyId)
+    .select("id");
   if (error) {
     console.error("[updateTaskStage]", error.code, error.message);
     return { ok: false, error: `변경에 실패했습니다: ${error.message}` };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "과제를 찾을 수 없습니다." };
   }
 
   revalidateTaskScreens(companyId);

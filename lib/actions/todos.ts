@@ -136,14 +136,19 @@ export async function updateTodoNote(
     update.note_date = noteDate;
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("todo_note")
     .update(update)
-    .eq("id", noteId);
+    .eq("id", noteId)
+    .select("id");
 
   if (error) {
     console.error("[updateTodoNote]", error.code, error.message);
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
+  }
+  // RLS(본인 노트만)가 걸러 0행이면 조용한 성공 대신 명확히 알린다.
+  if (!data || data.length === 0) {
+    return { ok: false, error: "노트를 찾을 수 없거나 수정 권한이 없습니다." };
   }
 
   revalidatePath("/app/board");
@@ -155,10 +160,17 @@ export async function deleteTodoNote(noteId: string): Promise<ActionResult> {
   if (!supabase) return { ok: false, error: DEMO_ERROR };
   if (!noteId) return { ok: false, error: "노트를 찾을 수 없습니다." };
 
-  const { error } = await supabase.from("todo_note").delete().eq("id", noteId);
+  const { data, error } = await supabase
+    .from("todo_note")
+    .delete()
+    .eq("id", noteId)
+    .select("id");
   if (error) {
     console.error("[deleteTodoNote]", error.code, error.message);
     return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "노트를 찾을 수 없거나 삭제 권한이 없습니다." };
   }
 
   revalidatePath("/app/board");

@@ -218,9 +218,9 @@ export async function chargeAndActivate(
     };
   }
 
-  // pending 거래 기록(없으면 생성)
+  // pending 거래 기록(없으면 생성). order_id unique 경합(23505) 시 상대 결과를 따른다.
   if (!prior) {
-    await service.from("payment_transaction").insert({
+    const { error: pendingError } = await service.from("payment_transaction").insert({
       tenant_id: tenantId,
       subscription_id: sub.id,
       payment_method_id: pm.id,
@@ -231,6 +231,33 @@ export async function chargeAndActivate(
       amount: plan.amount,
       currency: plan.currency,
     });
+    if (pendingError) {
+      // 동시 실행(크론 + 수동/웹훅)이 같은 orderId로 진입한 경우.
+      if (pendingError.code === "23505") {
+        const { data: winner } = await service
+          .from("payment_transaction")
+          .select("status, toss_payment_key")
+          .eq("order_id", orderId)
+          .maybeSingle();
+        if (winner?.status === "succeeded") {
+          return {
+            ok: true,
+            status: "active",
+            orderId,
+            paymentKey: winner.toss_payment_key ?? "",
+          };
+        }
+        // 상대가 아직 처리 중 — 중복 승인을 시도하지 않고 물러난다(상태 변경 없음).
+        return {
+          ok: false,
+          status: "past_due",
+          orderId,
+          code: "CONCURRENT",
+          message: "동일 주문이 처리 중입니다. 잠시 후 다시 시도해 주세요.",
+        };
+      }
+      throw new Error(`거래 기록 실패: ${pendingError.message}`);
+    }
   }
 
   try {
@@ -277,10 +304,12 @@ export async function chargeAndActivate(
     const code = err instanceof TossApiError ? err.code : "UNKNOWN";
     const message = err instanceof Error ? err.message : String(err);
 
+    // 경합으로 다른 실행이 이미 succeeded로 마감한 거래는 절대 덮어쓰지 않는다.
     await service
       .from("payment_transaction")
       .update({ status: "failed", failure_code: code, failure_message: message })
-      .eq("order_id", orderId);
+      .eq("order_id", orderId)
+      .neq("status", "succeeded");
 
     // 유예 경과 판정: 이미 past_due이고 grace_until 지났으면 expired
     const graceElapsed =

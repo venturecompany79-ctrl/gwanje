@@ -74,6 +74,7 @@ export function BillingView({ data }: { data: BillingOverview }) {
   const { toast, showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const sub = data.subscription;
   const status = sub?.status ?? null;
@@ -110,12 +111,7 @@ export function BillingView({ data }: { data: BillingOverview }) {
   }
 
   function onCancel() {
-    if (
-      !window.confirm(
-        "구독을 해지하시겠어요? 다음 결제일까지는 계속 이용할 수 있습니다.",
-      )
-    )
-      return;
+    setConfirmingCancel(false);
     startTransition(async () => {
       const res = await cancelSubscription();
       showToast(res.ok ? "구독 해지가 예약되었습니다." : res.error ?? "해지 실패");
@@ -192,9 +188,38 @@ export function BillingView({ data }: { data: BillingOverview }) {
         </div>
         {status === "active" && !sub?.canceledAt ? (
           <div className="sp-foot">
-            <Button variant="ghost-danger" size="sm" onClick={onCancel} disabled={pending}>
-              구독 해지
-            </Button>
+            {confirmingCancel ? (
+              <div className="cancel-confirm">
+                <span className="cancel-confirm-text">
+                  구독을 해지하시겠어요? 다음 결제일까지는 계속 이용할 수 있습니다.
+                </span>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={onCancel}
+                  disabled={pending}
+                >
+                  {pending ? "처리 중…" : "해지 확정"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmingCancel(false)}
+                  disabled={pending}
+                >
+                  취소
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost-danger"
+                size="sm"
+                onClick={() => setConfirmingCancel(true)}
+                disabled={pending}
+              >
+                구독 해지
+              </Button>
+            )}
           </div>
         ) : null}
       </div>

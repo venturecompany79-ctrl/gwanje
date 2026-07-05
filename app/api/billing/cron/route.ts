@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isBillingEnabled, isTossConfigured } from "@/lib/billing/config";
 import { runRecurringBilling } from "@/lib/billing/service";
+import { verifyBearerSecret } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,8 +21,8 @@ async function handle(request: Request): Promise<NextResponse> {
     );
   }
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  // Vercel Cron은 Authorization에 CRON_SECRET을 자동 첨부하므로 둘 다 허용한다.
+  if (!verifyBearerSecret(request, cronSecret, process.env.CRON_SECRET)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 

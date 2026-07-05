@@ -19,12 +19,16 @@ import {
 const PAGE_UNIT = 100;
 const MAX_PAGES = 5;
 
-function normalize(row: JsonRecord, index: number): NormalizedProgram | null {
+function normalize(row: JsonRecord): NormalizedProgram | null {
   // TODO: verify field names with issued BIZINFO_API_KEY response before production rollout.
   const item = row;
-  const externalId =
-    firstString(item, ["pblancId", "pblanc_id", "id", "seq", "PBLANC_ID"]) ??
-    `bizinfo-${index}`;
+  const rawId = firstString(item, [
+    "pblancId",
+    "pblanc_id",
+    "id",
+    "seq",
+    "PBLANC_ID",
+  ]);
   const title = firstString(item, ["pblancNm", "pblanc_nm", "title", "PBLANC_NM"]);
   if (!title) return null;
 
@@ -57,10 +61,13 @@ function normalize(row: JsonRecord, index: number): NormalizedProgram | null {
   const hashtags = splitTags(
     firstString(item, ["hashtags", "hashTags", "hashtagsNm", "kwrdArray"]),
   );
+  // ID 필드가 없으면 내용 해시 기반 키를 external_id로 사용한다.
+  // (위치 인덱스 기반 키는 목록 순서가 바뀌면 다른 공고 행을 덮어써 데이터를 오염시킴)
+  const contentKey = makeContentKey({ title, orgName, applyEnd: end });
   const program: NormalizedProgram = {
     source: "bizinfo",
-    externalId,
-    contentKey: "",
+    externalId: rawId ?? `bizinfo:${contentKey}`,
+    contentKey,
     title,
     supportField: inferSupportField(supportFieldText, title, targetText),
     orgName,
@@ -72,7 +79,7 @@ function normalize(row: JsonRecord, index: number): NormalizedProgram | null {
     detailUrl: firstString(item, ["pblancUrl", "url", "link", "detailUrl"]),
     raw: row,
   };
-  return { ...program, contentKey: makeContentKey(program) };
+  return program;
 }
 
 export const bizinfoAdapter: SourceAdapter = {
@@ -93,7 +100,7 @@ export const bizinfoAdapter: SourceAdapter = {
       const rows = extractItems(payload);
       programs.push(
         ...rows
-          .map((row, index) => normalize(row, (pageIndex - 1) * PAGE_UNIT + index))
+          .map((row) => normalize(row))
           .filter((program): program is NormalizedProgram => program !== null),
       );
       if (rows.length < PAGE_UNIT) break;

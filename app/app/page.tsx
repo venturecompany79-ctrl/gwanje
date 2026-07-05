@@ -22,11 +22,13 @@ export const metadata: Metadata = { title: "통합 대시보드" };
 export const dynamic = "force-dynamic";
 
 function todayLabel(): string {
+  // 서버(UTC)에서도 KST 기준 날짜가 표시되도록 timeZone 고정 — D-day 데이터(KST)와 정합.
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
     weekday: "long",
+    timeZone: "Asia/Seoul",
   }).format(new Date());
 }
 

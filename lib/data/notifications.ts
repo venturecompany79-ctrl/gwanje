@@ -37,10 +37,16 @@ export interface RawNotificationsData {
 export interface NotificationsData {
   /** true면 Supabase 미연결 — 데모 데이터 표시 중 */
   demo: boolean;
-  /** 최신순 정렬 */
+  /** 최신순 정렬 (최근 100건까지) */
   notifications: NotificationItem[];
   companies: CompanyOption[];
+  /** 로드된 목록과 무관한 전체 안읽음 수(사이드바 배지와 정합) */
+  unreadTotal: number;
+  /** 100건 상한에 걸려 더 오래된 알림이 존재할 수 있음 */
+  hasMore: boolean;
 }
+
+const NOTIFICATION_LIST_LIMIT = 100;
 
 function decorate(raw: RawNotification, now: Date): NotificationItem {
   const created = new Date(raw.createdAt);
@@ -58,24 +64,31 @@ export async function getNotificationsData(): Promise<NotificationsData> {
   const supabase = await createClient();
   if (!supabase) {
     const demo = DEMO_NOTIFICATIONS();
+    const decorated = demo.notifications.map((n) => decorate(n, now));
     return {
       ...demo,
-      notifications: demo.notifications.map((n) => decorate(n, now)),
+      notifications: decorated,
+      unreadTotal: decorated.filter((n) => !n.isRead).length,
+      hasMore: false,
     };
   }
 
-  const [notifications, companies] = await Promise.all([
+  const [notifications, companies, unreadCount] = await Promise.all([
     supabase
       .from("notification")
       .select(
         "id, type, title, is_urgent, is_read, company_id, ref_table, ref_id, created_at",
       )
       .order("created_at", { ascending: false })
-      .limit(100),
+      .limit(NOTIFICATION_LIST_LIMIT),
     supabase.from("company").select("id, name").order("name"),
+    supabase
+      .from("notification")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false),
   ]);
 
-  const firstError = notifications.error ?? companies.error;
+  const firstError = notifications.error ?? companies.error ?? unreadCount.error;
   if (firstError) {
     throw new Error(`알림을 불러오지 못했습니다: ${firstError.message}`);
   }
@@ -130,5 +143,7 @@ export async function getNotificationsData(): Promise<NotificationsData> {
       ),
     ),
     companies: companies.data ?? [],
+    unreadTotal: unreadCount.count ?? 0,
+    hasMore: (notifications.data?.length ?? 0) >= NOTIFICATION_LIST_LIMIT,
   };
 }

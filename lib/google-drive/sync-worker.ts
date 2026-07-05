@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { decryptRefreshToken } from "@/lib/google-drive/crypto";
-import { refreshAccessToken } from "@/lib/google-drive/oauth";
+import {
+  RefreshTokenInvalidError,
+  refreshAccessToken,
+} from "@/lib/google-drive/oauth";
 import {
   ensureFolder,
   ensureRootFolder,
@@ -127,7 +130,23 @@ async function processJob(service: Service, job: Job): Promise<void> {
 
   // 2) access token 발급
   const refreshToken = decryptRefreshToken(connection.encrypted_refresh_token);
-  const { accessToken } = await refreshAccessToken(refreshToken);
+  let accessToken: string;
+  try {
+    ({ accessToken } = await refreshAccessToken(refreshToken));
+  } catch (err) {
+    // refresh token 영구 폐기(사용자 액세스 철회 등) → 연결 해제 처리 후 영구 실패.
+    // 무의미한 백오프 재시도(최대 ~4시간)와 배치 슬롯 점유를 막는다.
+    if (err instanceof RefreshTokenInvalidError) {
+      await service
+        .from("google_drive_connections")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", connection.id);
+      throw new PermanentError(
+        "Google Drive 접근이 철회되어 연결을 해제했습니다. 설정에서 재연결해 주세요.",
+      );
+    }
+    throw err;
+  }
 
   // 3) 이미 업로드됐는지 확인(멱등) — 잡 유실/중복 실행 대비
   const existing = await findFileByDocumentId(accessToken, job.document_id);

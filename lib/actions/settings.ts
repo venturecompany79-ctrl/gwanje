@@ -297,11 +297,12 @@ export async function inviteTeamMember(
     return { ok: false, error: "역할 값이 올바르지 않습니다." };
   }
 
+  // email은 위에서 소문자 정규화됨 — eq로 정확 비교(ilike의 _/% 와일드카드 오탐 방지)
   const { data: existing, error: existingError } = await service
     .from("profile")
     .select("id, status")
     .eq("tenant_id", owner.tenantId)
-    .ilike("email", email)
+    .eq("email", email)
     .maybeSingle();
   if (existingError) {
     console.error("[inviteTeamMember:existing]", existingError.code, existingError.message);
@@ -479,6 +480,52 @@ export async function disableTeamMember(memberId: string): Promise<ActionResult>
   });
   if (banError) {
     console.error("[disableTeamMember:ban]", banError.message);
+  }
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app", "layout");
+  return { ok: true, error: null };
+}
+
+export async function reactivateTeamMember(memberId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const owner = await requireOwner(supabase);
+  if ("error" in owner) return { ok: false, error: owner.error };
+
+  const service = createServiceClient();
+  if (!service) {
+    return { ok: false, error: "팀원 재활성화 서버 설정이 누락되었습니다(service role)." };
+  }
+  if (!memberId) return { ok: false, error: "팀원을 찾을 수 없습니다." };
+
+  const { data: target, error: targetError } = await service
+    .from("profile")
+    .select("id, status")
+    .eq("id", memberId)
+    .eq("tenant_id", owner.tenantId)
+    .maybeSingle();
+  if (targetError || !target) {
+    if (targetError) console.error("[reactivateTeamMember:target]", targetError.code, targetError.message);
+    return { ok: false, error: "팀원을 찾을 수 없습니다." };
+  }
+
+  const { error } = await service
+    .from("profile")
+    .update({ status: "active", disabled_at: null })
+    .eq("id", memberId)
+    .eq("tenant_id", owner.tenantId);
+  if (error) {
+    console.error("[reactivateTeamMember]", error.code, error.message);
+    return { ok: false, error: `팀원 재활성화에 실패했습니다: ${error.message}` };
+  }
+
+  const { error: banError } = await service.auth.admin.updateUserById(memberId, {
+    ban_duration: "none",
+  });
+  if (banError) {
+    console.error("[reactivateTeamMember:unban]", banError.message);
   }
 
   revalidatePath("/app/settings");

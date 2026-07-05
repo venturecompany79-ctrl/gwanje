@@ -26,6 +26,7 @@ import {
   addCategory,
   disableTeamMember,
   inviteTeamMember,
+  reactivateTeamMember,
   renameCategory,
   setCategoryColor,
   updateTeamMember,
@@ -876,6 +877,7 @@ function TeamMemberRow({
   const [permissions, setPermissions] = useState<PermissionKey[]>(
     member.permissions,
   );
+  const [confirmingDisable, setConfirmingDisable] = useState(false);
   const disabled = member.status === "disabled";
   const locked = member.isCurrentUser || disabled;
 
@@ -898,6 +900,14 @@ function TeamMemberRow({
   function disable() {
     startTransition(async () => {
       const result = await disableTeamMember(member.id);
+      setConfirmingDisable(false);
+      onSaved(result.ok, result.error);
+    });
+  }
+
+  function reactivate() {
+    startTransition(async () => {
+      const result = await reactivateTeamMember(member.id);
       onSaved(result.ok, result.error);
     });
   }
@@ -938,15 +948,51 @@ function TeamMemberRow({
         >
           {pending ? "저장 중…" : "권한 저장"}
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={disable}
-          disabled={pending || locked}
-        >
-          {disabled ? "비활성화됨" : "비활성화"}
-        </Button>
+        {member.isCurrentUser ? null : disabled ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={reactivate}
+            disabled={pending}
+          >
+            {pending ? "처리 중…" : "재활성화"}
+          </Button>
+        ) : confirmingDisable ? (
+          <span className="team-confirm">
+            <span className="team-confirm-text">
+              로그인·데이터 접근이 즉시 차단됩니다. 계속할까요?
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              onClick={disable}
+              disabled={pending}
+            >
+              {pending ? "처리 중…" : "비활성화 확정"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmingDisable(false)}
+              disabled={pending}
+            >
+              취소
+            </Button>
+          </span>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => setConfirmingDisable(true)}
+            disabled={pending}
+          >
+            비활성화
+          </Button>
+        )}
       </div>
     </div>
   );
