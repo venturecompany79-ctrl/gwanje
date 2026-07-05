@@ -66,6 +66,13 @@ function smallHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/** http(s) 스킴만 허용 — javascript:/data: 등 스크립트 실행 스킴을 링크 렌더에서 차단. */
+export function safeHttpUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : null;
+}
+
 export function makeContentKey(
   program: Pick<NormalizedProgram, "title" | "orgName" | "applyEnd">,
 ): string {
@@ -92,7 +99,7 @@ export function toGovProgramInsert(
     region: program.region,
     apply_start: program.applyStart,
     apply_end: program.applyEnd,
-    detail_url: program.detailUrl,
+    detail_url: safeHttpUrl(program.detailUrl),
     raw: program.raw,
     synced_at: new Date().toISOString(),
   };

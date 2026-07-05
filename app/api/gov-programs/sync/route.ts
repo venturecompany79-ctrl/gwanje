@@ -7,6 +7,7 @@ import {
   type SourceCode,
 } from "@/lib/gov-programs/types";
 import { createServiceClient } from "@/lib/supabase/service";
+import { verifyBearerSecret } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -63,7 +64,7 @@ async function handle(request: Request): Promise<NextResponse> {
     );
   }
 
-  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!verifyBearerSecret(request, cronSecret)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 

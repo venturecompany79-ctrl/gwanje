@@ -163,7 +163,11 @@ export function NotificationsView({ data }: { data: NotificationsData }) {
   const isRead = (n: NotificationItem) =>
     allRead || readOverride[n.id] === true || n.isRead;
 
-  const unread = data.notifications.filter((n) => !isRead(n)).length;
+  // 로드된 100건이 아니라 전체 안읽음 수 기준(사이드바 배지와 정합).
+  // 낙관적으로 읽음 처리한 만큼 차감한다(readOverride 항목은 모두 직전 안읽음 건).
+  const unread = allRead
+    ? 0
+    : Math.max(0, data.unreadTotal - Object.keys(readOverride).length);
 
   const filtered = useMemo(
     () =>
@@ -329,6 +333,12 @@ export function NotificationsView({ data }: { data: NotificationsData }) {
               })}
             </div>
           )}
+          {data.hasMore ? (
+            <p className="inbox-more-note">
+              최근 {data.notifications.length}건까지 표시됩니다. 오래된 알림은
+              목록에 나타나지 않을 수 있습니다.
+            </p>
+          ) : null}
         </>
       )}
 

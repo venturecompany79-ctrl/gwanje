@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import {
   Fragment,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -69,6 +70,13 @@ function defaultScheduledAt(): string {
   d.setDate(d.getDate() + 1);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T09:00`;
+}
+
+/** datetime-local의 min 속성용 현재 시각(로컬) "YYYY-MM-DDTHH:mm" */
+function nowLocalDateTime(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /** 필드 변경 시 해당 필드의 기본 연산자·값 */
@@ -155,6 +163,23 @@ export function CampaignWizard({
   const template =
     TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0];
 
+  const scheduledInPast =
+    when === "sched" &&
+    scheduledAt !== "" &&
+    new Date(scheduledAt).getTime() <= Date.now();
+
+  // 작성 중 이탈 경고 — 발송/예약 완료 후 이동에는 걸리지 않음(sending일 때 해제).
+  const hasProgress = step > 1 || title.trim() !== "";
+  useEffect(() => {
+    if (!hasProgress || sending !== null) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasProgress, sending]);
+
   function patchRule(index: number, patch: Partial<SegmentRule>) {
     setRules((prev) =>
       prev.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)),
@@ -173,6 +198,10 @@ export function CampaignWizard({
   }
 
   function submit(mode: "now" | "sched") {
+    if (mode === "sched" && new Date(scheduledAt).getTime() <= Date.now()) {
+      showToast("예약 일시는 현재 이후로 설정해 주세요.");
+      return;
+    }
     setSending(mode);
     startTransition(async () => {
       const scheduled =
@@ -521,6 +550,7 @@ export function CampaignWizard({
                     type="datetime-local"
                     className="dt-input num"
                     value={scheduledAt}
+                    min={nowLocalDateTime()}
                     onChange={(e) => setScheduledAt(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     disabled={when !== "sched"}
@@ -529,6 +559,12 @@ export function CampaignWizard({
                 </span>
               </label>
             </div>
+            {scheduledInPast ? (
+              <p className="form-hint form-hint--error" style={{ marginTop: 10 }}>
+                <IconAlert /> 예약 일시가 현재보다 과거입니다. 미래 시각으로
+                변경해 주세요.
+              </p>
+            ) : null}
             <p className="form-hint" style={{ marginTop: 10 }}>
               <IconInfo /> 알림톡 게이트웨이 연동 전까지는 발송 기록만
               저장됩니다. 실제 메시지 발송과 도달/응답 집계는 발송 채널 연동
@@ -573,7 +609,12 @@ export function CampaignWizard({
           <>
             <Button
               variant="secondary"
-              disabled={when !== "sched" || !scheduledAt || sending !== null}
+              disabled={
+                when !== "sched" ||
+                !scheduledAt ||
+                scheduledInPast ||
+                sending !== null
+              }
               onClick={() => submit("sched")}
             >
               {sending === "sched" ? "예약 중…" : "예약 발송"}

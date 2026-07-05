@@ -39,6 +39,12 @@ export interface TokenExchangeResult {
   scope: string;
 }
 
+/**
+ * refresh token이 영구 폐기된 경우(사용자가 Google 계정에서 앱 액세스 철회,
+ * 토큰 만료·회수 등). 재시도해도 복구되지 않으므로 워커가 영구 실패로 처리한다.
+ */
+export class RefreshTokenInvalidError extends Error {}
+
 /** authorization code → access/refresh token 교환 */
 export async function exchangeCodeForTokens(
   code: string,
@@ -101,6 +107,12 @@ export async function refreshAccessToken(
     error_description?: string;
   };
   if (!res.ok || !data.access_token) {
+    // invalid_grant = refresh token 영구 폐기 → 재시도 무의미, 별도 타입으로 구분
+    if (data.error === "invalid_grant") {
+      throw new RefreshTokenInvalidError(
+        `refresh token 폐기됨: ${data.error_description ?? "invalid_grant"}`,
+      );
+    }
     throw new Error(
       `액세스 토큰 갱신 실패: ${data.error ?? res.status} ${data.error_description ?? ""}`.trim(),
     );

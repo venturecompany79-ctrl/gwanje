@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import { runSyncBatch } from "@/lib/google-drive/sync-worker";
+import { verifyBearerSecret } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 // 파일 다운로드/업로드가 길어질 수 있어 최대 실행시간을 늘린다(Vercel)
@@ -21,8 +22,7 @@ async function handle(request: Request): Promise<NextResponse> {
     );
   }
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyBearerSecret(request, cronSecret)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 

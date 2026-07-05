@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { IconAlert, IconSearch, IconTarget } from "@/components/ui/icons";
 import { Panel, PanelHead } from "@/components/ui/Panel";
 import { daysFromToday } from "@/lib/datetime";
+import { safeHttpUrl } from "@/lib/gov-programs/types";
 import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
 import { PROGRAM_SOURCE_LABEL, SUPPORT_FIELD_LABEL } from "@/lib/labels";
 import {
@@ -613,11 +614,11 @@ export function RecommendTab({
                           ))}
                         </div>
                       </div>
-                      {program.detail_url ? (
+                      {safeHttpUrl(program.detail_url) ? (
                         <LinkButton
                           variant="secondary"
                           size="sm"
-                          href={program.detail_url}
+                          href={safeHttpUrl(program.detail_url)!}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

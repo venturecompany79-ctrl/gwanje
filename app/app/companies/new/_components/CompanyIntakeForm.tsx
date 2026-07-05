@@ -180,7 +180,12 @@ async function extractPdfText(
   onStatus: (message: string) => void,
 ): Promise<ExtractedLicenseText> {
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  // 워커를 앱 번들에 포함해 self-host — 외부 CDN(unpkg) 의존·SRI 미검증 제거.
+  // 번들러(webpack)가 이 URL을 정적 자산으로 방출한다.
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
 
   const buffer = await file.arrayBuffer();
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
