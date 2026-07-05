@@ -72,6 +72,24 @@ export async function createCampaign(
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error, id: null };
 
+  // 수신자 id가 전부 우리 tenant의 기업인지 검증 — RLS가 자기 tenant 행만
+  // 반환하므로 개수 불일치 = 타 tenant/존재하지 않는 id 혼입
+  const companyIds = Array.from(new Set(input.companyIds));
+  const { count: ownedCount, error: ownedError } = await supabase
+    .from("company")
+    .select("id", { count: "exact", head: true })
+    .in("id", companyIds);
+  if (ownedError || (ownedCount ?? 0) !== companyIds.length) {
+    if (ownedError) {
+      console.error("[createCampaign:verify]", ownedError.code, ownedError.message);
+    }
+    return {
+      ok: false,
+      error: "발송 대상에 접근할 수 없는 기업이 포함되어 있습니다.",
+      id: null,
+    };
+  }
+
   const immediate = input.scheduledAt === null;
   const now = new Date().toISOString();
 
@@ -102,7 +120,7 @@ export async function createCampaign(
   const { error: recipientError } = await supabase
     .from("campaign_recipient")
     .insert(
-      input.companyIds.map((companyId) => ({
+      companyIds.map((companyId) => ({
         tenant_id: ctx.tenantId,
         campaign_id: campaign.id,
         company_id: companyId,

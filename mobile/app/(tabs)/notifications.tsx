@@ -61,6 +61,7 @@ function NotificationCell({
 
 export default function NotificationsScreen() {
   const [filter, setFilter] = useState<Filter>("all");
+  const [actionError, setActionError] = useState<string | null>(null);
   const { data, loading, refreshing, error, refresh } =
     useAsyncData(loadNotifications);
 
@@ -72,16 +73,32 @@ export default function NotificationsScreen() {
 
   async function markRead(item: NotificationItem) {
     if (item.is_read) return;
-    await mobileApi("/api/mobile/notifications/read", { body: { id: item.id } });
-    await Haptics.selectionAsync();
-    refresh();
+    try {
+      setActionError(null);
+      await mobileApi("/api/mobile/notifications/read", {
+        body: { id: item.id },
+      });
+      await Haptics.selectionAsync();
+      refresh();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "읽음 처리에 실패했습니다.",
+      );
+    }
   }
 
   async function markAll() {
     if (unreadCount === 0) return;
-    await mobileApi("/api/mobile/notifications/read-all");
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    refresh();
+    try {
+      setActionError(null);
+      await mobileApi("/api/mobile/notifications/read-all");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      refresh();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "읽음 처리에 실패했습니다.",
+      );
+    }
   }
 
   return (
@@ -102,6 +119,9 @@ export default function NotificationsScreen() {
         <Segmented items={FILTERS} value={filter} onChange={setFilter} />
       </View>
 
+      {actionError ? (
+        <Text style={styles.actionError}>{actionError}</Text>
+      ) : null}
       {loading && !data ? <Loading /> : null}
       {error ? <InlineEmpty>알림을 불러오지 못했습니다</InlineEmpty> : null}
       {data ? (
@@ -129,6 +149,13 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.base,
     marginTop: spacing.base,
     marginBottom: spacing.sm,
+  },
+  actionError: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.sm,
+    fontSize: 12.5,
+    letterSpacing: -0.2,
+    color: colors.critical,
   },
   readAll: {
     fontSize: 14.5,

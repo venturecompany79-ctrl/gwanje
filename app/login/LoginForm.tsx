@@ -65,7 +65,14 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
     });
 
     if (error) {
-      setAuthError("이메일 또는 비밀번호를 확인해 주세요.");
+      // 네트워크/서버 장애(status 0·5xx·429)를 자격증명 오류로 오인시키지 않는다
+      const transient =
+        !error.status || error.status >= 500 || error.status === 429;
+      setAuthError(
+        transient
+          ? "일시적인 연결 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+          : "이메일 또는 비밀번호를 확인해 주세요.",
+      );
       setLoading(false);
       return;
     }

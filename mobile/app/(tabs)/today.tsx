@@ -109,12 +109,19 @@ export default function TodayScreen() {
   }
 
   async function toggle(note: TodoNoteRow) {
-    await mobileApi(`/api/mobile/todos/${note.id}`, {
-      method: "PATCH",
-      body: { completed: !note.completed },
-    });
-    await Haptics.selectionAsync();
-    refresh();
+    try {
+      setSaveError(null);
+      await mobileApi(`/api/mobile/todos/${note.id}`, {
+        method: "PATCH",
+        body: { completed: !note.completed },
+      });
+      await Haptics.selectionAsync();
+      refresh();
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "상태 변경에 실패했습니다.",
+      );
+    }
   }
 
   return (

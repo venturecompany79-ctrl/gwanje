@@ -126,6 +126,9 @@ await step("migration: 20260708000000_document_mime_hardening", read("migrations
 await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
 await step("migration: 20260710000000_document_version_unique", read("migrations/20260710000000_document_version_unique.sql"));
 await step("migration: 20260711000000_company_tenant_consistency", read("migrations/20260711000000_company_tenant_consistency.sql"));
+await step("migration: 20260712000000_fk_indexes", read("migrations/20260712000000_fk_indexes.sql"));
+await step("migration: 20260713000000_todo_note_tag_unify", read("migrations/20260713000000_todo_note_tag_unify.sql"));
+await step("migration: 20260714000000_tag_backfill_perf_indexes", read("migrations/20260714000000_tag_backfill_perf_indexes.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",

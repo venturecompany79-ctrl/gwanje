@@ -40,11 +40,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/configuration-error", request.url));
   }
 
+  // prefetch 단축은 공개/인증 진입 경로만 — /app는 prefetch 헤더를 붙인 요청이
+  // 상태·구독 게이트를 우회할 수 있어 항상 전체 검사를 거친다.
   const isPrefetch =
     request.headers.get("next-router-prefetch") === "1" ||
     request.headers.get("purpose") === "prefetch" ||
     request.headers.get("sec-purpose") === "prefetch";
-  if (isPrefetch) return NextResponse.next();
+  if (isPrefetch && !pathname.startsWith("/app")) return NextResponse.next();
 
   let response = NextResponse.next({ request });
 
@@ -72,17 +74,32 @@ export async function middleware(request: NextRequest) {
   const isOnboarding = pathname === "/signup/complete";
   const isAppPath = pathname.startsWith("/app");
 
+  // 구독 게이트가 필요한 경로인지 미리 판정해 profile 조회와 병렬로 실행한다
+  const needsSubscriptionGate =
+    isAuthenticated &&
+    isBillingEnabled() &&
+    isAppPath &&
+    !pathname.startsWith("/app/billing") &&
+    !pathname.startsWith("/app/settings");
+
   // profile "행 없음"(가입 온보딩 전)과 "비활성 상태"(invited/disabled)를 구분한다
   let hasProfile = false;
   let profileStatus: string | null = null;
+  let subscriptionStatus: string | null | undefined;
   if (isAuthenticated && (isAuthEntry || isOnboarding || isAppPath)) {
-    const { data: profile } = await supabase
-      .from("profile")
-      .select("status")
-      .eq("id", claims?.claims.sub)
-      .maybeSingle();
-    hasProfile = Boolean(profile);
-    profileStatus = profile?.status ?? null;
+    const [profileRes, subRes] = await Promise.all([
+      supabase
+        .from("profile")
+        .select("status")
+        .eq("id", claims?.claims.sub)
+        .maybeSingle(),
+      needsSubscriptionGate
+        ? supabase.from("tenant_subscription").select("status").maybeSingle()
+        : Promise.resolve(null),
+    ]);
+    hasProfile = Boolean(profileRes.data);
+    profileStatus = profileRes.data?.status ?? null;
+    subscriptionStatus = subRes?.data?.status ?? null;
   }
 
   const isActiveMember = profileStatus === "active";
@@ -133,20 +150,10 @@ export async function middleware(request: NextRequest) {
   // 구독 접근 제어(피처 플래그 ON일 때만 — OFF면 쿼리 없이 기존 동작).
   // expired/미구독이면 /app/billing로 유도. 단 결제·설정 화면은 항상 허용.
   if (
-    isAuthenticated &&
-    isBillingEnabled() &&
-    isAppPath &&
-    !pathname.startsWith("/app/billing") &&
-    !pathname.startsWith("/app/settings")
+    needsSubscriptionGate &&
+    (subscriptionStatus === null || subscriptionStatus === "expired")
   ) {
-    const { data: sub } = await supabase
-      .from("tenant_subscription")
-      .select("status")
-      .maybeSingle();
-    const status = sub?.status ?? null;
-    if (status === null || status === "expired") {
-      return NextResponse.redirect(new URL("/app/billing", request.url));
-    }
+    return NextResponse.redirect(new URL("/app/billing", request.url));
   }
 
   return response;

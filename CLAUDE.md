@@ -2,7 +2,7 @@
 
 > Claude Code가 **매 세션 자동으로 읽는** 프로젝트 헌법. 모든 화면 작업은 이 규칙을 따른다.
 > 세부 원본(`/docs`)을 **권위(source of truth)**로 삼는다:
-> - `/docs/schema.sql` — DB 스키마
+> - `supabase/migrations/*.sql` — **DB 스키마 (실제 권위)**. `/docs/schema.sql`은 초기 스냅숏으로 이후 테이블(billing·mobile·drive 등)이 빠져 있다 — 참고용으로만.
 > - `/docs/design.md` — **디자인 시스템(Meta DS) 토큰·컴포넌트 (디자인 최우선 권위)**
 > - `/docs/wireframes/*.html` — 화면 레이아웃 참조 (Meta DS 토큰 + 앱 확장)
 > - `/docs/화면설계_기획자료.md` — 화면별 구성요소·동작·상태
@@ -103,7 +103,7 @@ Meta의 커머스(Quest·Ray-Ban) 디자인 시스템 기반. **라이트 테마
 - 타입: `supabase gen types`로 만든 `Database` 타입 사용. **`any` 금지.**
 - **RLS가 tenant 격리를 자동 처리**(`auth_tenant_id()`) → 일반 쿼리에서 `tenant_id` 수동 필터 불필요. 단, **새 테이블 추가 시** `tenant_id` + `enable row level security` + 격리 정책을 반드시 함께 만든다.
 
-### 테이블 요약 (전체는 `/docs/schema.sql`)
+### 테이블 요약 (전체·최신은 `supabase/migrations/`)
 | 테이블 | 용도 | 핵심 컬럼 |
 |---|---|---|
 | `tenant` / `profile` | 워크스페이스 / 컨설턴트 | profile에 알림규칙·발신정보 |

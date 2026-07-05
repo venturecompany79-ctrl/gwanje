@@ -21,6 +21,9 @@ function projectId(): string | undefined {
 }
 
 export async function registerDeviceForPush() {
+  // 웹 배포에서는 브라우저 알림 권한 팝업만 뜨고 VAPID 미설정으로 토큰 발급이
+  // 실패한다 — 웹 푸시를 정식 지원하기 전까지 웹에서는 등록하지 않는다.
+  if (Platform.OS === "web") return;
   if (!Device.isDevice) return;
 
   const current = await Notifications.getPermissionsAsync();
