@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Topbar } from "@/components/shell/Topbar";
 import { CategoryColorStyle } from "@/components/shell/CategoryColorStyle";
@@ -13,6 +14,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     getShellData(),
     getSubscriptionGate(),
   ]);
+
+  // 미들웨어 게이트의 이중 방어 — prefetch 등으로 미들웨어를 지나쳐도
+  // 비활성/미가입 계정은 렌더 전에 차단한다 (RLS가 최종 방어선).
+  if (!shell.demo && shell.memberStatus !== "active") {
+    redirect("/login?status=inactive");
+  }
 
   return (
     <div className="shell">

@@ -16,6 +16,8 @@ export interface HomeData {
   expire30: number;
   activeTasks: number;
   unreadCount: number;
+  /** 기한 지남 총 건수 — overdue 목록은 8건으로 잘리므로 KPI는 이 값을 쓴다 */
+  overdueCount: number;
   overdue: DeadlineItem[];
   deadlines: DeadlineItem[];
 }
@@ -79,6 +81,7 @@ export async function loadHomeData(): Promise<HomeData> {
     expire30,
     activeTasks,
     unread,
+    overdueTotal,
     overdue,
     deadlines,
   ] = await Promise.all([
@@ -104,6 +107,10 @@ export async function loadHomeData(): Promise<HomeData> {
       .eq("is_read", false),
     supabase
       .from("deadline_item")
+      .select("id", { count: "exact", head: true })
+      .lt("due_date", today),
+    supabase
+      .from("deadline_item")
       .select("*")
       .lt("due_date", today)
       .order("due_date", { ascending: true })
@@ -117,7 +124,7 @@ export async function loadHomeData(): Promise<HomeData> {
       .limit(12),
   ]);
 
-  throwIfError("홈 데이터를 불러오지 못했습니다", companies.error ?? due7.error ?? expire30.error ?? activeTasks.error ?? unread.error ?? overdue.error ?? deadlines.error);
+  throwIfError("홈 데이터를 불러오지 못했습니다", companies.error ?? due7.error ?? expire30.error ?? activeTasks.error ?? unread.error ?? overdueTotal.error ?? overdue.error ?? deadlines.error);
 
   return {
     companyCount: countValue(companies),
@@ -125,6 +132,7 @@ export async function loadHomeData(): Promise<HomeData> {
     expire30: countValue(expire30),
     activeTasks: countValue(activeTasks),
     unreadCount: countValue(unread),
+    overdueCount: countValue(overdueTotal),
     overdue: overdue.data ?? [],
     deadlines: deadlines.data ?? [],
   };

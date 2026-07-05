@@ -24,6 +24,10 @@
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
         }
       ]
     }
@@ -34,31 +38,7 @@
       "destination": "https://gwanje.vercel.app/api/mobile/:path*"
     },
     {
-      "source": "/login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/notifications",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/today",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/tasks",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/companies",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/task/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/company/:path*",
+      "source": "/((?!api/|_expo/|assets/).*)",
       "destination": "/index.html"
     }
   ]

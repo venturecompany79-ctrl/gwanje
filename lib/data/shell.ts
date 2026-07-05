@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import {
   getCurrentIdentity,
   readCurrentMemberProfile,
@@ -9,6 +8,7 @@ import {
   isMemberRole,
   normalizePermissions,
   type MemberRole,
+  type MemberStatus,
   type PermissionKey,
 } from "@/lib/permissions";
 
@@ -20,6 +20,8 @@ export interface ShellData {
   unreadCount: number;
   role: MemberRole;
   permissions: PermissionKey[];
+  /** 미들웨어 게이트의 이중 방어용 — active가 아니면 레이아웃에서 차단 */
+  memberStatus: MemberStatus | null;
 }
 
 const DEMO_SHELL: ShellData = {
@@ -42,40 +44,25 @@ const DEMO_SHELL: ShellData = {
     "settings.drive.write",
     "billing.manage",
   ],
+  memberStatus: "active",
 };
-
-async function readTenantNameById(
-  tenantId: string | null | undefined,
-): Promise<string> {
-  if (!tenantId) return "";
-
-  const service = createServiceClient();
-  if (!service) return "";
-
-  const { data } = await service
-    .from("tenant")
-    .select("name")
-    .eq("id", tenantId)
-    .maybeSingle();
-
-  return data?.name ?? "";
-}
 
 export async function getShellData(): Promise<ShellData> {
   const supabase = await createClient();
   if (!supabase) return DEMO_SHELL;
 
   const identity = await getCurrentIdentity(supabase);
-  const unreadPromise = supabase
-    .from("notification")
-    .select("id", { count: "exact", head: true })
-    .eq("is_read", false);
 
-  const [profile, unread] = await Promise.all([
+  // RLS가 자기 tenant 행만 반환하므로 tenant 이름도 같은 병렬 배치에서 조회
+  const [profile, unread, tenantRow] = await Promise.all([
     identity
       ? readCurrentMemberProfile(supabase, identity.userId)
       : Promise.resolve<CurrentMemberProfile | null>(null),
-    unreadPromise,
+    supabase
+      .from("notification")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false),
+    supabase.from("tenant").select("name").maybeSingle(),
   ]);
 
   const role =
@@ -85,15 +72,15 @@ export async function getShellData(): Promise<ShellData> {
   const permissions = profile?.permissions?.length
     ? normalizePermissions(role, profile.permissions)
     : [];
-  const orgName = await readTenantNameById(profile?.tenant_id);
 
   return {
     demo: false,
     consultantName: profile?.name ?? identity?.name ?? "컨설턴트",
     consultantTitle: profile?.title ?? "",
-    orgName,
+    orgName: tenantRow.data?.name ?? "",
     unreadCount: unread.count ?? 0,
     role,
     permissions,
+    memberStatus: profile?.status ?? null,
   };
 }

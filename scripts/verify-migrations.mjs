@@ -126,6 +126,9 @@ await step("migration: 20260708000000_document_mime_hardening", read("migrations
 await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
 await step("migration: 20260710000000_document_version_unique", read("migrations/20260710000000_document_version_unique.sql"));
 await step("migration: 20260711000000_company_tenant_consistency", read("migrations/20260711000000_company_tenant_consistency.sql"));
+await step("migration: 20260712000000_fk_indexes", read("migrations/20260712000000_fk_indexes.sql"));
+await step("migration: 20260713000000_todo_note_tag_unify", read("migrations/20260713000000_todo_note_tag_unify.sql"));
+await step("migration: 20260714000000_tag_backfill_perf_indexes", read("migrations/20260714000000_tag_backfill_perf_indexes.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -243,11 +246,11 @@ await step(
   "todo_note: 30일 창 밖/안 노트 삽입",
   `with p as (select id as user_id, tenant_id from profile limit 1)
    insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
-   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date - 30, '삭제 대상', '업무', 0 from p
+   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date - 30, '삭제 대상', '상담', 0 from p
    union all
    select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date - 29, '경계 유지 대상', '미팅', 1 from p
    union all
-   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date, '유지 대상', '기록', 2 from p;`,
+   select tenant_id, user_id, (now() at time zone 'Asia/Seoul')::date, '유지 대상', '서류', 2 from p;`,
 );
 const cleanup = await q("cleanup_old_todo_notes()", `select cleanup_old_todo_notes() as deleted`);
 assert((cleanup[0]?.deleted ?? 0) >= 1, "30일 창 밖 todo_note 삭제 함수 실행");
@@ -434,10 +437,10 @@ await step(
           'active'
    from profile where id='${USER_A}';
    insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
-   select tenant_id, '${USER_A}', (now() at time zone 'Asia/Seoul')::date, 'owner private note', '업무', 10
+   select tenant_id, '${USER_A}', (now() at time zone 'Asia/Seoul')::date, 'owner private note', '상담', 10
    from profile where id='${USER_A}';
    insert into todo_note (tenant_id, user_id, note_date, content, tag, sort_order)
-   select tenant_id, '${USER_C}', (now() at time zone 'Asia/Seoul')::date, 'member private note', '기록', 11
+   select tenant_id, '${USER_C}', (now() at time zone 'Asia/Seoul')::date, 'member private note', '서류', 11
    from profile where id='${USER_A}';`,
 );
 

@@ -3062,7 +3062,7 @@ table.dlist .name {
   font-weight: 700;
   white-space: nowrap;
 }
-.todo-tag--work {
+.todo-tag--consult {
   background: var(--app-ic-deadline-bg);
   border-color: rgba(0, 100, 224, 0.24);
   color: var(--color-primary-deep);
@@ -3072,10 +3072,15 @@ table.dlist .name {
   border-color: rgba(242, 169, 24, 0.32);
   color: var(--app-st-soon-text);
 }
-.todo-tag--record {
+.todo-tag--doc {
   background: var(--app-ic-match-bg);
   border-color: rgba(111, 63, 192, 0.22);
   color: var(--app-ic-match-icon);
+}
+.todo-tag--etc {
+  background: var(--color-surface-soft);
+  border-color: var(--color-hairline);
+  color: var(--color-steel);
 }
 .todo-text-input {
   display: block;
@@ -3176,14 +3181,17 @@ table.dlist .name {
 .todo-tag-option.is-active {
   background: var(--color-surface-soft);
 }
-.todo-tag-option--work {
+.todo-tag-option--consult {
   color: var(--color-primary-deep);
 }
 .todo-tag-option--meeting {
   color: var(--app-st-soon-text);
 }
-.todo-tag-option--record {
+.todo-tag-option--doc {
   color: var(--app-ic-match-icon);
+}
+.todo-tag-option--etc {
+  color: var(--color-steel);
 }
 .todo-tag-option svg {
   width: 14px;

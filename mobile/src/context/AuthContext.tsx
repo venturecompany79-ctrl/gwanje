@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const message = gateMessage(await checkProfileGate(current.user.id));
         if (!mounted) return;
         if (message) {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: "local" });
           if (!mounted) return;
           setGateError(message);
           setSession(null);
@@ -105,11 +105,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGateError(null);
       },
       async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
         if (error) throw error;
+        // Google 로그인과 동일하게 프로비저닝/활성 상태를 검증한다
+        const userId = data.user?.id;
+        if (userId) {
+          const message = gateMessage(await checkProfileGate(userId));
+          if (message) {
+            await supabase.auth.signOut({ scope: "local" });
+            throw new Error(message);
+          }
+        }
       },
       async signInWithGoogle() {
         const { cancelled } = await signInWithGoogleOAuth();
@@ -120,12 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!userId) throw new Error("로그인에 실패했습니다. 다시 시도해 주세요.");
         const message = gateMessage(await checkProfileGate(userId));
         if (message) {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: "local" });
           throw new Error(message);
         }
       },
       async signOut() {
-        await supabase.auth.signOut();
+        // global(기본값)은 같은 계정의 웹 대시보드 세션까지 무효화한다
+        await supabase.auth.signOut({ scope: "local" });
       },
     }),
     [envReady, gateError, loading, session],

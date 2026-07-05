@@ -19,7 +19,16 @@ function csvCell(value: string | number | null): string {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function toCsv(rows: DeadlineItem[]): string {
+type ExportRow = Pick<
+  DeadlineItem,
+  "source" | "company_name" | "title" | "category_name" | "due_date" | "days_left"
+>;
+
+// PostgREST max-rows 기본값(1000)이 암묵적으로 자르지 않도록 상한을 명시한다.
+// 이보다 커지면 range() 페이지네이션으로 전환할 것.
+const EXPORT_ROW_LIMIT = 1000;
+
+function toCsv(rows: ExportRow[]): string {
   const header = ["구분", "기업명", "항목", "분류", "마감일", "D-day"];
   const lines = rows
     .slice()
@@ -48,12 +57,13 @@ export async function getDeadlinesCsv(): Promise<string> {
 
   const { data, error } = await supabase
     .from("deadline_item")
-    .select("*")
-    .order("due_date", { ascending: true });
+    .select("source, company_name, title, category_name, due_date, days_left")
+    .order("due_date", { ascending: true })
+    .limit(EXPORT_ROW_LIMIT);
   if (error) {
     console.error("[getDeadlinesCsv]", error.code, error.message);
     throw new Error(`내보내기에 실패했습니다: ${error.message}`);
   }
 
-  return toCsv((data ?? []) as DeadlineItem[]);
+  return toCsv((data ?? []) as ExportRow[]);
 }

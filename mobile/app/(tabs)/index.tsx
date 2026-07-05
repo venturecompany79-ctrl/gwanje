@@ -108,10 +108,10 @@ export default function HomeScreen() {
                 <Text
                   style={[
                     styles.stripValue,
-                    data.overdue.length > 0 && styles.stripValueCritical,
+                    data.overdueCount > 0 && styles.stripValueCritical,
                   ]}
                 >
-                  {data.overdue.length}
+                  {data.overdueCount}
                 </Text>
                 <Text style={styles.stripLabel}>기한 지남</Text>
               </Pressable>
