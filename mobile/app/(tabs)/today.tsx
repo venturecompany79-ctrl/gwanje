@@ -21,9 +21,10 @@ import { Screen } from "@/ui/Screen";
 
 const FULL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-// 서버(app/api/mobile/todos + lib/todos.ts TODO_BOARD_DAY_COUNT)와 동일하게
-// 오늘을 포함한 최근 30일까지 작성/조회를 허용한다.
+// 서버(app/api/mobile/todos + lib/todos.ts TODO_BOARD_DAY_COUNT / TODO_NOTE_FUTURE_DAYS)와
+// 동일하게, 과거는 오늘 포함 최근 30일, 미래는 오늘 이후 최대 365일까지 작성/조회를 허용한다.
 const NOTE_HISTORY_DAYS = 30;
+const NOTE_FUTURE_DAYS = 365;
 
 function NoteCell({
   note,
@@ -68,6 +69,7 @@ export default function TodayScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const today = todayKstDate();
   const minDate = shiftDateString(today, -(NOTE_HISTORY_DAYS - 1));
+  const maxDate = shiftDateString(today, NOTE_FUTURE_DAYS);
   // 네이티브 입력 중(부분 입력)에는 오늘 날짜 목록을 유지한다.
   const listDate = FULL_DATE.test(noteDate) ? noteDate : today;
   const loadNotes = useCallback(() => loadNotesForDate(listDate), [listDate]);
@@ -77,11 +79,11 @@ export default function TodayScreen() {
   const canAdd = draft.trim().length > 0;
   // ◀▶ 하루 이동. YYYY-MM-DD 문자열은 사전식 비교가 곧 날짜 순서라 그대로 범위 판정에 쓴다.
   const canPrev = listDate > minDate;
-  const canNext = listDate < today;
+  const canNext = listDate < maxDate;
 
   function stepDay(delta: number) {
     const next = shiftDateString(listDate, delta);
-    if (next < minDate || next > today) return;
+    if (next < minDate || next > maxDate) return;
     setNoteDate(next);
     void Haptics.selectionAsync();
   }
@@ -162,7 +164,7 @@ export default function TodayScreen() {
               value={noteDate}
               onChange={setNoteDate}
               min={minDate}
-              max={today}
+              max={maxDate}
             />
             <Pressable
               onPress={() => stepDay(1)}

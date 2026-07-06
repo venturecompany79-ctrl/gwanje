@@ -2,6 +2,9 @@
 // 값을 바꾸면 mobile/src/lib/labels.ts, DB CHECK 제약, 톤 CSS도 함께 맞춰야 한다.
 export const TODO_TAGS = ["상담", "미팅", "서류", "기타"] as const;
 export const TODO_BOARD_DAY_COUNT = 30;
+// 오늘 이후로 노트를 작성할 수 있는 최대 일수(미래 일정·계획 메모용).
+// 과거 창(TODO_BOARD_DAY_COUNT)과 달리 보드 표시·보관 정리와 무관하므로 넉넉히 1년으로 둔다.
+export const TODO_NOTE_FUTURE_DAYS = 365;
 
 export type TodoTag = (typeof TODO_TAGS)[number];
 

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
 import {
   TODO_BOARD_DAY_COUNT,
+  TODO_NOTE_FUTURE_DAYS,
   cleanTodoContent,
   isTodoTag,
   type TodoTag,
@@ -27,7 +28,10 @@ function resolveNoteDate(value: string | undefined): string | null {
   if (value === undefined) return todayKstDate();
   if (!isValidDateString(value)) return null;
   const offset = daysFromToday(value);
-  if (offset > 0 || offset < -(TODO_BOARD_DAY_COUNT - 1)) return null;
+  // 과거는 오늘 포함 최근 TODO_BOARD_DAY_COUNT일, 미래는 오늘 이후 TODO_NOTE_FUTURE_DAYS일까지 허용.
+  if (offset > TODO_NOTE_FUTURE_DAYS || offset < -(TODO_BOARD_DAY_COUNT - 1)) {
+    return null;
+  }
   return value;
 }
 
