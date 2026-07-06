@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Trash2 } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
 import { longKstDate, monthDayKo, shiftDateString, todayKstDate } from "@/lib/dates";
@@ -30,12 +30,31 @@ function NoteCell({
   note,
   last,
   onToggle,
+  onDelete,
 }: {
   note: TodoNoteRow;
   last?: boolean;
   onToggle: () => void;
+  /** 삭제 실행 — 성공 시 목록 새로고침으로 이 셀이 사라지고, 실패 시 reject한다. */
+  onDelete: () => Promise<void>;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const done = note.completed;
+
+  async function confirmDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      // 성공하면 새로고침으로 셀이 언마운트되므로 상태를 되돌리지 않는다.
+    } catch {
+      // 실패 시 확인 UI를 접고, 에러 문구는 상위(remove)에서 노출한다.
+      setDeleting(false);
+      setConfirming(false);
+    }
+  }
+
   return (
     <Cell last={last} sepInset={46} align="flex-start">
       <Pressable
@@ -58,6 +77,40 @@ function NoteCell({
           <Text style={styles.noteTime}>{note.completed ? "완료" : "메모"}</Text>
         </View>
       </View>
+      {confirming ? (
+        <View style={styles.confirmRow}>
+          <Pressable
+            onPress={() => setConfirming(false)}
+            disabled={deleting}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="삭제 취소"
+            style={styles.confirmCancel}
+          >
+            <Text style={styles.confirmCancelText}>취소</Text>
+          </Pressable>
+          <Pressable
+            onPress={confirmDelete}
+            disabled={deleting}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="삭제 확인"
+            style={[styles.confirmDelete, deleting && styles.confirmDeleteBusy]}
+          >
+            <Text style={styles.confirmDeleteText}>{deleting ? "삭제 중" : "삭제"}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setConfirming(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="노트 삭제"
+          style={styles.deleteBtn}
+        >
+          <Trash2 size={16} color={colors.tertiaryLabel} strokeWidth={2} />
+        </Pressable>
+      )}
     </Cell>
   );
 }
@@ -123,6 +176,18 @@ export default function TodayScreen() {
       setSaveError(
         err instanceof Error ? err.message : "상태 변경에 실패했습니다.",
       );
+    }
+  }
+
+  async function remove(note: TodoNoteRow) {
+    setSaveError(null);
+    try {
+      await mobileApi(`/api/mobile/todos/${note.id}`, { method: "DELETE" });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      refresh();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "삭제에 실패했습니다.");
+      throw err; // NoteCell이 확인 UI를 되돌리도록 재던진다.
     }
   }
 
@@ -231,6 +296,7 @@ export default function TodayScreen() {
                 note={note}
                 last={i === data.length - 1}
                 onToggle={() => toggle(note)}
+                onDelete={() => remove(note)}
               />
             ))}
           </Group>
@@ -415,5 +481,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: colors.tertiaryLabel,
+  },
+  deleteBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginTop: -3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: -1,
+  },
+  confirmCancel: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: radius.chip,
+    backgroundColor: colors.fill,
+  },
+  confirmCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    color: colors.subText,
+  },
+  confirmDelete: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: radius.chip,
+    backgroundColor: colors.critical,
+  },
+  confirmDeleteBusy: {
+    opacity: 0.6,
+  },
+  confirmDeleteText: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    color: colors.canvas,
   },
 });
