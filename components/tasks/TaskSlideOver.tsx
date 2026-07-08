@@ -72,6 +72,7 @@ export function TaskSlideOver({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const editable = canEdit && isEditing;
+  const detailFormId = `task-detail-form-${task.id}`;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -108,7 +109,7 @@ export function TaskSlideOver({
             <IconX />
           </button>
         </div>
-        <form className="slideover-form" onSubmit={handleSubmit}>
+        <form id={detailFormId} className="slideover-form" onSubmit={handleSubmit}>
           <div className="slideover-body">
             {demo ? (
               <div className="auth-notice">
@@ -216,29 +217,35 @@ export function TaskSlideOver({
               </p>
             </div>
           </div>
+        </form>
+        {canEdit ? (
           <div className="slideover-foot">
-            {canEdit && isEditing ? (
-              <Button variant="cta" type="submit" full disabled={pending}>
-                {pending ? "저장 중…" : "변경 저장"}
-              </Button>
-            ) : canEdit ? (
+            {isEditing ? (
               <Button
                 variant="cta"
-                type="button"
+                type="submit"
+                form={detailFormId}
                 full
-                onClick={() => {
+                disabled={pending}
+              >
+                {pending ? "저장 중…" : "변경 저장"}
+              </Button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn--cta btn--full"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                   setError(null);
                   setIsEditing(true);
                 }}
               >
                 수정하기
-              </Button>
-            ) : null}
-            <Button variant="ghost" type="button" onClick={onClose}>
-              닫기
-            </Button>
+              </button>
+            )}
           </div>
-        </form>
+        ) : null}
     </SlideOver>
   );
 }

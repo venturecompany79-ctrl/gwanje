@@ -248,15 +248,21 @@ function TaskForm({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
-        <Pressable
-          onPress={isEditing ? save : () => setIsEditing(true)}
-          disabled={isEditing ? !canSave : false}
-          style={[styles.save, isEditing && !canSave && styles.saveDisabled]}
-        >
-          <Text style={styles.saveText}>
-            {isEditing ? (pending ? "저장 중…" : "변경 저장") : "수정하기"}
-          </Text>
-        </Pressable>
+        {isEditing ? (
+          <Pressable
+            onPress={save}
+            disabled={!canSave}
+            style={[styles.save, !canSave && styles.saveDisabled]}
+          >
+            <Text style={styles.saveText}>
+              {pending ? "저장 중…" : "변경 저장"}
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => setIsEditing(true)} style={styles.save}>
+            <Text style={styles.saveText}>수정하기</Text>
+          </Pressable>
+        )}
       </View>
     </>
   );
