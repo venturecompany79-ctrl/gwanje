@@ -31,6 +31,8 @@ create type ip_deadline_type as enum (
   'annuity',
   'etc'
 );
+create type meeting_report_status as enum ('pending', 'processing', 'succeeded', 'failed');
+create type meeting_report_source_role as enum ('company_info', 'meeting_note');
 
 -- -------------------------------------------------------------
 -- 1. tenant / profile — 워크스페이스 / 컨설턴트
@@ -176,7 +178,40 @@ create table document (
 );
 
 -- -------------------------------------------------------------
--- 8. ip_right / ip_deadline — 지식재산권(특허·상표) / 대응·납부·갱신 기한
+-- 8. meeting_report — 미팅 기반 AI 진단 보고서
+-- -------------------------------------------------------------
+create table meeting_report (
+  id                 uuid primary key default gen_random_uuid(),
+  tenant_id          uuid not null references tenant (id) on delete cascade,
+  company_id         uuid not null references company (id) on delete cascade,
+  requested_by       uuid references profile (id) on delete set null,
+  title              text not null,
+  status             meeting_report_status not null default 'pending',
+  attempts           int not null default 0 check (attempts >= 0),
+  model              text,
+  report_json        jsonb,
+  summary            text,
+  output_document_id uuid references document (id) on delete set null,
+  last_error         text,
+  next_run_at        timestamptz not null default now(),
+  generated_at       timestamptz,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+
+create table meeting_report_source (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references tenant (id) on delete cascade,
+  company_id  uuid not null references company (id) on delete cascade,
+  report_id   uuid not null references meeting_report (id) on delete cascade,
+  document_id uuid not null references document (id) on delete cascade,
+  role        meeting_report_source_role not null,
+  created_at  timestamptz not null default now(),
+  unique (report_id, role)
+);
+
+-- -------------------------------------------------------------
+-- 9. ip_right / ip_deadline — 지식재산권(특허·상표) / 대응·납부·갱신 기한
 -- -------------------------------------------------------------
 create table ip_right (
   id              uuid primary key default gen_random_uuid(),
@@ -212,7 +247,7 @@ alter table document
   add column ip_right_id uuid references ip_right (id) on delete set null;
 
 -- -------------------------------------------------------------
--- 9. campaign / campaign_recipient — 일괄안내 / 수신·응답
+-- 10. campaign / campaign_recipient — 일괄안내 / 수신·응답
 -- -------------------------------------------------------------
 create table campaign (
   id           uuid primary key default gen_random_uuid(),
@@ -480,6 +515,8 @@ alter table credential enable row level security;
 alter table task enable row level security;
 alter table schedule enable row level security;
 alter table document enable row level security;
+alter table meeting_report enable row level security;
+alter table meeting_report_source enable row level security;
 alter table ip_right enable row level security;
 alter table ip_deadline enable row level security;
 alter table campaign enable row level security;
@@ -511,6 +548,10 @@ create policy "task: tenant 격리" on task
 create policy "schedule: tenant 격리" on schedule
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "document: tenant 격리" on document
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "meeting_report: tenant 격리" on meeting_report
+  for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
+create policy "meeting_report_source: tenant 격리" on meeting_report_source
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
 create policy "ip_right: tenant 격리" on ip_right
   for all using (tenant_id = auth_tenant_id()) with check (tenant_id = auth_tenant_id());
@@ -564,9 +605,17 @@ create index idx_task_due on task (tenant_id, due_date);
 create index idx_task_stage on task (tenant_id, stage);
 create index idx_schedule_date on schedule (tenant_id, date);
 create index idx_document_company on document (company_id);
+create unique index document_tenant_company_id_uniq on document (tenant_id, company_id, id);
 create unique index document_company_name_version_uniq on document (company_id, name, version);
 create index idx_document_credential on document (credential_id);
 create index idx_document_ip_right on document (ip_right_id);
+create index idx_meeting_report_company_created
+  on meeting_report (tenant_id, company_id, created_at desc);
+create unique index meeting_report_tenant_company_id_uniq
+  on meeting_report (tenant_id, company_id, id);
+create index idx_meeting_report_due on meeting_report (status, next_run_at);
+create index idx_meeting_report_source_report on meeting_report_source (report_id);
+create index idx_meeting_report_source_document on meeting_report_source (document_id);
 create index idx_ip_right_company on ip_right (company_id);
 create index idx_ip_right_tenant_status on ip_right (tenant_id, status);
 create index idx_ip_deadline_company on ip_deadline (company_id);
@@ -602,6 +651,24 @@ alter table document
   add constraint document_tenant_company_fk
   foreign key (tenant_id, company_id) references company (tenant_id, id)
   on delete cascade not valid;
+alter table meeting_report
+  add constraint meeting_report_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table meeting_report_source
+  add constraint meeting_report_source_tenant_company_fk
+  foreign key (tenant_id, company_id) references company (tenant_id, id)
+  on delete cascade not valid;
+alter table meeting_report_source
+  add constraint meeting_report_source_report_tenant_company_fk
+  foreign key (tenant_id, company_id, report_id)
+  references meeting_report (tenant_id, company_id, id)
+  on delete cascade;
+alter table meeting_report_source
+  add constraint meeting_report_source_document_tenant_company_fk
+  foreign key (tenant_id, company_id, document_id)
+  references document (tenant_id, company_id, id)
+  on delete cascade;
 alter table campaign_recipient
   add constraint campaign_recipient_tenant_company_fk
   foreign key (tenant_id, company_id) references company (tenant_id, id)

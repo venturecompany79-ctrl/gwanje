@@ -452,6 +452,179 @@ export type Database = {
           },
         ]
       }
+      meeting_report: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          generated_at: string | null
+          id: string
+          last_error: string | null
+          model: string | null
+          next_run_at: string
+          output_document_id: string | null
+          report_json: Json | null
+          requested_by: string | null
+          status: Database["public"]["Enums"]["meeting_report_status"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          last_error?: string | null
+          model?: string | null
+          next_run_at?: string
+          output_document_id?: string | null
+          report_json?: Json | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["meeting_report_status"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          last_error?: string | null
+          model?: string | null
+          next_run_at?: string
+          output_document_id?: string | null
+          report_json?: Json | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["meeting_report_status"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_report_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_output_document_id_fkey"
+            columns: ["output_document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_tenant_company_fk"
+            columns: ["tenant_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "meeting_report_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_report_source: {
+        Row: {
+          company_id: string
+          created_at: string
+          document_id: string
+          id: string
+          report_id: string
+          role: Database["public"]["Enums"]["meeting_report_source_role"]
+          tenant_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+          report_id: string
+          role: Database["public"]["Enums"]["meeting_report_source_role"]
+          tenant_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          report_id?: string
+          role?: Database["public"]["Enums"]["meeting_report_source_role"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_report_source_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_document_tenant_company_fk"
+            columns: ["tenant_id", "company_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
+            referencedColumns: ["tenant_id", "company_id", "id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_report_tenant_company_fk"
+            columns: ["tenant_id", "company_id", "report_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_report"
+            referencedColumns: ["tenant_id", "company_id", "id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_tenant_company_fk"
+            columns: ["tenant_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "meeting_report_source_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ip_deadline: {
         Row: {
           company_id: string
@@ -1587,6 +1760,8 @@ export type Database = {
         | "rejected"
         | "abandoned"
         | "expired"
+      meeting_report_source_role: "company_info" | "meeting_note"
+      meeting_report_status: "pending" | "processing" | "succeeded" | "failed"
       notification_type: "expiry" | "deadline" | "program_match"
       payment_kind: "initial" | "recurring" | "refund"
       payment_status: "pending" | "succeeded" | "failed" | "canceled"
@@ -1746,6 +1921,8 @@ export const Constants = {
         "abandoned",
         "expired",
       ],
+      meeting_report_source_role: ["company_info", "meeting_note"],
+      meeting_report_status: ["pending", "processing", "succeeded", "failed"],
       notification_type: ["expiry", "deadline", "program_match"],
       payment_kind: ["initial", "recurring", "refund"],
       payment_status: ["pending", "succeeded", "failed", "canceled"],
@@ -1771,6 +1948,8 @@ export type NotificationType = Enums<"notification_type">
 export type IpRightKind = Enums<"ip_right_kind">
 export type IpRightStatus = Enums<"ip_right_status">
 export type IpDeadlineType = Enums<"ip_deadline_type">
+export type MeetingReportStatus = Enums<"meeting_report_status">
+export type MeetingReportSourceRole = Enums<"meeting_report_source_role">
 export type CredentialStatus = "valid" | "expiring" | "expired"
 
 export type DeadlineItem = Omit<

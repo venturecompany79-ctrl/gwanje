@@ -9,9 +9,12 @@ import type {
   IpDeadlineType,
   IpRightKind,
   IpRightStatus,
+  MeetingReportSourceRole,
+  MeetingReportStatus,
   ScheduleType,
   TaskStage,
 } from "@/lib/database.types";
+import { isReportSourceSupported } from "@/lib/reports/file-types";
 
 // daysFromToday는 KST 기준 공용 헬퍼(lib/datetime). 보드 등에서 재사용하므로 재노출.
 export { daysFromToday };
@@ -147,6 +150,29 @@ export interface DocumentRow {
   createdAt: string;
   /** 본인 Drive 연결 시 이 문서의 동기화 상태(잡 없으면 null — 연결 전 업로드분 등) */
   driveSync: DocumentDriveSync | null;
+  /** AI 미팅 보고서 소스로 사용할 수 있는 텍스트 추출 지원 형식 */
+  reportSourceSupported: boolean;
+}
+
+export interface MeetingReportSourceRow {
+  role: MeetingReportSourceRole;
+  documentId: string;
+  documentName: string;
+}
+
+export interface MeetingReportRow {
+  id: string;
+  title: string;
+  status: MeetingReportStatus;
+  attempts: number;
+  summary: string | null;
+  lastError: string | null;
+  outputDocumentId: string | null;
+  outputDocumentName: string | null;
+  generatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sources: MeetingReportSourceRow[];
 }
 
 export interface CategoryOption {
@@ -163,6 +189,7 @@ export interface CompanyDetailData {
   tasks: TaskRow[];
   schedules: ScheduleRow[];
   documents: DocumentRow[];
+  meetingReports: MeetingReportRow[];
   categories: CategoryOption[];
   /** 서버에 Google OAuth 환경변수가 갖춰졌는지 — false면 연결 유도 배너 숨김 */
   driveConfigured: boolean;
@@ -207,6 +234,7 @@ export async function getCompanyDetail(
     tasks,
     schedules,
     documents,
+    reports,
     categories,
     profiles,
     connection,
@@ -251,6 +279,13 @@ export async function getCompanyDetail(
         )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("meeting_report")
+        .select(
+          "id, title, status, attempts, summary, last_error, output_document_id, generated_at, created_at, updated_at",
+        )
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false }),
       supabase.from("category").select("id, name").order("sort_order"),
       supabase.from("profile").select("id, name"),
       // 본인 활성 Drive 연결 — RLS가 본인 행으로 한정하므로 user_id 필터 없이 조회(auth.getUser 호출 절약)
@@ -275,6 +310,7 @@ export async function getCompanyDetail(
   logRelatedQueryError("tasks", tasks.error);
   logRelatedQueryError("schedules", schedules.error);
   logRelatedQueryError("documents", documents.error);
+  logRelatedQueryError("meeting_reports", reports.error);
   logRelatedQueryError("categories", categories.error);
   logRelatedQueryError("profiles", profiles.error);
 
@@ -284,6 +320,7 @@ export async function getCompanyDetail(
   const taskData = tasks.error ? [] : (tasks.data ?? []);
   const scheduleData = schedules.error ? [] : (schedules.data ?? []);
   const documentData = documents.error ? [] : (documents.data ?? []);
+  const reportData = reports.error ? [] : (reports.data ?? []);
   const categoryData = categories.error ? [] : (categories.data ?? []);
   const profileData = profiles.error ? [] : (profiles.data ?? []);
 
@@ -314,6 +351,7 @@ export async function getCompanyDetail(
     profileData.map((p) => [p.id, p.name]),
   );
   const taskTitle = new Map(taskData.map((t) => [t.id, t.title]));
+  const documentName = new Map(documentData.map((d) => [d.id, d.name]));
   // 자격별 첨부 자료 — documentData는 created_at desc 정렬이라 최신순으로 쌓인다.
   const attachmentsByCredential = new Map<string, CredentialAttachment[]>();
   const attachmentsByIpRight = new Map<string, IpRightAttachment[]>();
@@ -461,6 +499,27 @@ export async function getCompanyDetail(
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  const sourcesByReport = new Map<string, MeetingReportSourceRow[]>();
+  if (reportData.length > 0) {
+    const { data: reportSources, error: reportSourceError } = await supabase
+      .from("meeting_report_source")
+      .select("report_id, role, document_id")
+      .in(
+        "report_id",
+        reportData.map((r) => r.id),
+      );
+    logRelatedQueryError("meeting_report_sources", reportSourceError);
+    for (const source of reportSources ?? []) {
+      const list = sourcesByReport.get(source.report_id) ?? [];
+      list.push({
+        role: source.role,
+        documentId: source.document_id,
+        documentName: documentName.get(source.document_id) ?? "삭제된 자료",
+      });
+      sourcesByReport.set(source.report_id, list);
+    }
+  }
+
   return {
     demo: false,
     company: {
@@ -506,6 +565,24 @@ export async function getCompanyDetail(
       sizeBytes: d.size_bytes,
       createdAt: d.created_at,
       driveSync: driveSyncByDoc.get(d.id) ?? null,
+      reportSourceSupported:
+        d.doc_category !== "보고서" && isReportSourceSupported(d.file_type),
+    })),
+    meetingReports: reportData.map((r) => ({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      attempts: r.attempts,
+      summary: r.summary,
+      lastError: r.last_error,
+      outputDocumentId: r.output_document_id,
+      outputDocumentName: r.output_document_id
+        ? (documentName.get(r.output_document_id) ?? null)
+        : null,
+      generatedAt: r.generated_at,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      sources: sourcesByReport.get(r.id) ?? [],
     })),
     categories: categoryData,
     driveConfigured: isGoogleDriveConfigured(),

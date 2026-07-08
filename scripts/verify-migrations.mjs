@@ -129,6 +129,7 @@ await step("migration: 20260711000000_company_tenant_consistency", read("migrati
 await step("migration: 20260712000000_fk_indexes", read("migrations/20260712000000_fk_indexes.sql"));
 await step("migration: 20260713000000_todo_note_tag_unify", read("migrations/20260713000000_todo_note_tag_unify.sql"));
 await step("migration: 20260714000000_tag_backfill_perf_indexes", read("migrations/20260714000000_tag_backfill_perf_indexes.sql"));
+await step("migration: 20260716000000_meeting_reports", read("migrations/20260716000000_meeting_reports.sql"));
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -331,11 +332,13 @@ const tenantCompanyFkRows = await q(
      'campaign_recipient_tenant_company_fk',
      'notification_tenant_company_fk',
      'ip_right_tenant_company_fk',
-     'ip_deadline_tenant_company_fk'
+     'ip_deadline_tenant_company_fk',
+     'meeting_report_tenant_company_fk',
+     'meeting_report_source_tenant_company_fk'
    )
    order by conname`,
 );
-assert(tenantCompanyFkRows.length === 8, "company_id 보유 테이블 8곳에 tenant 복합 FK가 존재");
+assert(tenantCompanyFkRows.length === 10, "tenant 복합 FK 필수 테이블 10곳에 제약이 존재");
 
 await assertSqlBlocked(
   "credential는 다른 tenant 회사 참조를 차단",
@@ -364,6 +367,101 @@ await assertSqlBlocked(
         b as (select id as company_id from company where name='B사 전용기업')
    insert into document (tenant_id, company_id, name, uploaded_by)
    select a.tenant_id, b.company_id, 'tenant-mismatch.pdf', 'consultant'::document_uploader from a, b;`,
+);
+await assertSqlBlocked(
+  "meeting_report는 다른 tenant 회사 참조를 차단",
+  `with a as (select tenant_id from profile where id='${USER_A}'),
+        b as (select id as company_id from company where name='B사 전용기업')
+   insert into meeting_report (tenant_id, company_id, title)
+   select a.tenant_id, b.company_id, 'tenant mismatch report' from a, b;`,
+);
+await step(
+  "meeting_report: source FK 테스트 행 준비",
+  `with a_company as (
+       select c.tenant_id, c.id as company_id
+       from company c
+       join profile p on p.tenant_id = c.tenant_id
+       where p.id = '${USER_A}'
+       order by c.created_at
+       limit 1
+     ),
+     b_company as (
+       select tenant_id, id as company_id
+       from company
+       where name='B사 전용기업'
+       limit 1
+     ),
+     a_doc as (
+       insert into document (tenant_id, company_id, name, uploaded_by)
+       select tenant_id, company_id, 'A사 보고서소스.pdf', 'consultant'::document_uploader from a_company
+       returning id
+     ),
+     a_report as (
+       insert into meeting_report (tenant_id, company_id, title)
+       select tenant_id, company_id, 'A사 source FK guard' from a_company
+       returning id
+     ),
+     b_doc as (
+       insert into document (tenant_id, company_id, name, uploaded_by)
+       select tenant_id, company_id, 'B사 보고서소스.pdf', 'consultant'::document_uploader from b_company
+       returning id
+     )
+     insert into meeting_report (tenant_id, company_id, title)
+     select b_company.tenant_id, b_company.company_id, 'B사 source FK guard'
+     from b_company, a_doc, a_report, b_doc;`,
+);
+await assertSqlBlocked(
+  "meeting_report_source는 다른 tenant/company의 report_id 참조를 차단",
+  `with a_company as (
+       select c.tenant_id, c.id as company_id
+       from company c
+       join profile p on p.tenant_id = c.tenant_id
+       where p.id = '${USER_A}'
+       order by c.created_at
+       limit 1
+     ),
+     a_doc as (
+       select d.id
+       from document d
+       join a_company a on a.tenant_id = d.tenant_id and a.company_id = d.company_id
+       where d.name = 'A사 보고서소스.pdf'
+       limit 1
+     ),
+     b_report as (
+       select id from meeting_report where title = 'B사 source FK guard' limit 1
+     )
+   insert into meeting_report_source (tenant_id, company_id, report_id, document_id, role)
+   select a_company.tenant_id, a_company.company_id, b_report.id, a_doc.id, 'company_info'::meeting_report_source_role
+   from a_company, a_doc, b_report;`,
+);
+await assertSqlBlocked(
+  "meeting_report_source는 다른 tenant/company의 document_id 참조를 차단",
+  `with a_company as (
+       select c.tenant_id, c.id as company_id
+       from company c
+       join profile p on p.tenant_id = c.tenant_id
+       where p.id = '${USER_A}'
+       order by c.created_at
+       limit 1
+     ),
+     a_report as (
+       select r.id
+       from meeting_report r
+       join a_company a on a.tenant_id = r.tenant_id and a.company_id = r.company_id
+       where r.title = 'A사 source FK guard'
+       limit 1
+     ),
+     b_doc as (
+       select d.id
+       from document d
+       join company c on c.id = d.company_id
+       where c.name = 'B사 전용기업'
+         and d.name = 'B사 보고서소스.pdf'
+       limit 1
+     )
+   insert into meeting_report_source (tenant_id, company_id, report_id, document_id, role)
+   select a_company.tenant_id, a_company.company_id, a_report.id, b_doc.id, 'meeting_note'::meeting_report_source_role
+   from a_company, a_report, b_doc;`,
 );
 await assertSqlBlocked(
   "campaign_recipient는 다른 tenant 회사 참조를 차단",

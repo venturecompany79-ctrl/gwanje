@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
@@ -18,6 +19,20 @@ import { OverviewTab } from "./OverviewTab";
 import { RecommendTab } from "./RecommendTab";
 import { Badge } from "@/components/ui/Badge";
 
+const ReportsTab = dynamic(
+  () => import("./ReportsTab").then((mod) => mod.ReportsTab),
+  {
+    loading: () => (
+      <div className="panel">
+        <div className="panel-head">
+          <h2>보고서</h2>
+        </div>
+        <div className="panel-loading">불러오는 중...</div>
+      </div>
+    ),
+  },
+);
+
 type TabKey =
   | "overview"
   | "cert"
@@ -25,6 +40,7 @@ type TabKey =
   | "tasks"
   | "schedule"
   | "files"
+  | "reports"
   | "recommend";
 
 const TAB_DEFS: { key: TabKey; label: string }[] = [
@@ -34,6 +50,7 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
+  { key: "reports", label: "보고서" },
   { key: "recommend", label: "정부지원사업 추천" },
 ];
 
@@ -199,6 +216,15 @@ export function CompanyDetailView({
           documents={data.documents}
           driveConnected={data.driveConnected}
           driveConfigured={data.driveConfigured}
+          showToast={showToast}
+        />
+      ) : null}
+      {tab === "reports" ? (
+        <ReportsTab
+          companyId={company.id}
+          companyName={company.name}
+          documents={data.documents}
+          reports={data.meetingReports}
           showToast={showToast}
         />
       ) : null}
