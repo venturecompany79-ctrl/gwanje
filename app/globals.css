@@ -503,6 +503,11 @@ h4 {
   border: 2px solid var(--color-fb-blue);
   padding: calc(var(--space-md) - 1px);
 }
+.input:disabled {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+  cursor: default;
+}
 .input--error {
   border: 2px solid var(--color-critical-strong);
 }
@@ -548,6 +553,11 @@ h4 {
 .cat-dd-trigger:focus-visible {
   outline: none;
   border-color: var(--color-fb-blue);
+}
+.cat-dd-trigger:disabled {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+  cursor: default;
 }
 .cat-dd-muted {
   color: var(--color-stone);
@@ -2497,6 +2507,11 @@ table.dlist .name {
   border: 2px solid var(--color-fb-blue);
   padding: 11px 13px;
 }
+.memo-input:disabled {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+  cursor: default;
+}
 .link-item {
   display: flex;
   align-items: center;
@@ -3254,6 +3269,13 @@ table.dlist .name {
   gap: 8px;
   flex: none;
 }
+.todo-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 0 0 34px;
+}
 .todo-add-note {
   display: inline-flex;
   align-items: center;
@@ -3337,11 +3359,21 @@ table.dlist .name {
   background: var(--color-surface-soft);
   border-color: var(--color-primary);
 }
+.task-file-upload.is-disabled,
+.task-file-upload.is-disabled:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-hairline-soft);
+  color: var(--color-steel);
+  cursor: default;
+}
 .task-file-upload input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+.task-file-upload input:disabled {
+  cursor: default;
 }
 .task-file-upload__icon {
   width: 24px;
@@ -6288,6 +6320,11 @@ body {
 
   .todo-draft-footer {
     padding-left: 30px;
+  }
+
+  .todo-list-actions {
+    padding-left: 30px;
+    flex-wrap: wrap;
   }
 
   .todo-add-note {

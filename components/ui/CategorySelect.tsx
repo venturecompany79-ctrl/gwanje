@@ -29,12 +29,14 @@ export function CategorySelect({
   defaultValue,
   label = "분류",
   demo = false,
+  disabled = false,
 }: {
   name: string;
   categories: CategoryOption[];
   defaultValue?: string | null;
   label?: string;
   demo?: boolean;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -185,7 +187,15 @@ export function CategorySelect({
           className="cat-dd-trigger"
           aria-haspopup="listbox"
           aria-expanded={open}
-          onClick={() => (open ? closeMenu() : setOpen(true))}
+          onClick={() => {
+            if (disabled) return;
+            if (open) {
+              closeMenu();
+            } else {
+              setOpen(true);
+            }
+          }}
+          disabled={disabled}
         >
           <span className={value ? undefined : "cat-dd-muted"}>
             {selectedName}

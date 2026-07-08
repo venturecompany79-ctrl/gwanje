@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { TaskStage } from "@/lib/database.types";
+import { isValidDateString } from "@/lib/datetime";
 import {
   mobileError,
   mobileJson,
@@ -10,8 +11,15 @@ import {
 const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
 
 interface UpdateTaskBody {
+  title?: string;
+  categoryId?: string | null;
+  dueDate?: string | null;
   stage?: TaskStage;
   memo?: string | null;
+}
+
+function cleanText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function optionalMemo(value: unknown): string | null | undefined {
@@ -35,12 +43,35 @@ export async function PATCH(
   if (!body) return mobileError("수정할 내용이 없습니다.");
 
   const update: {
+    title?: string;
+    category_id?: string | null;
+    due_date?: string | null;
     stage?: TaskStage;
     memo?: string | null;
     updated_at: string;
   } = {
     updated_at: new Date().toISOString(),
   };
+
+  if (body.title !== undefined) {
+    const title = cleanText(body.title);
+    if (!title) return mobileError("Task 제목을 입력해 주세요.");
+    update.title = title;
+  }
+
+  if (body.categoryId !== undefined) {
+    update.category_id = cleanText(body.categoryId) || null;
+  }
+
+  if (body.dueDate !== undefined) {
+    if (body.dueDate === null || body.dueDate === "") {
+      update.due_date = null;
+    } else if (isValidDateString(body.dueDate)) {
+      update.due_date = body.dueDate;
+    } else {
+      return mobileError("마감일 형식이 올바르지 않습니다.");
+    }
+  }
 
   if (body.stage !== undefined) {
     if (!TASK_STAGES.includes(body.stage)) {
@@ -52,7 +83,13 @@ export async function PATCH(
   const memo = optionalMemo(body.memo);
   if (memo !== undefined) update.memo = memo;
 
-  if (update.stage === undefined && memo === undefined) {
+  if (
+    update.title === undefined &&
+    update.category_id === undefined &&
+    update.due_date === undefined &&
+    update.stage === undefined &&
+    memo === undefined
+  ) {
     return mobileError("수정할 내용이 없습니다.");
   }
 
@@ -60,7 +97,7 @@ export async function PATCH(
     .from("task")
     .update(update)
     .eq("id", id)
-    .select("id, company_id, title, stage, due_date, memo, updated_at")
+    .select("id, company_id, title, category_id, stage, due_date, memo, updated_at")
     .maybeSingle();
   if (error) {
     return mobileError(`저장에 실패했습니다: ${error.message}`, 500);

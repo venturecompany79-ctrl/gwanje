@@ -214,7 +214,7 @@ export async function addTask(
   return { ok: true, error: null };
 }
 
-/** 과제 슬라이드오버 [변경 저장] — 단계 + 메모 */
+/** 과제 슬라이드오버 [변경 저장] — 기본 정보 + 단계 + 메모 */
 export async function updateTask(
   companyId: string,
   taskId: string,
@@ -226,15 +226,24 @@ export async function updateTask(
   const allowed = await requirePermission(supabase, "tasks.write");
   if ("error" in allowed) return { ok: false, error: allowed.error };
 
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
+
   const stage = String(formData.get("stage") ?? "") as TaskStage;
   if (!TASK_STAGES.includes(stage)) {
     return { ok: false, error: "단계 값이 올바르지 않습니다." };
   }
 
+  const dueDate = parseOptionalDate(formData, "due_date", "마감일");
+  if (!dueDate.ok) return { ok: false, error: dueDate.error };
+
   const { data, error } = await supabase
     .from("task")
     .update({
+      title,
+      category_id: optionalText(formData, "category_id"),
       stage,
+      due_date: dueDate.value,
       memo: optionalText(formData, "memo"),
       updated_at: new Date().toISOString(),
     })

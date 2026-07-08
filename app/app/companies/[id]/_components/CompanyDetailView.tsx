@@ -178,6 +178,7 @@ export function CompanyDetailView({
       {tab === "tasks" ? (
         <TasksTab
           companyId={company.id}
+          companyName={company.name}
           tasks={data.tasks}
           categories={data.categories}
           demo={data.demo}

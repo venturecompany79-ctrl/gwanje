@@ -197,6 +197,7 @@ export function TodoBoard({
         isToday: date === data.today,
         notes: (byDate.get(date) ?? []).sort(
           (a, b) =>
+            Number(a.completed) - Number(b.completed) ||
             a.sortOrder - b.sortOrder ||
             a.createdAt.localeCompare(b.createdAt),
         ),
@@ -444,7 +445,7 @@ export function TodoBoard({
               disabled={!note.editable}
               aria-label="노트 날짜"
             />
-            {data.canViewTeam ? (
+            {data.selectedUserId === "all" ? (
               <span className="todo-author">{note.userName}</span>
             ) : null}
             <button
@@ -672,14 +673,6 @@ export function TodoBoard({
                   >
                     {pending ? "저장 중…" : "저장"}
                   </Button>
-                ) : data.canCreate ? (
-                  <button
-                    type="button"
-                    className="todo-add-note"
-                    onClick={() => addDraft(group.date)}
-                  >
-                    <IconPlus /> 노트 추가
-                  </button>
                 ) : null}
               </div>
             </div>
@@ -689,8 +682,11 @@ export function TodoBoard({
             >
               {group.notes.map(renderNote)}
               {groupDrafts.map(renderDraft)}
-              {groupDrafts.length > 0 ? (
-                <div className="todo-draft-footer">
+              {data.canCreate && itemCount > 0 ? (
+                <div className="todo-list-actions">
+                  {groupDrafts.length > 0 ? (
+                    <span className="todo-draft-hint">Shift+Enter 줄바꿈</span>
+                  ) : null}
                   <button
                     type="button"
                     className="todo-add-note"
@@ -698,7 +694,6 @@ export function TodoBoard({
                   >
                     <IconPlus /> 노트 추가
                   </button>
-                  <span className="todo-draft-hint">Shift+Enter 줄바꿈</span>
                 </div>
               ) : null}
               {itemCount === 0 ? (

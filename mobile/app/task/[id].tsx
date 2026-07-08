@@ -15,19 +15,31 @@ import * as Haptics from "expo-haptics";
 import { Check, X } from "lucide-react-native";
 import { colors, radius } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { monthDayKo } from "@/lib/dates";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
-import { loadTask, type MobileTask } from "@/lib/queries";
+import {
+  loadTask,
+  loadTaskFormOptions,
+  type MobileTask,
+  type TaskFormOptions,
+} from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { useAuth } from "@/context/AuthContext";
-import { Cell, DdayBadge, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives";
+import { DateField } from "@/ui/DateField";
+import { Cell, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives";
 
 export default function TaskModal() {
   const router = useRouter();
   const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const loadCurrentTask = useCallback(
-    () => (session ? loadTask(String(id)) : Promise.resolve(null)),
+    async () => {
+      if (!session) return null;
+      const [task, options] = await Promise.all([
+        loadTask(String(id)),
+        loadTaskFormOptions(),
+      ]);
+      return task ? { task, options } : null;
+    },
     [id, session],
   );
   const { data, loading, error, refresh } = useAsyncData(loadCurrentTask);
@@ -49,7 +61,7 @@ export default function TaskModal() {
             <View style={styles.grabber} />
           </View>
           <View style={styles.header}>
-            <Text style={styles.sheetTitle}>Task 수정</Text>
+            <Text style={styles.sheetTitle}>Task 상세</Text>
             <Pressable style={styles.close} onPress={() => router.back()} hitSlop={8}>
               <X size={13} color={colors.secondaryLabel} strokeWidth={2.2} />
             </Pressable>
@@ -67,8 +79,9 @@ export default function TaskModal() {
           ) : null}
           {data ? (
             <TaskForm
-              key={data.id}
-              task={data}
+              key={data.task.id}
+              task={data.task}
+              options={data.options}
               onClose={() => router.back()}
               onSaved={refresh}
             />
@@ -81,29 +94,41 @@ export default function TaskModal() {
 
 function TaskForm({
   task,
+  options,
   onClose,
   onSaved,
 }: {
   task: MobileTask;
+  options: TaskFormOptions;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
   const insets = useSafeAreaInsets();
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [categoryId, setCategoryId] = useState<string | null>(task.category_id);
+  const [dueDate, setDueDate] = useState(task.due_date ?? "");
   const [stage, setStage] = useState<TaskStage>(task.stage);
   const [memo, setMemo] = useState(task.memo ?? "");
   const [pending, setPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const done = stage === "result";
+  const canSave = title.trim().length > 0 && !pending;
 
   async function save() {
-    if (pending) return;
+    if (!canSave) return;
     setPending(true);
     setSaveError(null);
     try {
       await mobileApi(`/api/mobile/tasks/${task.id}`, {
         method: "PATCH",
-        body: { stage, memo },
+        body: {
+          title: title.trim(),
+          categoryId,
+          dueDate: dueDate || null,
+          stage,
+          memo,
+        },
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await onSaved();
@@ -124,27 +149,79 @@ function TaskForm({
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.infoCard}>
-          <Text style={styles.infoCompany}>{task.companyName}</Text>
-          <Text style={styles.infoTitle}>{task.title}</Text>
-          <View style={styles.infoMeta}>
-            <DdayBadge
-              daysLeft={task.daysLeft}
-              tone={done ? "success" : undefined}
-              label={done ? "완료" : undefined}
+        {!isEditing ? (
+          <InlineEmpty>수정하려면 하단의 수정하기 버튼을 눌러 주세요.</InlineEmpty>
+        ) : null}
+
+        <SectionLabel style={styles.tightLabel}>기업</SectionLabel>
+        <Group>
+          <Cell last>
+            <Text style={styles.readonlyValue} numberOfLines={1}>
+              {task.companyName}
+            </Text>
+          </Cell>
+        </Group>
+
+        <SectionLabel style={styles.tightLabel}>내용</SectionLabel>
+        <Group>
+          <Cell>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              editable={isEditing}
+              placeholder="Task 제목"
+              placeholderTextColor={colors.tertiaryLabel}
+              style={[styles.fieldInput, !isEditing && styles.fieldInputReadonly]}
             />
-            <Text style={styles.infoMetaText}>{monthDayKo(task.due_date)}</Text>
-            <View style={styles.dotSep} />
-            <Text style={styles.infoMetaText}>{task.categoryName ?? "분류 없음"}</Text>
-          </View>
-        </View>
+          </Cell>
+          <Cell last>
+            <Text style={styles.fieldLabel}>마감일</Text>
+            <DateField
+              value={dueDate}
+              onChange={setDueDate}
+              disabled={!isEditing}
+            />
+          </Cell>
+        </Group>
+
+        {options.categories.length > 0 ? (
+          <>
+            <SectionLabel style={styles.tightLabel}>분류</SectionLabel>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.catRow}
+            >
+              <CategoryChip
+                label="없음"
+                active={categoryId === null}
+                disabled={!isEditing}
+                onPress={() => setCategoryId(null)}
+              />
+              {options.categories.map((category) => (
+                <CategoryChip
+                  key={category.id}
+                  label={category.name}
+                  active={categoryId === category.id}
+                  disabled={!isEditing}
+                  onPress={() => setCategoryId(category.id)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
 
         <SectionLabel style={styles.tightLabel}>단계</SectionLabel>
         <Group>
           {TASK_STAGES.map((item, i) => {
             const active = stage === item;
             return (
-              <Cell key={item} last={i === TASK_STAGES.length - 1} onPress={() => setStage(item)}>
+              <Cell
+                key={item}
+                last={i === TASK_STAGES.length - 1}
+                onPress={isEditing ? () => setStage(item) : undefined}
+              >
                 <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
                   {TASK_STAGE_LABEL[item]}
                 </Text>
@@ -163,7 +240,8 @@ function TaskForm({
           placeholder="진행 내용, 다음 처리, 특이사항 기록"
           placeholderTextColor={colors.tertiaryLabel}
           multiline
-          style={styles.memo}
+          editable={isEditing}
+          style={[styles.memo, !isEditing && styles.memoReadonly]}
         />
 
         {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
@@ -171,14 +249,42 @@ function TaskForm({
 
       <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
         <Pressable
-          onPress={save}
-          disabled={pending}
-          style={[styles.save, pending && styles.saveDisabled]}
+          onPress={isEditing ? save : () => setIsEditing(true)}
+          disabled={isEditing ? !canSave : false}
+          style={[styles.save, isEditing && !canSave && styles.saveDisabled]}
         >
-          <Text style={styles.saveText}>{pending ? "저장 중…" : "저장"}</Text>
+          <Text style={styles.saveText}>
+            {isEditing ? (pending ? "저장 중…" : "변경 저장") : "수정하기"}
+          </Text>
         </Pressable>
       </View>
     </>
+  );
+}
+
+function CategoryChip({
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        styles.cat,
+        active ? styles.catActive : styles.catOff,
+        disabled && styles.catDisabled,
+      ]}
+    >
+      <Text style={[styles.catText, active && styles.catTextActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -299,6 +405,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 22,
   },
+  readonlyValue: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
+    color: colors.secondaryLabel,
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
+    color: colors.label,
+    paddingVertical: 2,
+  },
+  fieldInputReadonly: {
+    color: colors.secondaryLabel,
+  },
+  fieldLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+    letterSpacing: -0.3,
+    color: colors.label,
+  },
+  catRow: {
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingTop: 2,
+  },
+  cat: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.chip,
+  },
+  catActive: {
+    backgroundColor: colors.brandTintStrong,
+  },
+  catOff: {
+    backgroundColor: colors.fill,
+  },
+  catDisabled: {
+    opacity: 0.72,
+  },
+  catText: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    color: colors.subText,
+  },
+  catTextActive: {
+    color: colors.brand,
+    fontWeight: "600",
+  },
   stageLabel: {
     flex: 1,
     fontSize: 16,
@@ -321,6 +481,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     color: colors.label,
     textAlignVertical: "top",
+  },
+  memoReadonly: {
+    color: colors.secondaryLabel,
   },
   saveError: {
     marginTop: 12,

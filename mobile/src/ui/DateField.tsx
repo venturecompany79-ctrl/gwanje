@@ -20,6 +20,7 @@ export function DateField({
   onChange,
   min,
   max,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -27,6 +28,7 @@ export function DateField({
   min?: string;
   /** 선택 가능한 최대 날짜(YYYY-MM-DD) — 웹 데이트피커에만 적용 */
   max?: string;
+  disabled?: boolean;
 }) {
   if (Platform.OS === "web") {
     return (
@@ -35,6 +37,7 @@ export function DateField({
         value={value}
         min={min}
         max={max}
+        disabled={disabled}
         onChange={(event) => onChange((event.target as { value: string }).value)}
         style={{
           border: "none",
@@ -48,6 +51,7 @@ export function DateField({
           textAlign: "right",
           padding: 0,
           colorScheme: "light",
+          opacity: disabled ? 0.65 : 1,
         }}
       />
     );
@@ -57,11 +61,12 @@ export function DateField({
     <TextInput
       value={value}
       onChangeText={(text) => onChange(formatDate(text))}
+      editable={!disabled}
       placeholder="YYYY-MM-DD"
       placeholderTextColor={colors.tertiaryLabel}
       keyboardType="number-pad"
       maxLength={10}
-      style={styles.input}
+      style={[styles.input, disabled && styles.inputDisabled]}
     />
   );
 }
@@ -75,5 +80,8 @@ const styles = StyleSheet.create({
     color: colors.label,
     textAlign: "right",
     paddingVertical: 2,
+  },
+  inputDisabled: {
+    color: colors.secondaryLabel,
   },
 });

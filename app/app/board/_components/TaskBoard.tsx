@@ -347,6 +347,7 @@ export function TaskBoard({
           companyId={selected.companyId}
           companyName={selected.companyName}
           task={{ ...selected, stage: effectiveStage(selected) }}
+          categories={data.categories}
           demo={data.demo}
           canEdit={data.canWriteTasks}
           showToast={showToast}

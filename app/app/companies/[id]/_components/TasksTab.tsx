@@ -15,12 +15,14 @@ import type { CategoryOption, TaskRow } from "@/lib/data/company-detail";
 
 export function TasksTab({
   companyId,
+  companyName,
   tasks,
   categories,
   demo,
   showToast,
 }: {
   companyId: string;
+  companyName: string;
   tasks: TaskRow[];
   categories: CategoryOption[];
   demo: boolean;
@@ -88,7 +90,9 @@ export function TasksTab({
         <TaskSlideOver
           key={selected.id}
           companyId={companyId}
+          companyName={companyName}
           task={selected}
+          categories={categories}
           demo={demo}
           showToast={showToast}
           onClose={() => setSelectedId(null)}

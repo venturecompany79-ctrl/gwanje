@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -41,6 +41,10 @@ function NoteCell({
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const done = note.completed;
+  const displayTag =
+    typeof note.tag === "string" && TODO_TAGS.some((item) => item === note.tag)
+      ? note.tag
+      : null;
 
   async function confirmDelete() {
     if (deleting) return;
@@ -69,9 +73,9 @@ function NoteCell({
           {note.content}
         </Text>
         <View style={styles.noteMeta}>
-          {note.tag ? (
+          {displayTag ? (
             <View style={styles.tagChip}>
-              <Text style={styles.tagChipText}>{note.tag}</Text>
+              <Text style={styles.tagChipText}>{displayTag}</Text>
             </View>
           ) : null}
           <Text style={styles.noteTime}>{note.completed ? "완료" : "메모"}</Text>
@@ -127,6 +131,18 @@ export default function TodayScreen() {
   const listDate = FULL_DATE.test(noteDate) ? noteDate : today;
   const loadNotes = useCallback(() => loadNotesForDate(listDate), [listDate]);
   const { data, loading, refreshing, error, refresh } = useAsyncData(loadNotes);
+  const sortedNotes = useMemo(
+    () =>
+      (data ?? []).slice().sort((a, b) => {
+        const doneDiff = Number(a.completed) - Number(b.completed);
+        if (doneDiff !== 0) return doneDiff;
+        return (
+          (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+          a.created_at.localeCompare(b.created_at)
+        );
+      }),
+    [data],
+  );
 
   const isToday = listDate === today;
   const canAdd = draft.trim().length > 0;
@@ -290,11 +306,11 @@ export default function TodayScreen() {
       {data ? (
         data.length > 0 ? (
           <Group>
-            {data.map((note, i) => (
+            {sortedNotes.map((note, i) => (
               <NoteCell
                 key={note.id}
                 note={note}
-                last={i === data.length - 1}
+                last={i === sortedNotes.length - 1}
                 onToggle={() => toggle(note)}
                 onDelete={() => remove(note)}
               />

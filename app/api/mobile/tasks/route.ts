@@ -16,6 +16,7 @@ interface CreateTaskBody {
   categoryId?: string | null;
   dueDate?: string | null;
   stage?: TaskStage;
+  memo?: string | null;
 }
 
 function cleanText(value: unknown): string {
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   const categoryId = cleanText(body?.categoryId) || null;
+  const memo = cleanText(body?.memo) || null;
 
   // 테넌트 소속 기업인지 확인 (RLS도 막지만, 명확한 에러를 위해 선검증)
   const { data: company, error: companyError } = await ctx.supabase
@@ -70,8 +72,9 @@ export async function POST(request: NextRequest) {
       stage,
       due_date: dueDate,
       assignee_id: ctx.member.userId,
+      memo,
     })
-    .select("id, company_id, title, stage, due_date, category_id, created_at")
+    .select("id, company_id, title, stage, due_date, category_id, memo, created_at")
     .single();
   if (error) {
     return mobileError(`저장에 실패했습니다: ${error.message}`, 500);

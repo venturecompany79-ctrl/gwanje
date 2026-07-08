@@ -92,6 +92,7 @@ function NewTaskForm({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [stage, setStage] = useState<TaskStage>("diagnosis");
+  const [memo, setMemo] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [companyQuery, setCompanyQuery] = useState("");
   const [pending, setPending] = useState(false);
@@ -132,6 +133,7 @@ function NewTaskForm({
           categoryId,
           dueDate: dueDate || null,
           stage,
+          memo: memo.trim() || null,
         },
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -300,6 +302,16 @@ function NewTaskForm({
             );
           })}
         </Group>
+
+        <SectionLabel style={styles.tightLabel}>메모</SectionLabel>
+        <TextInput
+          value={memo}
+          onChangeText={setMemo}
+          placeholder="진행 내용, 다음 처리, 특이사항 기록"
+          placeholderTextColor={colors.tertiaryLabel}
+          multiline
+          style={styles.memo}
+        />
 
         {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
       </ScrollView>
@@ -551,6 +563,18 @@ const styles = StyleSheet.create({
   stageLabelActive: {
     fontWeight: "600",
     color: colors.label,
+  },
+  memo: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    minHeight: 110,
+    fontSize: 15.5,
+    lineHeight: 23,
+    letterSpacing: -0.3,
+    color: colors.label,
+    textAlignVertical: "top",
   },
   saveError: {
     marginTop: 14,
