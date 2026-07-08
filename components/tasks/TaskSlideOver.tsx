@@ -70,14 +70,33 @@ export function TaskSlideOver({
   const [stage, setStage] = useState<TaskStage>(task.stage);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedTaskFile[]>([]);
   const [pending, startTransition] = useTransition();
   const editable = canEdit && isEditing;
   const detailFormId = `task-detail-form-${task.id}`;
+  const detailFilesId = `${detailFormId}-files`;
+
+  function handleFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.currentTarget.files ?? []);
+    if (files.length > 0) {
+      setSelectedFiles((prev) => [
+        ...prev,
+        ...files.map((file) => ({ id: makeSelectedFileId(), file })),
+      ]);
+    }
+    e.currentTarget.value = "";
+  }
+
+  function removeFile(id: string) {
+    setSelectedFiles((prev) => prev.filter((item) => item.id !== id));
+  }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editable) return;
     const formData = new FormData(e.currentTarget);
+    formData.delete("task_files");
+    selectedFiles.forEach(({ file }) => formData.append("task_files", file));
     startTransition(async () => {
       const result = await updateTask(companyId, task.id, formData);
       if (!result.ok) {
@@ -194,26 +213,54 @@ export function TaskSlideOver({
               />
             </div>
             <div className="field">
-              <label htmlFor="task-detail-files">파일</label>
+              <label htmlFor={detailFilesId}>파일</label>
               <label
-                className="task-file-upload is-disabled"
-                htmlFor="task-detail-files"
+                className={[
+                  "task-file-upload",
+                  !editable ? "is-disabled" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                htmlFor={detailFilesId}
               >
                 <input
-                  id="task-detail-files"
+                  id={detailFilesId}
                   name="task_files"
                   type="file"
                   multiple
-                  disabled
+                  disabled={!editable}
+                  onChange={handleFiles}
                 />
                 <span className="task-file-upload__icon">
                   <IconPlus />
                 </span>
                 <span>파일 추가하기</span>
               </label>
+              {selectedFiles.length > 0 ? (
+                <div className="task-file-list" aria-label="첨부 파일 목록">
+                  {selectedFiles.map(({ id, file }) => (
+                    <div key={id} className="task-file-item">
+                      <IconFile />
+                      <span className="task-file-name">{file.name}</span>
+                      <span className="task-file-size">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        className="task-file-remove"
+                        onClick={() => removeFile(id)}
+                        disabled={!editable}
+                        aria-label={`${file.name} 삭제`}
+                      >
+                        <IconX />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <p className="form-hint">
-                <IconInfo /> 기존 Task 파일 추가는 별도 자료 관리 흐름에서
-                제공합니다.
+                <IconInfo /> 수정하기를 누른 뒤 파일을 선택하고 변경 저장을
+                누르면 Task에 첨부됩니다.
               </p>
             </div>
           </div>

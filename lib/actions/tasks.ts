@@ -214,7 +214,7 @@ export async function addTask(
   return { ok: true, error: null };
 }
 
-/** 과제 슬라이드오버 [변경 저장] — 기본 정보 + 단계 + 메모 */
+/** 과제 슬라이드오버 [변경 저장] — 기본 정보 + 단계 + 메모 + 첨부 파일 */
 export async function updateTask(
   companyId: string,
   taskId: string,
@@ -237,6 +237,7 @@ export async function updateTask(
   const dueDate = parseOptionalDate(formData, "due_date", "마감일");
   if (!dueDate.ok) return { ok: false, error: dueDate.error };
 
+  const files = getTaskFiles(formData);
   const { data, error } = await supabase
     .from("task")
     .update({
@@ -257,6 +258,15 @@ export async function updateTask(
   if (!data || data.length === 0) {
     return { ok: false, error: "과제를 찾을 수 없습니다." };
   }
+
+  const uploadResult = await uploadTaskFiles(
+    supabase,
+    { tenantId: allowed.tenantId, userId: allowed.userId },
+    companyId,
+    taskId,
+    files,
+  );
+  if (!uploadResult.ok) return uploadResult;
 
   revalidateTaskScreens(companyId);
   return { ok: true, error: null };
