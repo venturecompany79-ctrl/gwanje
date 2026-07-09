@@ -7,7 +7,7 @@ export interface CategoryColorEntry {
 }
 
 // 데모 모드(.env 없음)에서도 칩 색이 보이도록 기본 분류에 팔레트를 순서대로 매핑
-const DEMO_CATEGORY_COLORS: CategoryColorEntry[] = [
+export const DEMO_CATEGORY_COLORS: CategoryColorEntry[] = [
   { name: "정부지원사업", color: CATEGORY_COLORS[0] },
   { name: "벤처기업확인", color: CATEGORY_COLORS[1] },
   { name: "기업부설연구소", color: CATEGORY_COLORS[2] },

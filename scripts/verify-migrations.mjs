@@ -129,6 +129,7 @@ await step("migration: 20260711000000_company_tenant_consistency", read("migrati
 await step("migration: 20260712000000_fk_indexes", read("migrations/20260712000000_fk_indexes.sql"));
 await step("migration: 20260713000000_todo_note_tag_unify", read("migrations/20260713000000_todo_note_tag_unify.sql"));
 await step("migration: 20260714000000_tag_backfill_perf_indexes", read("migrations/20260714000000_tag_backfill_perf_indexes.sql"));
+await step("migration: 20260715000000_company_share", read("migrations/20260715000000_company_share.sql"));
 await step("migration: 20260716000000_meeting_reports", read("migrations/20260716000000_meeting_reports.sql"));
 
 const companyDocumentMime = await q(

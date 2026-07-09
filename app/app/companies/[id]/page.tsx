@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { IconAlert, IconBack } from "@/components/ui/icons";
 import { getCompanyDetail } from "@/lib/data/company-detail";
 import { getCompanyProgramMatches } from "@/lib/data/company-programs";
+import { getCompanyShareSettings } from "@/lib/data/company-share";
+import { isCompanyShareConfigured } from "@/lib/share/config";
+import { createClient } from "@/lib/supabase/server";
 import { CompanyDetailView } from "./_components/CompanyDetailView";
 
 export const metadata: Metadata = { title: "기업 상세" };
@@ -18,9 +21,11 @@ export default async function CompanyDetailPage({
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const shouldLoadRecommend = tab === "recommend";
-  const [data, initialProgramMatches] = await Promise.all([
+  const supabase = await createClient();
+  const [data, initialProgramMatches, share] = await Promise.all([
     getCompanyDetail(id),
     shouldLoadRecommend ? getCompanyProgramMatches(id) : Promise.resolve(null),
+    supabase ? getCompanyShareSettings(supabase, id) : Promise.resolve(null),
   ]);
   if (!data) notFound();
 
@@ -46,6 +51,8 @@ export default async function CompanyDetailPage({
         data={data}
         initialTab={tab ?? "overview"}
         initialProgramMatches={initialProgramMatches}
+        share={share}
+        shareConfigured={isCompanyShareConfigured()}
       />
     </>
   );

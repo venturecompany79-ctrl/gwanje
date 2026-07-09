@@ -6,6 +6,8 @@ import { Toast, useToast } from "@/components/ui/Toast";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
 import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
+import type { CompanyShareSettings } from "@/lib/data/company-share";
+import { ShareSettingsButton } from "./ShareSettingsSlideOver";
 import { CertsTab } from "./CertsTab";
 import { IpTab } from "./IpTab";
 import { TasksTab } from "./TasksTab";
@@ -66,10 +68,14 @@ function CompanyHeader({
   company,
   demo,
   showToast,
+  share,
+  shareConfigured,
 }: {
   company: CompanyProfile;
   demo: boolean;
   showToast: (message: string) => void;
+  share: CompanyShareSettings | null;
+  shareConfigured: boolean;
 }) {
   const isEnded = company.status === "ended";
   const contractDays = company.contractDaysLeft;
@@ -103,6 +109,13 @@ function CompanyHeader({
           ))}
         </div>
         <div className="spacer" />
+        <ShareSettingsButton
+          companyId={company.id}
+          share={share}
+          shareConfigured={shareConfigured}
+          demo={demo}
+          showToast={showToast}
+        />
         <EditCompanyButton company={company} demo={demo} showToast={showToast} />
         {isEnded ? null : (
           <EndCompanyButton company={company} demo={demo} showToast={showToast} />
@@ -124,10 +137,14 @@ export function CompanyDetailView({
   data,
   initialTab,
   initialProgramMatches,
+  share,
+  shareConfigured,
 }: {
   data: CompanyDetailData;
   initialTab: string;
   initialProgramMatches?: CompanyProgramMatchesData | null;
+  share: CompanyShareSettings | null;
+  shareConfigured: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>(() => resolveTab(initialTab));
   const { toast, showToast } = useToast();
@@ -149,7 +166,13 @@ export function CompanyDetailView({
 
   return (
     <>
-      <CompanyHeader company={company} demo={data.demo} showToast={showToast} />
+      <CompanyHeader
+        company={company}
+        demo={data.demo}
+        showToast={showToast}
+        share={share}
+        shareConfigured={shareConfigured}
+      />
 
       {company.status === "ended" ? (
         <EndedCompanyBanner

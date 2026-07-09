@@ -314,6 +314,79 @@ export type Database = {
           },
         ]
       }
+      company_share: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          failed_attempts: number
+          id: string
+          locked_until: string | null
+          password_hash: string | null
+          password_set_at: string | null
+          rotated_at: string | null
+          session_version: number
+          tenant_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          failed_attempts?: number
+          id?: string
+          locked_until?: string | null
+          password_hash?: string | null
+          password_set_at?: string | null
+          rotated_at?: string | null
+          session_version?: number
+          tenant_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          failed_attempts?: number
+          id?: string
+          locked_until?: string | null
+          password_hash?: string | null
+          password_set_at?: string | null
+          rotated_at?: string | null
+          session_version?: number
+          tenant_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_share_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_share_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_share_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credential: {
         Row: {
           category_id: string | null
@@ -1694,6 +1767,13 @@ export type Database = {
       auth_member_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: string }
       cleanup_old_todo_notes: { Args: never; Returns: number }
+      company_share_record_failure: {
+        Args: { p_share_id: string }
+        Returns: {
+          out_failed_attempts: number
+          out_locked_until: string | null
+        }[]
+      }
       generate_due_notifications: { Args: never; Returns: number }
       gov_program_to_search_vector: {
         Args: {
