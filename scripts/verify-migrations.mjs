@@ -54,7 +54,9 @@ async function assertSqlBlocked(label, sql) {
     failures++;
     console.error(`✗ assert FAILED: ${label}`);
   } catch (e) {
-    const blocked = /foreign key|violates|constraint|참조|키/i.test(e.message);
+    const blocked = /foreign key|violates|constraint|참조|키|최대 \d+개까지 연결/i.test(
+      e.message,
+    );
     assert(blocked, label);
     if (!blocked) {
       console.error(`   unexpected error: ${e.message}`);
@@ -111,14 +113,24 @@ for (const file of migrationFiles) {
 }
 
 const companyDocumentMime = await q(
-  "company-documents octet-stream 허용 여부",
-  `select coalesce('application/octet-stream' = any(allowed_mime_types), false) as has_octet
+  "company-documents 보고서 소스 MIME 허용 여부",
+  `select
+     coalesce('application/octet-stream' = any(allowed_mime_types), false) as has_octet,
+     coalesce('text/plain' = any(allowed_mime_types), false) as has_text,
+     coalesce('text/markdown' = any(allowed_mime_types), false) as has_markdown,
+     coalesce('application/json' = any(allowed_mime_types), false) as has_json
    from storage.buckets
    where id = 'company-documents'`,
 );
 assert(
   companyDocumentMime[0]?.has_octet === false,
   "company-documents bucket은 application/octet-stream을 허용하지 않음",
+);
+assert(
+  companyDocumentMime[0]?.has_text === true &&
+    companyDocumentMime[0]?.has_markdown === true &&
+    companyDocumentMime[0]?.has_json === true,
+  "company-documents bucket은 TXT·MD·JSON 보고서 소스를 허용",
 );
 
 // ── 3. 시드 (auth 사용자 1명 선행) ───────────────────────────────────────
@@ -168,33 +180,37 @@ const govProgramCount = await q(
 );
 assert((govProgramCount[0]?.n ?? 0) === 2, "gov_program 샘플 2건 삽입");
 
-let govCandidates = [];
+let visibleGovPrograms = [];
 try {
   await db.exec("begin");
   await db.exec("set local role authenticated");
   await db.exec(`set local "test.uid" = '${USER_A}'`);
   const r = await db.query(
     `select source, title
-     from match_gov_program_candidates(
-       '제조업 R&D',
-       array['제조업','R&D']::text[],
-       array['기술']::text[],
-       '2026-06-29'::date,
-       10
-     )`,
+       from gov_program
+      where apply_end >= '2026-06-29'::date
+      order by apply_end, title
+      limit 10`,
   );
-  govCandidates = r.rows;
-  console.log(`→ gov_program 후보 조회: ${JSON.stringify(govCandidates)}`);
+  visibleGovPrograms = r.rows;
+  console.log(`→ gov_program 공개 풀 조회: ${JSON.stringify(visibleGovPrograms)}`);
   await db.exec("rollback");
 } catch (e) {
   failures++;
-  console.error(`✗ gov_program 후보 조회 실행 오류\n   ${e.message}`);
+  console.error(`✗ gov_program 공개 풀 조회 실행 오류\n   ${e.message}`);
   try { await db.exec("rollback"); } catch {}
 }
 assert(
-  govCandidates.some((r) => r.title === "스마트공장 제조혁신 지원사업"),
-  "authenticated가 RPC로 매칭 후보를 조회할 수 있음",
+  visibleGovPrograms.some((r) => r.title === "스마트공장 제조혁신 지원사업"),
+  "authenticated가 전체 공고 풀을 직접 조회할 수 있음",
 );
+const retiredCandidateRpc = await q(
+  "match_gov_program_candidates 제거 확인",
+  `select count(*)::int as n
+     from pg_proc
+    where proname='match_gov_program_candidates'`,
+);
+assert((retiredCandidateRpc[0]?.n ?? 1) === 0, "기존 후보 선별 RPC가 제거됨");
 const syncLogGrants = await q(
   "gov_program_sync_log authenticated grant",
   `select count(*)::int as n
@@ -442,6 +458,89 @@ await assertSqlBlocked(
    select a_company.tenant_id, a_company.company_id, a_report.id, b_doc.id, 'meeting_note'::meeting_report_source_role
    from a_company, a_report, b_doc;`,
 );
+await step(
+  "meeting_report: 복수 자료 제약 테스트 행 준비",
+  `with a_company as (
+       select c.tenant_id, c.id as company_id
+       from company c
+       join profile p on p.tenant_id = c.tenant_id
+       where p.id = '${USER_A}'
+       order by c.created_at
+       limit 1
+     ),
+     names(name) as (
+       values
+         ('보고서복수소스-1.txt'), ('보고서복수소스-2.txt'),
+         ('보고서복수소스-3.txt'), ('보고서복수소스-4.txt'),
+         ('보고서복수소스-5.txt'), ('보고서복수소스-6.txt'),
+         ('보고서회의록-1.txt'), ('보고서회의록-2.txt')
+     )
+   insert into document (tenant_id, company_id, name, uploaded_by)
+   select a_company.tenant_id, a_company.company_id, names.name,
+          'consultant'::document_uploader
+   from a_company cross join names;
+
+   with a_company as (
+     select c.tenant_id, c.id as company_id
+     from company c
+     join profile p on p.tenant_id = c.tenant_id
+     where p.id = '${USER_A}'
+     order by c.created_at
+     limit 1
+   )
+   insert into meeting_report (tenant_id, company_id, title)
+   select tenant_id, company_id, '복수 소스 제약 테스트' from a_company;
+
+   with report as (
+     select id, tenant_id, company_id
+     from meeting_report
+     where title = '복수 소스 제약 테스트'
+     limit 1
+   )
+   insert into meeting_report_source
+     (tenant_id, company_id, report_id, document_id, role)
+   select report.tenant_id, report.company_id, report.id, document.id,
+          case when document.name = '보고서회의록-1.txt'
+            then 'meeting_note'::meeting_report_source_role
+            else 'company_info'::meeting_report_source_role
+          end
+   from report
+   join document
+     on document.tenant_id = report.tenant_id
+    and document.company_id = report.company_id
+   where document.name in (
+     '보고서복수소스-1.txt', '보고서복수소스-2.txt', '보고서복수소스-3.txt',
+     '보고서복수소스-4.txt', '보고서복수소스-5.txt', '보고서회의록-1.txt'
+   );`,
+);
+await assertSqlBlocked(
+  "meeting_report_source는 기업자료 6번째 연결을 차단",
+  `with report as (
+     select id, tenant_id, company_id
+     from meeting_report where title = '복수 소스 제약 테스트' limit 1
+   )
+   insert into meeting_report_source
+     (tenant_id, company_id, report_id, document_id, role)
+   select report.tenant_id, report.company_id, report.id, document.id,
+          'company_info'::meeting_report_source_role
+   from report
+   join document on document.company_id = report.company_id
+   where document.name = '보고서복수소스-6.txt';`,
+);
+await assertSqlBlocked(
+  "meeting_report_source는 두 번째 회의록 연결을 차단",
+  `with report as (
+     select id, tenant_id, company_id
+     from meeting_report where title = '복수 소스 제약 테스트' limit 1
+   )
+   insert into meeting_report_source
+     (tenant_id, company_id, report_id, document_id, role)
+   select report.tenant_id, report.company_id, report.id, document.id,
+          'meeting_note'::meeting_report_source_role
+   from report
+   join document on document.company_id = report.company_id
+   where document.name = '보고서회의록-2.txt';`,
+);
 await assertSqlBlocked(
   "campaign_recipient는 다른 tenant 회사 참조를 차단",
   `with a as (select tenant_id from profile where id='${USER_A}'),
@@ -503,6 +602,52 @@ try {
 }
 assert((isolation[0]?.leaked ?? 1) === 0, "사용자 A 세션에서 tenant B의 기업이 보이지 않음(RLS 격리)");
 assert((isolation[0]?.visible ?? 0) >= 6, "사용자 A는 자기 tenant 기업은 정상 조회");
+
+let requesterRows = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const inserted = await db.query(
+    `insert into meeting_report (tenant_id, company_id, requested_by, title)
+     select c.tenant_id, c.id, '${USER_B}', '요청자 위변조 방지 테스트'
+     from company c
+     join profile p on p.tenant_id = c.tenant_id
+     where p.id = '${USER_A}'
+     order by c.created_at
+     limit 1
+     returning requested_by`,
+  );
+  requesterRows = inserted.rows;
+  await db.exec("commit");
+} catch (e) {
+  failures++;
+  console.error(`✗ meeting_report 요청자 강제 테스트 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert(
+  requesterRows[0]?.requested_by === USER_A,
+  "meeting_report 요청자는 직접 입력값 대신 auth.uid()로 강제됨",
+);
+
+let requesterMutationBlocked = false;
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  await db.exec(
+    `update meeting_report
+     set requested_by = '${USER_B}'
+     where title = '요청자 위변조 방지 테스트'`,
+  );
+  await db.exec("rollback");
+} catch (e) {
+  requesterMutationBlocked = /요청자는 변경할 수 없습니다|permission|policy/i.test(
+    e.message,
+  );
+  try { await db.exec("rollback"); } catch {}
+}
+assert(requesterMutationBlocked, "authenticated 사용자는 meeting_report 요청자를 변경할 수 없음");
 
 // ── 8-1. 목록 집계 + 기업 대량 가져오기 RPC ─────────────────────────────
 let bulkImportRows = [];

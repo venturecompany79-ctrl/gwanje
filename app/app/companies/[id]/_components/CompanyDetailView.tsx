@@ -50,11 +50,6 @@ const FilesTab = dynamic(
   { loading: () => <TabLoading title="자료" /> },
 );
 
-const ReportsTab = dynamic(
-  () => import("./ReportsTab").then((mod) => mod.ReportsTab),
-  { loading: () => <TabLoading title="보고서" /> },
-);
-
 const RecommendTab = dynamic(
   () => import("./RecommendTab").then((mod) => mod.RecommendTab),
   { loading: () => <TabLoading title="정부지원사업" /> },
@@ -67,7 +62,6 @@ type TabKey =
   | "tasks"
   | "schedule"
   | "files"
-  | "reports"
   | "recommend";
 
 const TAB_DEFS: { key: TabKey; label: string }[] = [
@@ -77,12 +71,14 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
-  { key: "reports", label: "보고서" },
   { key: "recommend", label: "정부지원사업" },
 ];
 
 // ?tab= 별칭 — 자연스러운 표기(docs)도 허용 (GWJ-012)
-const TAB_ALIASES: Record<string, TabKey> = { docs: "files" };
+const TAB_ALIASES: Record<string, TabKey> = {
+  docs: "files",
+  reports: "overview",
+};
 
 function resolveTab(value: string): TabKey {
   if (TAB_DEFS.some((t) => t.key === value)) return value as TabKey;
@@ -91,12 +87,14 @@ function resolveTab(value: string): TabKey {
 
 function CompanyHeader({
   company,
+  consultants,
   demo,
   showToast,
   share,
   shareConfigured,
 }: {
   company: CompanyProfile;
+  consultants: CompanyDetailData["consultants"];
   demo: boolean;
   showToast: (message: string) => void;
   share: CompanyShareSettings | null;
@@ -109,6 +107,7 @@ function CompanyHeader({
     ["매출", formatRevenue(company.revenue)],
     ["인원", company.headcount !== null ? `${company.headcount}명` : "—"],
     ["대표", company.ceoName ?? "—"],
+    ["주담당", company.primaryConsultantName ?? "미배정"],
   ];
   return (
     <div className="co-header">
@@ -141,7 +140,12 @@ function CompanyHeader({
           demo={demo}
           showToast={showToast}
         />
-        <EditCompanyButton company={company} demo={demo} showToast={showToast} />
+        <EditCompanyButton
+          company={company}
+          consultants={consultants}
+          demo={demo}
+          showToast={showToast}
+        />
         {isEnded ? null : (
           <EndCompanyButton company={company} demo={demo} showToast={showToast} />
         )}
@@ -191,6 +195,7 @@ export function CompanyDetailView({
     <>
       <CompanyHeader
         company={company}
+        consultants={data.consultants}
         demo={data.demo}
         showToast={showToast}
         share={share}
@@ -220,7 +225,16 @@ export function CompanyDetailView({
         ))}
       </div>
 
-      {tab === "overview" ? <OverviewTab company={company} /> : null}
+      {tab === "overview" ? (
+        <OverviewTab
+          company={company}
+          documents={data.documents}
+          reports={data.meetingReports}
+          driveConnected={data.driveConnected}
+          driveConfigured={data.driveConfigured}
+          showToast={showToast}
+        />
+      ) : null}
       {tab === "cert" ? (
         <CertsTab
           companyId={company.id}
@@ -262,15 +276,6 @@ export function CompanyDetailView({
           documents={data.documents}
           driveConnected={data.driveConnected}
           driveConfigured={data.driveConfigured}
-          showToast={showToast}
-        />
-      ) : null}
-      {tab === "reports" ? (
-        <ReportsTab
-          companyId={company.id}
-          companyName={company.name}
-          documents={data.documents}
-          reports={data.meetingReports}
           showToast={showToast}
         />
       ) : null}

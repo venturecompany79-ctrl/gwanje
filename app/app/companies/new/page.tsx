@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { IconAlert, IconBack, IconCheck, IconInfo } from "@/components/ui/icons";
 import { createClient } from "@/lib/supabase/server";
+import { getConsultantOptions } from "@/lib/data/consultants";
 import { CompanyIntakeForm } from "./_components/CompanyIntakeForm";
 
 export const metadata: Metadata = { title: "기업 정보입력" };
@@ -20,6 +21,7 @@ const requiredItems = [
 export default async function NewCompanyPage() {
   const supabase = await createClient();
   const demo = !supabase;
+  const consultantData = await getConsultantOptions();
 
   return (
     <>
@@ -52,7 +54,11 @@ export default async function NewCompanyPage() {
 
       <div className="intake-layout">
         <div className="intake-main">
-          <CompanyIntakeForm demo={demo} />
+          <CompanyIntakeForm
+            demo={demo}
+            consultants={consultantData.consultants}
+            currentConsultantId={consultantData.currentConsultantId}
+          />
         </div>
 
         <aside className="intake-side" aria-label="입력 항목 안내">

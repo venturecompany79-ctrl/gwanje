@@ -11,6 +11,9 @@ import {
 } from "@/lib/google-drive/oauth";
 import { ensureRootFolder } from "@/lib/google-drive/drive";
 import { encryptRefreshToken } from "@/lib/google-drive/crypto";
+import { createServiceClient } from "@/lib/supabase/service";
+import { enqueueExistingMeetingReportBackups } from "@/lib/google-drive/report-backup";
+import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +104,19 @@ export async function GET(request: Request) {
     if (error) {
       console.error("[google-drive/callback] upsert", error.code, error.message);
       return redirectToSettings(request, "error");
+    }
+
+    // Drive 미연결 상태에서 먼저 생성된 전체본·요약본도 연결 직후 자동 백업한다.
+    // 보고서 생성/연결 성공을 백업 실패와 결합하지 않도록 실패는 로그만 남긴다.
+    const service = createServiceClient();
+    if (service) {
+      const enqueued = await enqueueExistingMeetingReportBackups(
+        service,
+        ctx.tenantId,
+        ctx.userId,
+        { resetExisting: true },
+      );
+      if (enqueued > 0) triggerDriveSyncAfterResponse();
     }
 
     return redirectToSettings(request, "connected");

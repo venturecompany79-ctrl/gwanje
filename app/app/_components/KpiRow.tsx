@@ -2,11 +2,20 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   IconAlert,
-  IconBuilding,
   IconCalendar,
   IconKanban,
+  IconUser,
 } from "@/components/ui/icons";
-import type { DashboardKpi } from "@/lib/data/dashboard";
+import type { DashboardRiskSummary, DashboardScope } from "@/lib/data/dashboard";
+
+type KpiTone = "critical" | "warning" | "attention" | "neutral";
+
+function riskHref(scope: DashboardScope, risk: string): string {
+  const params = new URLSearchParams();
+  if (scope === "team") params.set("scope", "team");
+  params.set("risk", risk);
+  return `/app?${params.toString()}`;
+}
 
 function KpiCard({
   label,
@@ -14,7 +23,7 @@ function KpiCard({
   unit,
   sub,
   icon,
-  urgent = false,
+  tone,
   href,
 }: {
   label: string;
@@ -22,12 +31,15 @@ function KpiCard({
   unit: string;
   sub: string;
   icon: ReactNode;
-  urgent?: boolean;
-  href?: string;
+  tone: KpiTone;
+  href: string;
 }) {
-  const className = `kpi${urgent ? " kpi--urgent" : ""}${href ? " kpi--link" : ""}`;
-  const inner = (
-    <>
+  return (
+    <Link
+      href={href}
+      className={`kpi monitor-kpi monitor-kpi--${tone} kpi--link`}
+      aria-label={`${label} ${value}${unit} — ${sub}`}
+    >
       <div className="kpi-top">
         <div className="kpi-label">{label}</div>
         <div className="kpi-icon">{icon}</div>
@@ -37,56 +49,55 @@ function KpiCard({
         <em>{unit}</em>
       </div>
       <div className="kpi-sub">{sub}</div>
-    </>
+    </Link>
   );
-
-  if (href) {
-    return (
-      <Link href={href} className={className}>
-        {inner}
-      </Link>
-    );
-  }
-  return <div className={className}>{inner}</div>;
 }
 
-export function KpiRow({ kpi }: { kpi: DashboardKpi }) {
-  const hasData = kpi.companyCount > 0;
+export function KpiRow({
+  risk,
+  scope,
+}: {
+  risk: DashboardRiskSummary;
+  scope: DashboardScope;
+}) {
   return (
-    <div className="kpi-row">
+    <section className="kpi-row monitor-kpi-row" aria-label="관제 핵심 지표">
       <KpiCard
-        label="관리 기업 수"
-        value={kpi.companyCount}
-        unit="개사"
-        sub={hasData ? "전체 워크스페이스" : "—"}
-        icon={<IconBuilding />}
-        href="/app/companies"
+        label="기한 지남"
+        value={risk.overdue}
+        unit="건"
+        sub={risk.overdue > 0 ? "즉시 조치가 필요합니다" : "지연 업무 없음"}
+        icon={<IconAlert />}
+        tone={risk.overdue > 0 ? "critical" : "neutral"}
+        href={riskHref(scope, "overdue")}
       />
       <KpiCard
         label="7일 내 마감"
-        value={kpi.due7}
+        value={risk.due7}
         unit="건"
-        sub={kpi.due7 > 0 ? "즉시 확인 필요" : "—"}
-        icon={<IconAlert />}
-        urgent={kpi.due7 > 0}
-        href={kpi.due7 > 0 ? "/app?due=7" : undefined}
+        sub={risk.due7 > 0 ? "이번 주 우선 확인" : "임박 업무 없음"}
+        icon={<IconCalendar />}
+        tone={risk.due7 > 0 ? "warning" : "neutral"}
+        href={riskHref(scope, "due7")}
       />
       <KpiCard
-        label="30일 내 만료"
-        value={kpi.expire30}
+        label="미배정 과제"
+        value={risk.unassigned}
         unit="건"
-        sub={hasData ? "자격·인증 갱신" : "—"}
-        icon={<IconCalendar />}
-        href={kpi.expire30 > 0 ? "/app?expire=30" : undefined}
+        sub={risk.unassigned > 0 ? "담당자 지정 필요" : "모두 배정됨"}
+        icon={<IconUser />}
+        tone={risk.unassigned > 0 ? "attention" : "neutral"}
+        href={riskHref(scope, "unassigned")}
       />
       <KpiCard
         label="진행 중 과제"
-        value={kpi.activeTasks}
+        value={risk.activeTasks}
         unit="건"
-        sub={hasData ? `${kpi.companyCount}개사 전체` : "—"}
+        sub={`${risk.companyCount}개 관리 기업 기준`}
         icon={<IconKanban />}
-        href="/app/board"
+        tone="neutral"
+        href={riskHref(scope, "active")}
       />
-    </div>
+    </section>
   );
 }

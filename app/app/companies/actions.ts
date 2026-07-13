@@ -27,6 +27,7 @@ import {
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 import { normalizeConditionTags } from "@/lib/company-tags";
 import { normalizeCompanyName } from "@/lib/import/validate";
+import { validatePrimaryConsultant } from "@/lib/data/consultants";
 
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
@@ -161,6 +162,20 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
+  // 기존 호출부가 필드를 보내지 않으면 등록자 본인을 기본 주담당자로 둔다.
+  // 새 폼에서 빈 값을 명시하면 이관 준비를 위한 미배정(null)으로 저장한다.
+  const requestedPrimaryConsultant = formData.has("primary_consultant_id")
+    ? optionalText(formData, "primary_consultant_id")
+    : ctx.userId;
+  const primaryConsultant = await validatePrimaryConsultant(
+    supabase,
+    ctx.tenantId,
+    requestedPrimaryConsultant,
+  );
+  if (!primaryConsultant.ok) {
+    return { ok: false, error: primaryConsultant.error };
+  }
+
   // 상호·사업자번호 중복 검사 — 사용자가 확인(재제출)하면 건너뛴다 (GWJ-016)
   const bizNoDigits = (optionalText(formData, "biz_no") ?? "").replace(/\D/g, "");
   const confirmDuplicate = String(formData.get("confirm_duplicate") ?? "") === "1";
@@ -242,6 +257,7 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
       contact_email: optionalText(formData, "contact_email"),
       condition_tags: conditionTags,
       memo: combinedMemo,
+      primary_consultant_id: primaryConsultant.value,
     })
     .select("id")
     .single();

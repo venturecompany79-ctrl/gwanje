@@ -192,6 +192,8 @@ create table meeting_report (
   report_json        jsonb,
   summary            text,
   output_document_id uuid references document (id) on delete set null,
+  summary_report_json jsonb,
+  summary_output_document_id uuid references document (id) on delete set null,
   last_error         text,
   next_run_at        timestamptz not null default now(),
   generated_at       timestamptz,
@@ -207,8 +209,49 @@ create table meeting_report_source (
   document_id uuid not null references document (id) on delete cascade,
   role        meeting_report_source_role not null,
   created_at  timestamptz not null default now(),
-  unique (report_id, role)
+  unique (report_id, document_id)
 );
+
+-- 회의록은 보고서당 1개만 허용한다. company_info 최소 1개와 meeting_note
+-- 정확히 1개 입력은 pending 보고서 생성 후 소스를 적재하는 애플리케이션 흐름에서 검증한다.
+create unique index meeting_report_source_one_meeting_note_idx
+  on meeting_report_source (report_id)
+  where role = 'meeting_note'::meeting_report_source_role;
+
+create or replace function enforce_meeting_report_company_info_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_company_info_count int;
+begin
+  if new.role <> 'company_info'::meeting_report_source_role then
+    return new;
+  end if;
+
+  perform 1 from meeting_report where id = new.report_id for update;
+  select count(*)::int into v_company_info_count
+  from meeting_report_source
+  where report_id = new.report_id
+    and role = 'company_info'::meeting_report_source_role
+    and id <> new.id;
+
+  if v_company_info_count >= 5 then
+    raise exception '미팅 보고서의 기업자료는 최대 5개까지 연결할 수 있습니다.'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function enforce_meeting_report_company_info_limit()
+  from public, anon, authenticated;
+
+create trigger meeting_report_source_company_info_limit
+  before insert or update of report_id, role on meeting_report_source
+  for each row execute function enforce_meeting_report_company_info_limit();
 
 -- -------------------------------------------------------------
 -- 9. ip_right / ip_deadline — 지식재산권(특허·상표) / 대응·납부·갱신 기한

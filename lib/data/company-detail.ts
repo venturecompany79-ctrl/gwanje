@@ -15,6 +15,7 @@ import type {
   TaskStage,
 } from "@/lib/database.types";
 import { isReportSourceSupported } from "@/lib/reports/file-types";
+import type { ConsultantOption } from "@/lib/data/consultants";
 
 // daysFromToday는 KST 기준 공용 헬퍼(lib/datetime). 보드 등에서 재사용하므로 재노출.
 export { daysFromToday };
@@ -35,6 +36,8 @@ export interface CompanyProfile {
   contactEmail: string | null;
   conditionTags: string[];
   memo: string | null;
+  primaryConsultantId: string | null;
+  primaryConsultantName: string | null;
   /** 관리 상태 — active(관리중) / ended(종료) */
   status: CompanyStatus;
   contractStartDate: string | null;
@@ -167,8 +170,14 @@ export interface MeetingReportRow {
   attempts: number;
   summary: string | null;
   lastError: string | null;
+  /** 전체본 DOCX. 기존 outputDocument* 이름을 호환 필드로 유지한다. */
   outputDocumentId: string | null;
   outputDocumentName: string | null;
+  outputDriveSync: DocumentDriveSync | null;
+  /** 요약본 DOCX */
+  summaryOutputDocumentId: string | null;
+  summaryOutputDocumentName: string | null;
+  summaryOutputDriveSync: DocumentDriveSync | null;
   generatedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -191,6 +200,8 @@ export interface CompanyDetailData {
   documents: DocumentRow[];
   meetingReports: MeetingReportRow[];
   categories: CategoryOption[];
+  /** 기업 주담당자로 지정 가능한 같은 테넌트의 활성 컨설턴트 */
+  consultants: ConsultantOption[];
   /** 서버에 Google OAuth 환경변수가 갖춰졌는지 — false면 연결 유도 배너 숨김 */
   driveConfigured: boolean;
   /** 현재 사용자가 본인 Drive를 연결했는지 — 동기화 컬럼/배너 노출 분기 */
@@ -242,7 +253,7 @@ export async function getCompanyDetail(
       supabase
         .from("company")
         .select(
-          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, status, contract_start_date, contract_end_date, ended_at, ended_reason",
+          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, primary_consultant_id, status, contract_start_date, contract_end_date, ended_at, ended_reason",
         )
         .eq("id", companyId)
         .maybeSingle(),
@@ -282,12 +293,12 @@ export async function getCompanyDetail(
       supabase
         .from("meeting_report")
         .select(
-          "id, title, status, attempts, summary, last_error, output_document_id, generated_at, created_at, updated_at",
+          "id, title, status, attempts, summary, last_error, output_document_id, summary_output_document_id, generated_at, created_at, updated_at",
         )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase.from("category").select("id, name").order("sort_order"),
-      supabase.from("profile").select("id, name"),
+      supabase.from("profile").select("id, name, title, status"),
       // 본인 활성 Drive 연결 — RLS가 본인 행으로 한정하므로 user_id 필터 없이 조회(auth.getUser 호출 절약)
       supabase
         .from("google_drive_connections")
@@ -324,17 +335,43 @@ export async function getCompanyDetail(
   const categoryData = categories.error ? [] : (categories.data ?? []);
   const profileData = profiles.error ? [] : (profiles.data ?? []);
 
-  // 본인 Drive 연결 시, 이 회사 문서들의 동기화 잡 상태를 문서별로 매핑(RLS로 본인 잡만).
+  const reportOutputDocumentIds = Array.from(
+    new Set(
+      reportData.flatMap((report) =>
+        [report.output_document_id, report.summary_output_document_id].filter(
+          (id): id is string => id !== null,
+        ),
+      ),
+    ),
+  );
+  const documentIds = new Set(documentData.map((document) => document.id));
+  const missingReportOutputIds = reportOutputDocumentIds.filter(
+    (id) => !documentIds.has(id),
+  );
+  let missingReportOutputDocuments: { id: string; name: string }[] = [];
+  if (missingReportOutputIds.length > 0) {
+    const { data: outputDocuments, error: outputDocumentsError } = await supabase
+      .from("document")
+      .select("id, name")
+      .eq("company_id", companyId)
+      .in("id", missingReportOutputIds);
+    logRelatedQueryError("meeting_report_output_documents", outputDocumentsError);
+    missingReportOutputDocuments = outputDocumentsError
+      ? []
+      : (outputDocuments ?? []);
+  }
+
+  // 본인 Drive 연결 시, 일반 문서와 보고서 전체본/요약본의 동기화 잡을 함께 매핑한다.
   const driveConnected = Boolean(connection.data);
   const driveSyncByDoc = new Map<string, DocumentDriveSync>();
-  if (driveConnected && documentData.length > 0) {
+  const driveDocumentIds = Array.from(
+    new Set([...documentData.map((document) => document.id), ...reportOutputDocumentIds]),
+  );
+  if (driveConnected && driveDocumentIds.length > 0) {
     const { data: jobs, error: jobsError } = await supabase
       .from("google_drive_sync_jobs")
       .select("document_id, status, google_drive_web_view_link")
-      .in(
-        "document_id",
-        documentData.map((d) => d.id),
-      );
+      .in("document_id", driveDocumentIds);
     logRelatedQueryError("drive_sync_jobs", jobsError);
     for (const job of jobs ?? []) {
       driveSyncByDoc.set(job.document_id, {
@@ -351,7 +388,12 @@ export async function getCompanyDetail(
     profileData.map((p) => [p.id, p.name]),
   );
   const taskTitle = new Map(taskData.map((t) => [t.id, t.title]));
-  const documentName = new Map(documentData.map((d) => [d.id, d.name]));
+  const documentName = new Map([
+    ...documentData.map((document) => [document.id, document.name] as const),
+    ...missingReportOutputDocuments.map(
+      (document) => [document.id, document.name] as const,
+    ),
+  ]);
   // 자격별 첨부 자료 — documentData는 created_at desc 정렬이라 최신순으로 쌓인다.
   const attachmentsByCredential = new Map<string, CredentialAttachment[]>();
   const attachmentsByIpRight = new Map<string, IpRightAttachment[]>();
@@ -538,6 +580,10 @@ export async function getCompanyDetail(
       contactEmail: company.data.contact_email,
       conditionTags: company.data.condition_tags ?? [],
       memo: company.data.memo,
+      primaryConsultantId: company.data.primary_consultant_id,
+      primaryConsultantName: company.data.primary_consultant_id
+        ? (profileName.get(company.data.primary_consultant_id) ?? null)
+        : null,
       status: (company.data.status as CompanyStatus) ?? "active",
       contractStartDate: company.data.contract_start_date,
       contractEndDate: company.data.contract_end_date,
@@ -579,12 +625,33 @@ export async function getCompanyDetail(
       outputDocumentName: r.output_document_id
         ? (documentName.get(r.output_document_id) ?? null)
         : null,
+      outputDriveSync: r.output_document_id
+        ? (driveSyncByDoc.get(r.output_document_id) ?? null)
+        : null,
+      summaryOutputDocumentId: r.summary_output_document_id,
+      summaryOutputDocumentName: r.summary_output_document_id
+        ? (documentName.get(r.summary_output_document_id) ?? null)
+        : null,
+      summaryOutputDriveSync: r.summary_output_document_id
+        ? (driveSyncByDoc.get(r.summary_output_document_id) ?? null)
+        : null,
       generatedAt: r.generated_at,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       sources: sourcesByReport.get(r.id) ?? [],
     })),
     categories: categoryData,
+    consultants: profileData
+      .filter((profile) => profile.status === "active")
+      .map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        title: profile.title,
+      }))
+      .sort((a, b) => {
+        const name = a.name.localeCompare(b.name, "ko");
+        return name !== 0 ? name : a.id.localeCompare(b.id);
+      }),
     driveConfigured: isGoogleDriveConfigured(),
     driveConnected,
   };

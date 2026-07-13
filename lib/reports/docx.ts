@@ -235,25 +235,73 @@ function sectionBlocks(section: ReportSection): Array<Paragraph | Table> {
   return blocks;
 }
 
-export async function buildReportDocx(report: ReportData): Promise<Buffer> {
-  const blocks: Array<Paragraph | Table> = [
-    new Paragraph({
-      children: [run("STRATEGIC BRIEFING", { bold: true, color: CYAN, size: 20 })],
-      spacing: { before: 800, after: 180 },
-    }),
-    new Paragraph({
-      children: [run(report.cover.company_name, { bold: true, color: NAVY, size: 56 })],
-      spacing: { after: 180 },
-    }),
-    new Paragraph({
-      children: [run(report.cover.subtitle ?? "미팅 기반 컨설팅 진단 보고서", { color: NAVY, size: 28 })],
-      spacing: { after: 420 },
-    }),
-    paragraph(`Prepared for: ${report.cover.prepared_for ?? report.cover.company_name}`),
-    paragraph(`Prepared by: ${report.cover.prepared_by ?? "Gwanje"}`),
-    paragraph(`Date: ${report.cover.date ?? "-"}`),
-    new Paragraph({ pageBreakBefore: true }),
-  ];
+export interface BuildReportDocxOptions {
+  compact?: boolean;
+}
+
+export async function buildReportDocx(
+  report: ReportData,
+  options: BuildReportDocxOptions = {},
+): Promise<Buffer> {
+  const blocks: Array<Paragraph | Table> = options.compact
+    ? [
+        new Paragraph({
+          children: [
+            run("MEETING REPORT SUMMARY", { bold: true, color: CYAN, size: 18 }),
+          ],
+          spacing: { before: 180, after: 100 },
+        }),
+        new Paragraph({
+          children: [
+            run(report.cover.company_name, { bold: true, color: NAVY, size: 42 }),
+          ],
+          spacing: { after: 100 },
+        }),
+        new Paragraph({
+          children: [
+            run(report.cover.subtitle ?? "미팅 보고서 요약본", {
+              color: NAVY,
+              size: 24,
+            }),
+          ],
+          spacing: { after: 140 },
+        }),
+        new Paragraph({
+          children: [
+            run(`Prepared for: ${report.cover.prepared_for ?? report.cover.company_name}`),
+            run(`  |  Prepared by: ${report.cover.prepared_by ?? "Gwanje"}`),
+            run(`  |  Date: ${report.cover.date ?? "-"}`),
+          ],
+          spacing: { after: 160 },
+        }),
+      ]
+    : [
+        new Paragraph({
+          children: [
+            run("STRATEGIC BRIEFING", { bold: true, color: CYAN, size: 20 }),
+          ],
+          spacing: { before: 800, after: 180 },
+        }),
+        new Paragraph({
+          children: [
+            run(report.cover.company_name, { bold: true, color: NAVY, size: 56 }),
+          ],
+          spacing: { after: 180 },
+        }),
+        new Paragraph({
+          children: [
+            run(report.cover.subtitle ?? "미팅 기반 컨설팅 진단 보고서", {
+              color: NAVY,
+              size: 28,
+            }),
+          ],
+          spacing: { after: 420 },
+        }),
+        paragraph(`Prepared for: ${report.cover.prepared_for ?? report.cover.company_name}`),
+        paragraph(`Prepared by: ${report.cover.prepared_by ?? "Gwanje"}`),
+        paragraph(`Date: ${report.cover.date ?? "-"}`),
+        new Paragraph({ pageBreakBefore: true }),
+      ];
 
   if (report.executive_summary) {
     blocks.push(

@@ -22,6 +22,7 @@ import type {
 } from "@/lib/data/notifications";
 import type { NotificationType } from "@/lib/database.types";
 import type { SettingsData } from "@/lib/data/settings";
+import { DEMO_CONSULTANTS } from "@/lib/data/consultants";
 
 const DEMO_TENANT = "00000000-0000-0000-0000-000000000000";
 
@@ -352,6 +353,8 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
     memo: isTechnova
       ? "벤처확인 갱신이 최우선. 2026년 디딤돌 R&D 신규 과제 희망."
       : null,
+    primaryConsultantId: DEMO_CONSULTANTS[0].id,
+    primaryConsultantName: DEMO_CONSULTANTS[0].name,
     status: base.status,
     contractStartDate: base.contractEndDate ? dateAfter(-365) : null,
     contractEndDate: base.contractEndDate,
@@ -386,6 +389,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
       documents: [],
       meetingReports: [],
       categories: DEMO_CATEGORIES,
+      consultants: DEMO_CONSULTANTS,
       driveConfigured: false,
       driveConnected: false,
     };
@@ -487,6 +491,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
     ],
     meetingReports: [],
     categories: DEMO_CATEGORIES,
+    consultants: DEMO_CONSULTANTS,
     driveConfigured: false,
     driveConnected: false,
   };

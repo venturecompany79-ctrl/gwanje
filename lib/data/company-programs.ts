@@ -67,7 +67,7 @@ export async function getCompanyProgramMatches(
   const { data: company, error: companyError } = await supabase
     .from("company")
     .select(
-      "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, status, contract_start_date, contract_end_date, ended_at, ended_reason",
+      "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, primary_consultant_id, status, contract_start_date, contract_end_date, ended_at, ended_reason",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -104,6 +104,8 @@ export async function getCompanyProgramMatches(
     contactEmail: company.contact_email,
     conditionTags: company.condition_tags ?? [],
     memo: company.memo,
+    primaryConsultantId: company.primary_consultant_id,
+    primaryConsultantName: null,
     status: (company.status as CompanyProfile["status"]) ?? "active",
     contractStartDate: company.contract_start_date,
     contractEndDate: company.contract_end_date,

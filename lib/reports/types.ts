@@ -54,7 +54,19 @@ export interface ReportData {
   closing?: ReportSection | null;
 }
 
+export interface ReportBundle {
+  full: ReportData;
+  summary: ReportData;
+}
+
 export function asReportData(value: Json | null): ReportData | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as unknown as ReportData;
+}
+
+export function asReportBundle(value: Json | null): ReportBundle | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const bundle = value as Record<string, unknown>;
+  if (!bundle.full || !bundle.summary) return null;
+  return value as unknown as ReportBundle;
 }

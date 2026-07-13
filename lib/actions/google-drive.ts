@@ -9,6 +9,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { DEMO_ERROR, getTenantContext, type ActionResult } from "@/lib/actions/shared";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
+import { enqueueReportDocumentBackups } from "@/lib/google-drive/report-backup";
 
 export async function retryDriveSync(
   companyId: string,
@@ -56,6 +57,54 @@ export async function retryDriveSync(
   // 3) 즉시 트리거(응답 후 백그라운드)
   if (isGoogleDriveConfigured()) triggerDriveSyncAfterResponse();
 
+  revalidatePath(`/app/companies/${companyId}`);
+  return { ok: true, error: null };
+}
+
+/** 백업 잡이 유실된 생성 보고서에 대해 잡을 새로 보장한다. */
+export async function ensureReportDriveSync(
+  companyId: string,
+  documentId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+  if (!isGoogleDriveConfigured()) {
+    return { ok: false, error: "Google Drive 백업이 설정되지 않았습니다." };
+  }
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const { data: document, error } = await supabase
+    .from("document")
+    .select("id")
+    .eq("id", documentId)
+    .eq("company_id", companyId)
+    .eq("tenant_id", ctx.tenantId)
+    .eq("doc_category", "보고서")
+    .maybeSingle();
+  if (error) {
+    return { ok: false, error: `보고서 확인에 실패했습니다: ${error.message}` };
+  }
+  if (!document) return { ok: false, error: "백업할 보고서를 찾을 수 없습니다." };
+
+  const service = createServiceClient();
+  if (!service) {
+    return { ok: false, error: "서버 설정이 필요합니다(SUPABASE_SERVICE_ROLE_KEY)." };
+  }
+  const enqueued = await enqueueReportDocumentBackups(service, {
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    documentIds: [document.id],
+  });
+  if (enqueued === 0) {
+    return {
+      ok: false,
+      error: "연결된 Google Drive를 찾지 못했습니다. 설정에서 다시 연결해 주세요.",
+    };
+  }
+
+  triggerDriveSyncAfterResponse();
   revalidatePath(`/app/companies/${companyId}`);
   return { ok: true, error: null };
 }

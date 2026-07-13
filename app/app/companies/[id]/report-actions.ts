@@ -23,6 +23,13 @@ function formText(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
 }
 
+function formTexts(formData: FormData, key: string): string[] {
+  return formData
+    .getAll(key)
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+}
+
 export async function createMeetingReport(
   companyId: string,
   formData: FormData,
@@ -42,13 +49,21 @@ export async function createMeetingReport(
   const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
   if (!access.ok) return access;
 
-  const companyInfoId = formText(formData, "company_info_document_id");
-  const meetingNoteId = formText(formData, "meeting_note_document_id");
-  if (!companyInfoId || !meetingNoteId) {
-    return { ok: false, error: "회사정보 자료와 회의록 자료를 선택해 주세요." };
+  const companyInfoIds = formTexts(formData, "company_info_document_ids");
+  const meetingNoteIds = formTexts(formData, "meeting_note_document_id");
+  if (companyInfoIds.length < 1 || companyInfoIds.length > 5) {
+    return { ok: false, error: "첨부자료는 1개 이상 5개 이하로 선택해 주세요." };
   }
-  if (companyInfoId === meetingNoteId) {
-    return { ok: false, error: "회사정보와 회의록은 서로 다른 자료를 선택해 주세요." };
+  if (new Set(companyInfoIds).size !== companyInfoIds.length) {
+    return { ok: false, error: "같은 첨부자료를 중복 선택할 수 없습니다." };
+  }
+  if (meetingNoteIds.length !== 1) {
+    return { ok: false, error: "회의록은 정확히 1개를 선택해 주세요." };
+  }
+
+  const meetingNoteId = meetingNoteIds[0];
+  if (companyInfoIds.includes(meetingNoteId)) {
+    return { ok: false, error: "첨부자료와 회의록은 서로 다른 자료를 선택해 주세요." };
   }
 
   const { data: company, error: companyError } = await supabase
@@ -69,12 +84,12 @@ export async function createMeetingReport(
     .select("id, name, file_type, doc_category")
     .eq("company_id", companyId)
     .eq("tenant_id", ctx.tenantId)
-    .in("id", [companyInfoId, meetingNoteId]);
+    .in("id", [...companyInfoIds, meetingNoteId]);
   if (docsError) {
     return { ok: false, error: `자료 확인에 실패했습니다: ${docsError.message}` };
   }
-  if ((docs ?? []).length !== 2) {
-    return { ok: false, error: "선택한 자료를 찾을 수 없습니다." };
+  if ((docs ?? []).length !== companyInfoIds.length + 1) {
+    return { ok: false, error: "선택한 자료 중 현재 기업에서 사용할 수 없는 자료가 있습니다." };
   }
   const unsupported = (docs ?? []).find((doc) => !isReportSourceSupported(doc.file_type));
   if (unsupported) {
@@ -105,13 +120,13 @@ export async function createMeetingReport(
   }
 
   const { error: sourceError } = await supabase.from("meeting_report_source").insert([
-    {
+    ...companyInfoIds.map((documentId) => ({
       tenant_id: ctx.tenantId,
       company_id: companyId,
       report_id: inserted.id,
-      document_id: companyInfoId,
+      document_id: documentId,
       role: "company_info",
-    },
+    }) as const),
     {
       tenant_id: ctx.tenantId,
       company_id: companyId,
