@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import { runSyncBatch } from "@/lib/google-drive/sync-worker";
 import { verifyBearerSecret } from "@/lib/api/auth";
+import { reconcileMeetingReportBackups } from "@/lib/google-drive/report-backup";
 
 export const dynamic = "force-dynamic";
 // 파일 다운로드/업로드가 길어질 수 있어 최대 실행시간을 늘린다(Vercel)
@@ -42,6 +43,7 @@ async function handle(request: Request): Promise<NextResponse> {
   }
 
   try {
+    await reconcileMeetingReportBackups(service);
     const result = await runSyncBatch(service);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

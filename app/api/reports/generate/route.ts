@@ -3,6 +3,7 @@ import { verifyBearerSecret } from "@/lib/api/auth";
 import { reportGenerationEnabled } from "@/lib/reports/config";
 import { runReportBatch } from "@/lib/reports/worker";
 import { createServiceClient } from "@/lib/supabase/service";
+import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -37,6 +38,7 @@ async function handle(request: Request): Promise<NextResponse> {
 
   try {
     const result = await runReportBatch(service, 1);
+    if (result.succeeded > 0) triggerDriveSyncAfterResponse();
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     console.error("[reports/generate]", err);
