@@ -81,17 +81,20 @@ async function handle(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: true, enabledSources: [], fetched: 0, upserted: 0 });
   }
 
-  const results: SourceResult[] = [];
-  for (const source of sources) {
-    try {
-      const programs = await GOV_PROGRAM_ADAPTERS[source].fetch();
-      results.push({ source, fetched: programs.length, programs, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[gov-programs/sync:${source}]`, message);
-      results.push({ source, fetched: 0, programs: [], error: message });
-    }
-  }
+  // 소스별 다페이지 수집으로 순차 실행 시 maxDuration(60s)을 넘길 수 있어 병렬화.
+  // try/catch가 각 promise 안에 있어 reject되지 않으므로 Promise.all로 충분.
+  const results: SourceResult[] = await Promise.all(
+    sources.map(async (source): Promise<SourceResult> => {
+      try {
+        const programs = await GOV_PROGRAM_ADAPTERS[source].fetch();
+        return { source, fetched: programs.length, programs, error: null };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[gov-programs/sync:${source}]`, message);
+        return { source, fetched: 0, programs: [], error: message };
+      }
+    }),
+  );
 
   const successful = results.filter((result) => result.error === null);
   const deduped = dedupePrograms(successful.flatMap((result) => result.programs));

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { formatRevenue } from "@/lib/format";
 import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detail";
-import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
 import type { CompanyShareSettings } from "@/lib/data/company-share";
 import { ShareSettingsButton } from "./ShareSettingsSlideOver";
 import { EditCompanyButton } from "./EditCompanySlideOver";
@@ -58,7 +57,7 @@ const ReportsTab = dynamic(
 
 const RecommendTab = dynamic(
   () => import("./RecommendTab").then((mod) => mod.RecommendTab),
-  { loading: () => <TabLoading title="정부지원사업 추천" /> },
+  { loading: () => <TabLoading title="정부지원사업" /> },
 );
 
 type TabKey =
@@ -79,7 +78,7 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
   { key: "reports", label: "보고서" },
-  { key: "recommend", label: "정부지원사업 추천" },
+  { key: "recommend", label: "정부지원사업" },
 ];
 
 // ?tab= 별칭 — 자연스러운 표기(docs)도 허용 (GWJ-012)
@@ -162,13 +161,11 @@ function CompanyHeader({
 export function CompanyDetailView({
   data,
   initialTab,
-  initialProgramMatches,
   share,
   shareConfigured,
 }: {
   data: CompanyDetailData;
   initialTab: string;
-  initialProgramMatches?: CompanyProgramMatchesData | null;
   share: CompanyShareSettings | null;
   shareConfigured: boolean;
 }) {
@@ -278,12 +275,7 @@ export function CompanyDetailView({
         />
       ) : null}
       {tab === "recommend" ? (
-        <RecommendTab
-          companyId={company.id}
-          companyName={company.name}
-          initialData={initialProgramMatches}
-          showToast={showToast}
-        />
+        <RecommendTab companyId={company.id} showToast={showToast} />
       ) : null}
 
       <Toast message={toast} />

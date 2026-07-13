@@ -1,19 +1,8 @@
 import type { Json } from "@/lib/database.types";
 import type { SupportField } from "@/lib/gov-programs/types";
-import { isSupportField } from "@/lib/gov-programs/types";
+import { SUPPORT_KEYWORDS, isSupportField } from "@/lib/gov-programs/types";
 
 export type JsonRecord = Record<string, Json | undefined>;
-
-const SUPPORT_KEYWORDS: Record<SupportField, string[]> = {
-  금융: ["금융", "자금", "융자", "보증", "대출", "투자", "바우처"],
-  기술: ["기술", "r&d", "연구", "개발", "스마트공장", "디지털", "ai", "ict"],
-  인력: ["인력", "고용", "채용", "인건비", "교육", "훈련"],
-  수출: ["수출", "해외", "글로벌", "무역", "전시회"],
-  내수: ["내수", "판로", "마케팅", "브랜드", "유통"],
-  창업: ["창업", "스타트업", "초기기업", "예비창업"],
-  경영: ["경영", "컨설팅", "진단", "멘토링", "인증", "세액"],
-  기타: ["기타"],
-};
 
 export function buildUrl(
   base: string,
@@ -78,6 +67,22 @@ export async function fetchItems(url: string): Promise<JsonRecord[]> {
     return extractItems(JSON.parse(trimmed) as Json);
   }
   return parseXmlItems(trimmed);
+}
+
+/** 페이지 단위 수집 — 짧은 페이지(마지막)를 만나면 중단. */
+export async function fetchPagedItems(
+  makeUrl: (pageNo: number) => string,
+  options: { pageSize?: number; maxPages?: number } = {},
+): Promise<JsonRecord[]> {
+  const pageSize = options.pageSize ?? 100;
+  const maxPages = options.maxPages ?? 5;
+  const items: JsonRecord[] = [];
+  for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
+    const rows = await fetchItems(makeUrl(pageNo));
+    items.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return items;
 }
 
 function isRecord(value: Json | undefined): value is JsonRecord {

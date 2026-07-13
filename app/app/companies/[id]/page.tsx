@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconAlert, IconBack } from "@/components/ui/icons";
 import { getCompanyDetail } from "@/lib/data/company-detail";
-import { getCompanyProgramMatches } from "@/lib/data/company-programs";
 import { getCompanyShareSettings } from "@/lib/data/company-share";
 import { isCompanyShareConfigured } from "@/lib/share/config";
 import { createClient } from "@/lib/supabase/server";
@@ -20,11 +19,11 @@ export default async function CompanyDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
-  const shouldLoadRecommend = tab === "recommend";
   const supabase = await createClient();
-  const [data, initialProgramMatches, share] = await Promise.all([
+  // 정부지원사업 탭은 풀 전체(최대 1,000건)를 다루므로 RSC payload에 싣지 않고
+  // RecommendTab이 클라이언트에서 직접 조회한다.
+  const [data, share] = await Promise.all([
     getCompanyDetail(id),
-    shouldLoadRecommend ? getCompanyProgramMatches(id) : Promise.resolve(null),
     supabase ? getCompanyShareSettings(supabase, id) : Promise.resolve(null),
   ]);
   if (!data) notFound();
@@ -50,7 +49,6 @@ export default async function CompanyDetailPage({
       <CompanyDetailView
         data={data}
         initialTab={tab ?? "overview"}
-        initialProgramMatches={initialProgramMatches}
         share={share}
         shareConfigured={isCompanyShareConfigured()}
       />

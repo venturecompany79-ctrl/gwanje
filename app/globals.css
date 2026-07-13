@@ -2708,6 +2708,12 @@ table.dlist .name {
 .program-more:hover {
   background: var(--color-surface-soft);
 }
+.program-pool-note {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-stone);
+}
 .program-card--skeleton {
   display: grid;
   align-content: start;

@@ -1,18 +1,41 @@
 import type { CompanyProfile } from "@/lib/data/company-detail";
-import { daysFromToday, todayKstDate } from "@/lib/datetime";
+import { todayKstDate } from "@/lib/datetime";
+import {
+  companyRegionOption,
+  extractProgramRegions,
+  isNationalProgram,
+} from "@/lib/gov-programs/region";
 import type {
-  GovProgramRow,
+  GovProgramSlim,
   SupportField,
 } from "@/lib/gov-programs/types";
 import {
   SUPPORT_FIELDS,
+  SUPPORT_KEYWORDS,
   normalizeContentText,
 } from "@/lib/gov-programs/types";
 
-export const PROGRAM_MATCH_THRESHOLD = 30;
+// 적합도 가중치 — 점수는 "이 기업에 맞는가"의 힌트일 뿐 배제 기준이 아니다.
+// 마감 임박(긴급도)은 DdayBadge가 담당하므로 점수에 넣지 않는다.
+export const SCORE_BASE = 15;
+export const W_INDUSTRY_EXACT = 30;
+export const W_INDUSTRY_PARTIAL = 12;
+export const W_FIELD = 10;
+export const W_TAGS_MAX = 25;
+export const W_REGION = 10;
+export const P_REGION_MISMATCH = -25;
+export const W_AGE = 10;
+export const P_AGE_MISMATCH = -30;
+export const W_EARLY_STAGE = 8;
+export const W_HEADCOUNT = 5;
+export const W_REVENUE = 5;
+
+// UI 티어 경계 (scoreTone·적합도 필터 공용)
+export const SCORE_HIGH = 60;
+export const SCORE_MID = 35;
 
 export interface ProgramMatch {
-  program: GovProgramRow;
+  program: GovProgramSlim;
   score: number;
   reasons: string[];
 }
@@ -24,12 +47,7 @@ interface AgeRequirement {
   operator: AgeOperator;
 }
 
-interface ScaleAndAgeScore {
-  score: number;
-  disqualified: boolean;
-}
-
-function programText(program: GovProgramRow): string {
+function programText(program: GovProgramSlim): string {
   return normalizeContentText(
     [
       program.title,
@@ -46,27 +64,37 @@ function normalizedTags(tags: string[]): string[] {
 }
 
 export function supportFieldsForCompany(company: CompanyProfile): SupportField[] {
-  void company;
-  return [...SUPPORT_FIELDS];
-}
-
-export function queryTextForCompany(company: CompanyProfile): string {
-  return [company.industry, ...company.conditionTags]
+  const haystack = [
+    company.industry,
+    company.businessCondition,
+    ...company.conditionTags,
+  ]
     .filter((value): value is string => Boolean(value?.trim()))
-    .join(" ");
+    .join(" ")
+    .toLowerCase();
+  if (!haystack) return [];
+
+  return SUPPORT_FIELDS.filter(
+    (field) =>
+      field !== "기타" &&
+      SUPPORT_KEYWORDS[field].some((keyword) => haystack.includes(keyword)),
+  );
 }
 
 function scoreIndustryAndField(
   company: CompanyProfile,
-  program: GovProgramRow,
+  program: GovProgramSlim,
   text: string,
   reasons: string[],
 ): number {
   let score = 0;
   const industry = normalizeContentText(company.industry);
   if (industry && text.includes(industry)) {
-    score += 24;
+    score += W_INDUSTRY_EXACT;
     reasons.push(`업종 '${company.industry}' 일치`);
+  } else if (industry.length >= 2 && text.includes(industry.slice(0, 2))) {
+    score += W_INDUSTRY_PARTIAL;
+    reasons.push("업종 키워드 일부 일치");
   }
 
   const fields = supportFieldsForCompany(company);
@@ -74,20 +102,15 @@ function scoreIndustryAndField(
     program.support_field &&
     fields.includes(program.support_field as SupportField)
   ) {
-    score += 16;
+    score += W_FIELD;
     reasons.push(`지원분야 '${program.support_field}' 적합`);
   }
-
-  if (score === 0 && company.industry && text.includes(company.industry.slice(0, 2))) {
-    score += 10;
-    reasons.push("업종 키워드 일부 일치");
-  }
-  return Math.min(score, 40);
+  return score;
 }
 
 function scoreTags(
   company: CompanyProfile,
-  program: GovProgramRow,
+  program: GovProgramSlim,
   text: string,
   reasons: string[],
 ): number {
@@ -106,24 +129,31 @@ function scoreTags(
   if (matched.length === 0) return 0;
 
   reasons.push(`컨디션 태그 ${matched.slice(0, 3).join(", ")} 반영`);
-  return Math.min(30, Math.round((matched.length / tags.length) * 30));
+  return Math.min(
+    W_TAGS_MAX,
+    Math.round((matched.length / tags.length) * W_TAGS_MAX),
+  );
 }
 
-function scoreDeadline(program: GovProgramRow, reasons: string[]): number {
-  if (!program.apply_end) return 0;
-  const daysLeft = daysFromToday(program.apply_end);
-  if (daysLeft < 0) return 0;
-  if (daysLeft <= 7) {
-    reasons.push(daysLeft === 0 ? "오늘 마감" : `마감 D-${daysLeft}`);
-    return 15;
+function scoreRegion(
+  company: CompanyProfile,
+  program: GovProgramSlim,
+  reasons: string[],
+  penaltyReasons: string[],
+): number {
+  if (isNationalProgram(program)) {
+    reasons.push("전국 대상");
+    return W_REGION;
   }
-  if (daysLeft <= 14) {
-    reasons.push(`2주 내 마감`);
-    return 12;
+  const companyRegion = companyRegionOption(company.region);
+  const programRegions = extractProgramRegions(program);
+  if (!companyRegion || programRegions.length === 0) return 0;
+  if (programRegions.includes(companyRegion)) {
+    reasons.push("지역 조건 부합");
+    return W_REGION;
   }
-  if (daysLeft <= 30) return 8;
-  if (daysLeft <= 60) return 5;
-  return 2;
+  penaltyReasons.push("지역 불일치 가능");
+  return P_REGION_MISMATCH;
 }
 
 function companyAgeYears(company: CompanyProfile): number | null {
@@ -154,22 +184,21 @@ function ageRequirementKey(requirement: AgeRequirement): string {
   return `${requirement.operator}:${requirement.limit}`;
 }
 
-function addAgeRequirement(
-  requirements: Map<string, AgeRequirement>,
+function ageRequirementFromText(
   limitText: string,
   operatorText: string,
-) {
+): AgeRequirement | null {
   const limit = Number(limitText);
-  if (!Number.isFinite(limit) || limit < 0) return;
-  const requirement = {
-    limit,
-    operator: ageOperatorFromText(operatorText),
-  };
-  requirements.set(ageRequirementKey(requirement), requirement);
+  if (!Number.isFinite(limit) || limit < 0) return null;
+  return { limit, operator: ageOperatorFromText(operatorText) };
 }
 
-function extractAgeRequirements(text: string): AgeRequirement[] {
-  const requirements = new Map<string, AgeRequirement>();
+/**
+ * 공고 텍스트에서 업력 조건을 그룹 단위로 추출.
+ * 그룹 내부는 AND(범위 "3년 이상 7년 미만"), 그룹 사이는 OR(트랙별 조건).
+ * 하나의 그룹만 만족해도 조건 충족으로 본다 — 멀티트랙 공고 오탈락 방지.
+ */
+function extractAgeRequirementGroups(text: string): AgeRequirement[][] {
   const rangeBeforeContext = new RegExp(
     `${AGE_CONTEXT_PATTERN}${AGE_CONNECTOR_PATTERN}\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}(이상|초과)\\s*(\\d+)\\s*${AGE_YEAR_PATTERN}(미만|이하|이내)`,
     "g",
@@ -187,22 +216,33 @@ function extractAgeRequirements(text: string): AgeRequirement[] {
     "g",
   );
 
-  for (const match of text.matchAll(rangeBeforeContext)) {
-    addAgeRequirement(requirements, match[1], match[2]);
-    addAgeRequirement(requirements, match[3], match[4]);
-  }
-  for (const match of text.matchAll(rangeAfterContext)) {
-    addAgeRequirement(requirements, match[1], match[2]);
-    addAgeRequirement(requirements, match[3], match[4]);
-  }
-  for (const match of text.matchAll(beforeContext)) {
-    addAgeRequirement(requirements, match[1], match[2]);
-  }
-  for (const match of text.matchAll(afterContext)) {
-    addAgeRequirement(requirements, match[1], match[2]);
+  const groups = new Map<string, AgeRequirement[]>();
+  const rangeMemberKeys = new Set<string>();
+
+  for (const pattern of [rangeBeforeContext, rangeAfterContext]) {
+    for (const match of text.matchAll(pattern)) {
+      const lower = ageRequirementFromText(match[1], match[2]);
+      const upper = ageRequirementFromText(match[3], match[4]);
+      if (!lower || !upper) continue;
+      const group = [lower, upper];
+      groups.set(group.map(ageRequirementKey).join("|"), group);
+      rangeMemberKeys.add(ageRequirementKey(lower));
+      rangeMemberKeys.add(ageRequirementKey(upper));
+    }
   }
 
-  return [...requirements.values()];
+  for (const pattern of [beforeContext, afterContext]) {
+    for (const match of text.matchAll(pattern)) {
+      const requirement = ageRequirementFromText(match[1], match[2]);
+      if (!requirement) continue;
+      const key = ageRequirementKey(requirement);
+      // 범위의 절반이 단독 패턴으로 다시 잡힌 경우 — 범위 그룹이 이미 대표한다.
+      if (rangeMemberKeys.has(key)) continue;
+      groups.set(key, [requirement]);
+    }
+  }
+
+  return [...groups.values()];
 }
 
 function meetsAgeRequirement(ageYears: number, requirement: AgeRequirement): boolean {
@@ -216,23 +256,24 @@ function scoreScaleAndAge(
   company: CompanyProfile,
   text: string,
   reasons: string[],
-): ScaleAndAgeScore {
+  penaltyReasons: string[],
+): number {
   let score = 0;
   const ageYears = companyAgeYears(company);
-  const ageRequirements = extractAgeRequirements(text);
-  if (ageRequirements.length > 0 && ageYears !== null) {
-    const ageMatched = ageRequirements.every((requirement) =>
-      meetsAgeRequirement(ageYears, requirement),
+  const ageGroups = extractAgeRequirementGroups(text);
+  if (ageGroups.length > 0 && ageYears !== null) {
+    const ageMatched = ageGroups.some((group) =>
+      group.every((requirement) => meetsAgeRequirement(ageYears, requirement)),
     );
     if (ageMatched) {
-      score += 8;
+      score += W_AGE;
       reasons.push(`업력 ${ageYears}년 조건 부합`);
     } else {
-      reasons.push(`업력 ${ageYears}년 조건 미충족`);
-      return { score: 0, disqualified: true };
+      score += P_AGE_MISMATCH;
+      penaltyReasons.push(`업력 ${ageYears}년 조건 확인 필요`);
     }
   } else if (ageYears !== null && text.includes("초기기업") && ageYears <= 7) {
-    score += 6;
+    score += W_EARLY_STAGE;
     reasons.push("초기기업 조건 부합");
   }
 
@@ -241,7 +282,7 @@ function scoreScaleAndAge(
     const limit = Number(headcountLimit[1]);
     const inclusive = headcountLimit[2] === "이하";
     if (company.headcount < limit || (inclusive && company.headcount <= limit)) {
-      score += 4;
+      score += W_HEADCOUNT;
       reasons.push(`인원 ${company.headcount}명 조건 부합`);
     }
   }
@@ -251,38 +292,33 @@ function scoreScaleAndAge(
     const limit = Number(revenueLimit[1]) * 100_000_000;
     const inclusive = revenueLimit[2] === "이하";
     if (company.revenue < limit || (inclusive && company.revenue <= limit)) {
-      score += 3;
+      score += W_REVENUE;
       reasons.push(`매출 조건 부합`);
     }
   }
 
-  return { score: Math.min(score, 15), disqualified: false };
+  return score;
 }
 
 export function scoreProgram(
   company: CompanyProfile,
-  program: GovProgramRow,
+  program: GovProgramSlim,
 ): ProgramMatch {
   const reasons: string[] = [];
+  // 감점 사유는 앞에 배치해 slice(0, 4)에서 잘리지 않게 한다.
+  const penaltyReasons: string[] = [];
   const text = programText(program);
-  const scaleAndAge = scoreScaleAndAge(company, text, reasons);
-  if (scaleAndAge.disqualified) {
-    return {
-      program,
-      score: 0,
-      reasons: reasons.slice(0, 4),
-    };
-  }
 
   const score =
+    SCORE_BASE +
     scoreIndustryAndField(company, program, text, reasons) +
     scoreTags(company, program, text, reasons) +
-    scoreDeadline(program, reasons) +
-    scaleAndAge.score;
+    scoreRegion(company, program, reasons, penaltyReasons) +
+    scoreScaleAndAge(company, text, reasons, penaltyReasons);
 
   return {
     program,
-    score: Math.min(100, score),
-    reasons: reasons.slice(0, 4),
+    score: Math.max(0, Math.min(100, score)),
+    reasons: [...penaltyReasons, ...reasons].slice(0, 4),
   };
 }

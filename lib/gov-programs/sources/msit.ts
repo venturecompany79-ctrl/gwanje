@@ -2,7 +2,7 @@ import { getDataGoKrApiKey } from "@/lib/gov-programs/config";
 import {
   buildUrl,
   combineText,
-  fetchItems,
+  fetchPagedItems,
   firstString,
   inferSupportField,
   parseDate,
@@ -64,16 +64,18 @@ export const msitAdapter: SourceAdapter = {
     const key = getDataGoKrApiKey();
     if (!key) return [];
 
-    const url = buildUrl(
-      "https://apis.data.go.kr/1721000/MSITPublicNoticeService/getPublicNoticeList",
-      {
-        pageNo: 1,
-        numOfRows: 100,
-        type: "json",
-      },
-      { serviceKey: key },
+    const rows = await fetchPagedItems((pageNo) =>
+      buildUrl(
+        "https://apis.data.go.kr/1721000/MSITPublicNoticeService/getPublicNoticeList",
+        {
+          pageNo,
+          numOfRows: 100,
+          type: "json",
+        },
+        { serviceKey: key },
+      ),
     );
-    return (await fetchItems(url))
+    return rows
       .map((row, index) => normalize(row, index))
       .filter((program): program is NormalizedProgram => program !== null);
   },

@@ -11,6 +11,13 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import { daysFromToday } from "@/lib/datetime";
 import { safeHttpUrl } from "@/lib/gov-programs/types";
 import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
+import { SCORE_HIGH, SCORE_MID } from "@/lib/gov-programs/match";
+import {
+  REGION_OPTIONS,
+  extractProgramRegions,
+  isNationalProgram,
+  type RegionOption,
+} from "@/lib/gov-programs/region";
 import { PROGRAM_SOURCE_LABEL, SUPPORT_FIELD_LABEL } from "@/lib/labels";
 import {
   SUPPORT_FIELDS,
@@ -22,56 +29,14 @@ import {
 } from "@/lib/gov-programs/types";
 
 const INITIAL_VISIBLE = 6;
+const LOAD_MORE_STEP = 24;
 const cache = new Map<string, CompanyProgramMatchesData>();
 
-const REGION_OPTIONS = [
-  "서울",
-  "부산",
-  "대구",
-  "인천",
-  "광주",
-  "대전",
-  "울산",
-  "세종",
-  "경기",
-  "강원",
-  "충북",
-  "충남",
-  "전북",
-  "전남",
-  "경북",
-  "경남",
-  "제주",
-] as const;
-
-type RegionOption = (typeof REGION_OPTIONS)[number];
 type RegionFilter = "all" | "national" | RegionOption;
 type FieldFilter = "all" | SupportField;
 type DueFilter = "all" | "7" | "14" | "30" | "60" | "none";
 type FitFilter = "all" | "high" | "review" | "exclude-low";
 type SortKey = "recommend" | "deadline" | "synced";
-
-const REGION_ALIASES: Record<RegionOption, string[]> = {
-  서울: ["서울", "서울특별시"],
-  부산: ["부산", "부산광역시"],
-  대구: ["대구", "대구광역시"],
-  인천: ["인천", "인천광역시"],
-  광주: ["광주", "광주광역시"],
-  대전: ["대전", "대전광역시"],
-  울산: ["울산", "울산광역시"],
-  세종: ["세종", "세종특별자치시"],
-  경기: ["경기", "경기도"],
-  강원: ["강원", "강원도", "강원특별자치도"],
-  충북: ["충북", "충청북도"],
-  충남: ["충남", "충청남도"],
-  전북: ["전북", "전라북도", "전북특별자치도"],
-  전남: ["전남", "전라남도"],
-  경북: ["경북", "경상북도"],
-  경남: ["경남", "경상남도"],
-  제주: ["제주", "제주도", "제주특별자치도"],
-};
-
-const NATIONAL_REGION_KEYWORDS = ["전국", "지역무관", "전지역", "전국공통"];
 
 const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
   { value: "all", label: "마감기간 전체" },
@@ -112,46 +77,6 @@ function supportLabel(field: string | null): string | null {
     : field;
 }
 
-function compactRegionText(value: string): string {
-  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
-}
-
-function matchesRegionAlias(value: string, aliases: string[]): boolean {
-  const normalized = compactRegionText(value);
-  return aliases.some((alias) => normalized.includes(compactRegionText(alias)));
-}
-
-function hasNationalRegionText(value: string | null | undefined): boolean {
-  if (!value) return false;
-  return NATIONAL_REGION_KEYWORDS.some((keyword) =>
-    compactRegionText(value).includes(compactRegionText(keyword)),
-  );
-}
-
-function extractProgramRegions(
-  program: CompanyProgramMatchesData["matches"][number]["program"],
-): RegionOption[] {
-  const regions = new Set<RegionOption>();
-  const candidates = [program.region, ...program.hashtags];
-  for (const candidate of candidates) {
-    if (!candidate?.trim()) continue;
-    for (const region of REGION_OPTIONS) {
-      if (matchesRegionAlias(candidate, REGION_ALIASES[region])) {
-        regions.add(region);
-      }
-    }
-  }
-  return [...regions];
-}
-
-function isNationalProgram(
-  program: CompanyProgramMatchesData["matches"][number]["program"],
-): boolean {
-  if (hasNationalRegionText(program.region)) return true;
-  if (program.hashtags.some(hasNationalRegionText)) return true;
-  return !program.region?.trim() && extractProgramRegions(program).length === 0;
-}
-
 function regionLabel(
   program: CompanyProgramMatchesData["matches"][number]["program"],
 ): string | null {
@@ -164,8 +89,8 @@ function regionLabel(
 }
 
 function scoreTone(score: number): string {
-  if (score >= 80) return "is-high";
-  if (score >= 50) return "is-mid";
+  if (score >= SCORE_HIGH) return "is-high";
+  if (score >= SCORE_MID) return "is-mid";
   return "is-low";
 }
 
@@ -219,15 +144,15 @@ function matchesDueFilter(
 
 function matchesFitFilter(score: number, fitFilter: FitFilter): boolean {
   if (fitFilter === "all") return true;
-  if (fitFilter === "high") return score >= 80;
-  if (fitFilter === "review") return score >= 50 && score < 80;
-  return score >= 50;
+  if (fitFilter === "high") return score >= SCORE_HIGH;
+  if (fitFilter === "review") return score >= SCORE_MID && score < SCORE_HIGH;
+  return score >= SCORE_MID;
 }
 
 function RecommendSkeleton() {
   return (
     <Panel>
-      <PanelHead title="정부지원사업 추천" count="불러오는 중" />
+      <PanelHead title="정부지원사업" count="불러오는 중" />
       <div className="program-list" aria-busy>
         {Array.from({ length: 3 }, (_, index) => (
           <div className="program-card program-card--skeleton" key={index}>
@@ -244,13 +169,9 @@ function RecommendSkeleton() {
 
 export function RecommendTab({
   companyId,
-  companyName,
-  initialData,
   showToast,
 }: {
   companyId: string;
-  companyName: string;
-  initialData?: CompanyProgramMatchesData | null;
   showToast: (message: string) => void;
 }) {
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
@@ -264,10 +185,6 @@ export function RecommendTab({
   const [state, setState] = useState<LoadState>(() => {
     const cached = cache.get(companyId);
     if (cached) return { status: "ready", data: cached, error: null };
-    if (initialData) {
-      cache.set(companyId, initialData);
-      return { status: "ready", data: initialData, error: null };
-    }
     return { status: "loading", data: null, error: null };
   });
 
@@ -291,13 +208,15 @@ export function RecommendTab({
           demo: json.demo,
           enabledSources: json.enabledSources,
           matches: json.matches,
+          total: json.total,
+          hasMore: json.hasMore,
         };
         cache.set(companyId, data);
         setState({ status: "ready", data, error: null });
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : String(err);
-        showToast(`추천 공고를 불러오지 못했습니다: ${message}`);
+        showToast(`공고를 불러오지 못했습니다: ${message}`);
         setState({ status: "error", data: null, error: message });
       }
     }
@@ -440,11 +359,11 @@ export function RecommendTab({
   if (state.status === "error") {
     return (
       <Panel>
-        <PanelHead title="정부지원사업 추천" />
+        <PanelHead title="정부지원사업" />
         <EmptyState
           bare
           icon={<IconAlert />}
-          title="추천 공고를 불러오지 못했습니다"
+          title="공고를 불러오지 못했습니다"
           description="잠시 후 다시 확인해 주세요."
         />
       </Panel>
@@ -456,11 +375,11 @@ export function RecommendTab({
   return (
     <Panel>
       <PanelHead
-        title="정부지원사업 추천"
+        title="정부지원사업"
         count={
           filterActive
             ? `${filteredMatches.length}/${matches.length}건`
-            : `${matches.length}건`
+            : `전체 ${matches.length}건${state.data.hasMore ? "+" : ""}`
         }
       />
 
@@ -475,8 +394,8 @@ export function RecommendTab({
         <EmptyState
           bare
           icon={<IconTarget />}
-          title="매칭된 지원사업이 없습니다"
-          description={`${companyName}에 맞는 진행 중 공고를 찾지 못했습니다.`}
+          title="진행 중인 공고가 없습니다"
+          description="공고 동기화 후 다시 확인해 주세요."
         />
       ) : (
         <>
@@ -633,10 +552,15 @@ export function RecommendTab({
                 <button
                   type="button"
                   className="program-more"
-                  onClick={() => setVisible(filteredMatches.length)}
+                  onClick={() => setVisible((count) => count + LOAD_MORE_STEP)}
                 >
-                  더 보기
+                  더 보기 ({filteredMatches.length - visible}건 남음)
                 </button>
+              ) : null}
+              {state.data.hasMore ? (
+                <p className="program-pool-note">
+                  공고가 많아 마감이 먼 일부 공고는 표시되지 않을 수 있습니다.
+                </p>
               ) : null}
             </>
           )}

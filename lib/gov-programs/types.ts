@@ -15,8 +15,26 @@ export const SUPPORT_FIELDS = [
 ] as const;
 export type SupportField = (typeof SUPPORT_FIELDS)[number];
 
+/** 지원분야 추론·기업 프로필 분야 도출 공용 키워드 (fetch 코드가 아닌 이곳에 두어 클라이언트 번들에서 http.ts를 배제). */
+export const SUPPORT_KEYWORDS: Record<SupportField, string[]> = {
+  금융: ["금융", "자금", "융자", "보증", "대출", "투자", "바우처"],
+  기술: ["기술", "r&d", "연구", "개발", "스마트공장", "디지털", "ai", "ict"],
+  인력: ["인력", "고용", "채용", "인건비", "교육", "훈련"],
+  수출: ["수출", "해외", "글로벌", "무역", "전시회"],
+  내수: ["내수", "판로", "마케팅", "브랜드", "유통"],
+  창업: ["창업", "스타트업", "초기기업", "예비창업"],
+  경영: ["경영", "컨설팅", "진단", "멘토링", "인증", "세액"],
+  기타: ["기타"],
+};
+
 export type GovProgramRow = Tables<"gov_program">;
 export type GovProgramInsert = Database["public"]["Tables"]["gov_program"]["Insert"];
+
+/** 목록/추천 전송용 경량 행 — raw(jsonb)·search_vector 제외. */
+export type GovProgramSlim = Omit<GovProgramRow, "raw" | "search_vector">;
+
+export const GOV_PROGRAM_SLIM_COLUMNS =
+  "id, source, external_id, content_key, title, support_field, org_name, target_text, hashtags, region, apply_start, apply_end, detail_url, synced_at, created_at";
 
 export interface NormalizedProgram {
   source: SourceCode;
