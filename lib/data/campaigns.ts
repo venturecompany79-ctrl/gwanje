@@ -10,7 +10,11 @@ import {
   type SegmentCompany,
 } from "@/lib/segments";
 import { todayKstDate } from "@/lib/datetime";
-import type { CampaignChannel, CampaignStatus } from "@/lib/database.types";
+import type {
+  CampaignChannel,
+  CampaignStatus,
+  Database,
+} from "@/lib/database.types";
 
 export interface CampaignListRow {
   id: string;
@@ -29,6 +33,8 @@ export interface CampaignListRow {
 export interface CampaignsData {
   /** true면 Supabase 미연결 — 데모 데이터 표시 중 */
   demo: boolean;
+  /** true면 목록 제한을 초과한 캠페인이 있어 일부만 반환됨 */
+  hasMore: boolean;
   campaigns: CampaignListRow[];
 }
 
@@ -66,8 +72,10 @@ export interface SegmentCompaniesData {
   companies: SegmentCompany[];
 }
 
-const CAMPAIGN_LIST_LIMIT = 200;
-const CAMPAIGN_RECIPIENT_LIMIT = 5_000;
+export const CAMPAIGN_LIST_LIMIT = 200;
+
+type CampaignListStatsRpcRow =
+  Database["public"]["Functions"]["get_campaign_list_stats"]["Returns"][number];
 
 /** 응답 먼저(응답 시각순) → 도달 → 미도달 순으로 정렬 */
 function sortRecipients(recipients: RecipientRow[]): RecipientRow[] {
@@ -89,41 +97,41 @@ export async function getCampaignsData(): Promise<CampaignsData> {
     .from("campaign")
     .select("id, title, status, segment, sent_at, scheduled_at")
     .order("created_at", { ascending: false })
-    .limit(CAMPAIGN_LIST_LIMIT);
+    .order("id", { ascending: false })
+    .limit(CAMPAIGN_LIST_LIMIT + 1);
 
   if (campaigns.error) {
     throw new Error(`캠페인 목록을 불러오지 못했습니다: ${campaigns.error.message}`);
   }
 
-  const campaignIds = (campaigns.data ?? []).map((campaign) => campaign.id);
-  let recipientRows: { campaign_id: string; responded: boolean }[] = [];
+  const visibleCampaigns = (campaigns.data ?? []).slice(
+    0,
+    CAMPAIGN_LIST_LIMIT,
+  );
+  const campaignIds = visibleCampaigns.map((campaign) => campaign.id);
+  let campaignStatsRows: CampaignListStatsRpcRow[] = [];
   if (campaignIds.length > 0) {
-    const recipients = await supabase
-      .from("campaign_recipient")
-      .select("campaign_id, responded")
-      .in("campaign_id", campaignIds)
-      .limit(CAMPAIGN_RECIPIENT_LIMIT);
-    if (recipients.error) {
+    const stats = await supabase.rpc("get_campaign_list_stats", {
+      p_campaign_ids: campaignIds,
+    });
+    if (stats.error) {
       throw new Error(
-        `캠페인 목록을 불러오지 못했습니다: ${recipients.error.message}`,
+        `캠페인 목록을 불러오지 못했습니다: ${stats.error.message}`,
       );
     }
-    recipientRows = recipients.data ?? [];
+    campaignStatsRows = stats.data ?? [];
   }
 
-  const total = new Map<string, number>();
-  const responded = new Map<string, number>();
-  for (const r of recipientRows) {
-    total.set(r.campaign_id, (total.get(r.campaign_id) ?? 0) + 1);
-    if (r.responded) {
-      responded.set(r.campaign_id, (responded.get(r.campaign_id) ?? 0) + 1);
-    }
-  }
+  const statsByCampaign = new Map(
+    campaignStatsRows.map((stats) => [stats.campaign_id, stats]),
+  );
 
   return {
     demo: false,
-    campaigns: (campaigns.data ?? []).map((c) => {
-      const count = total.get(c.id) ?? null;
+    hasMore: (campaigns.data?.length ?? 0) > CAMPAIGN_LIST_LIMIT,
+    campaigns: visibleCampaigns.map((c) => {
+      const stats = statsByCampaign.get(c.id);
+      const count = stats?.recipient_count ?? null;
       return {
         id: c.id,
         title: c.title,
@@ -134,7 +142,7 @@ export async function getCampaignsData(): Promise<CampaignsData> {
         scheduledAt: c.scheduled_at,
         responseRate:
           c.status === "sent" && count
-            ? Math.round(((responded.get(c.id) ?? 0) / count) * 100)
+            ? Math.round(((stats?.responded_count ?? 0) / count) * 100)
             : null,
       };
     }),

@@ -541,6 +541,7 @@ const CAMPAIGN_IDS = {
 export function DEMO_CAMPAIGNS(): CampaignsData {
   return {
     demo: true,
+    hasMore: false,
     campaigns: [
       {
         id: CAMPAIGN_IDS.renewal,
@@ -686,6 +687,7 @@ export function DEMO_NOTIFICATIONS(): RawNotificationsData {
 export function DEMO_COMPANIES(): CompaniesData {
   return {
     demo: true,
+    hasMore: false,
     companies: [
       demoCompany(1, "(주)테크노바", "IT·소프트웨어", "2019-03-12", 4_200_000_000, 28, ["성장기"], ["벤처기업확인"], 2, 2, 0, 120),
       demoCompany(2, "한빛정밀", "정밀기계 제조", "2012-07-01", 18_500_000_000, 64, ["성숙기"], ["ISO 9001"], 5, 3, 0, 300),

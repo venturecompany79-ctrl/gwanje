@@ -1766,6 +1766,17 @@ export type Database = {
       auth_is_owner: { Args: never; Returns: boolean }
       auth_member_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: string }
+      bulk_import_companies: {
+        Args: { p_rows: Json }
+        Returns: {
+          company_id: string | null
+          error: string | null
+          ok: boolean
+          row_id: string
+          row_index: number
+          warning: string | null
+        }[]
+      }
       cleanup_old_todo_notes: { Args: never; Returns: number }
       company_share_record_failure: {
         Args: { p_share_id: string }
@@ -1775,6 +1786,39 @@ export type Database = {
         }[]
       }
       generate_due_notifications: { Args: never; Returns: number }
+      get_campaign_list_stats: {
+        Args: { p_campaign_ids: string[] }
+        Returns: {
+          campaign_id: string
+          recipient_count: number
+          responded_count: number
+        }[]
+      }
+      get_company_import_duplicate_candidates: {
+        Args: {
+          p_biz_no_digits: string[]
+          p_normalized_names: string[]
+        }
+        Returns: {
+          biz_no: string | null
+          name: string
+        }[]
+      }
+      get_company_list_stats: {
+        Args: {
+          p_company_ids: string[]
+          p_today: string
+          p_upcoming_window_days?: number
+        }
+        Returns: {
+          company_id: string
+          credential_types: string[]
+          expired_count: number
+          nearest_days_left: number | null
+          upcoming_count: number
+          upcoming_items: Json
+        }[]
+      }
       gov_program_to_search_vector: {
         Args: {
           hashtags: string[]

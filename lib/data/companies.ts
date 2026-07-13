@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANIES } from "@/lib/demo-data";
 import { daysFromToday, todayKstDate } from "@/lib/datetime";
 import type { CompanyStatus } from "@/lib/labels";
+import type { Database, Json } from "@/lib/database.types";
 
 export interface CompanyListRow {
   id: string;
@@ -37,12 +38,27 @@ export interface CompanyListRow {
 export interface CompaniesData {
   /** true면 Supabase 미연결 — 데모 데이터 표시 중 */
   demo: boolean;
+  /** true면 목록 제한을 초과한 기업이 있어 일부만 반환됨 */
+  hasMore: boolean;
   companies: CompanyListRow[];
 }
 
-const COMPANY_LIST_LIMIT = 500;
-const COMPANY_DETAIL_LIMIT = 2_000;
+export const COMPANY_LIST_LIMIT = 500;
 const UPCOMING_DEADLINE_WINDOW_DAYS = 365;
+
+type CompanyListStatsRpcRow =
+  Database["public"]["Functions"]["get_company_list_stats"]["Returns"][number];
+
+function parseUpcomingItems(value: Json): CompanyListRow["upcomingItems"] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!item || Array.isArray(item) || typeof item !== "object") return [];
+    const { title, daysLeft } = item;
+    if (typeof title !== "string" || typeof daysLeft !== "number") return [];
+    return [{ title, daysLeft }];
+  });
+}
 
 export async function getCompaniesData(): Promise<CompaniesData> {
   const supabase = await createClient();
@@ -55,104 +71,61 @@ export async function getCompaniesData(): Promise<CompaniesData> {
       "id, name, industry, founded_date, revenue, headcount, condition_tags, created_at, status, contract_end_date, ended_at, ended_reason",
     )
     .order("name")
-    .limit(COMPANY_LIST_LIMIT);
+    .order("id")
+    .limit(COMPANY_LIST_LIMIT + 1);
 
   if (companies.error) {
     throw new Error(`기업 목록을 불러오지 못했습니다: ${companies.error.message}`);
   }
 
-  const companyIds = (companies.data ?? []).map((company) => company.id);
-  let credentialRows: { company_id: string; type: string }[] = [];
-  let upcomingDeadlineRows: {
-    company_id: string | null;
-    days_left: number | null;
-    title: string | null;
-  }[] = [];
-  let expiredCredentialRows: { company_id: string | null }[] = [];
+  const visibleCompanies = (companies.data ?? []).slice(0, COMPANY_LIST_LIMIT);
+  const companyIds = visibleCompanies.map((company) => company.id);
+  let companyStatsRows: CompanyListStatsRpcRow[] = [];
 
   if (companyIds.length > 0) {
-    const [credentials, upcomingDeadlines, expiredCredentials] = await Promise.all([
-      supabase
-        .from("credential")
-        .select("company_id, type")
-        .in("company_id", companyIds)
-        .limit(COMPANY_DETAIL_LIMIT),
-      supabase
-        .from("deadline_item")
-        .select("company_id, days_left, title")
-        .gte("due_date", today)
-        .gte("days_left", 0)
-        .lte("days_left", UPCOMING_DEADLINE_WINDOW_DAYS)
-        .in("company_id", companyIds)
-        .order("due_date", { ascending: true })
-        .limit(COMPANY_DETAIL_LIMIT),
-      supabase
-        .from("deadline_item")
-        .select("company_id")
-        .eq("source", "credential")
-        .lt("due_date", today)
-        .in("company_id", companyIds)
-        .limit(COMPANY_DETAIL_LIMIT),
-    ]);
-
-    const firstError =
-      credentials.error ?? upcomingDeadlines.error ?? expiredCredentials.error;
-    if (firstError) {
-      throw new Error(`기업 목록을 불러오지 못했습니다: ${firstError.message}`);
+    const stats = await supabase.rpc("get_company_list_stats", {
+      p_company_ids: companyIds,
+      p_today: today,
+      p_upcoming_window_days: UPCOMING_DEADLINE_WINDOW_DAYS,
+    });
+    if (stats.error) {
+      throw new Error(`기업 목록을 불러오지 못했습니다: ${stats.error.message}`);
     }
-
-    credentialRows = credentials.data ?? [];
-    upcomingDeadlineRows = upcomingDeadlines.data ?? [];
-    expiredCredentialRows = expiredCredentials.data ?? [];
+    companyStatsRows = stats.data ?? [];
   }
 
-  const credsByCompany = new Map<string, string[]>();
-  for (const cred of credentialRows) {
-    const list = credsByCompany.get(cred.company_id) ?? [];
-    list.push(cred.type);
-    credsByCompany.set(cred.company_id, list);
-  }
-
-  const upcomingItems = new Map<string, { title: string; daysLeft: number }[]>();
-  const expired = new Map<string, number>();
-  for (const item of upcomingDeadlineRows) {
-    if (!item.company_id || item.days_left === null) continue;
-    const list = upcomingItems.get(item.company_id) ?? [];
-    list.push({ title: item.title ?? "항목", daysLeft: item.days_left });
-    upcomingItems.set(item.company_id, list);
-  }
-  for (const item of expiredCredentialRows) {
-    if (!item.company_id) continue;
-    expired.set(item.company_id, (expired.get(item.company_id) ?? 0) + 1);
-  }
-  for (const list of upcomingItems.values()) {
-    list.sort((a, b) => a.daysLeft - b.daysLeft);
-  }
+  const statsByCompany = new Map(
+    companyStatsRows.map((stats) => [stats.company_id, stats]),
+  );
 
   return {
     demo: false,
-    companies: (companies.data ?? []).map((co) => ({
-      id: co.id,
-      name: co.name,
-      industry: co.industry,
-      foundedDate: co.founded_date,
-      revenue: co.revenue,
-      headcount: co.headcount,
-      conditionTags: co.condition_tags,
-      createdAt: co.created_at,
-      status: (co.status as CompanyStatus) ?? "active",
-      contractEndDate: co.contract_end_date,
-      contractDaysLeft:
-        co.status === "active" && co.contract_end_date
-          ? daysFromToday(co.contract_end_date)
-          : null,
-      endedAt: co.ended_at,
-      endedReason: co.ended_reason,
-      credentialTypes: credsByCompany.get(co.id) ?? [],
-      nearestDaysLeft: upcomingItems.get(co.id)?.[0]?.daysLeft ?? null,
-      upcomingCount: upcomingItems.get(co.id)?.length ?? 0,
-      upcomingItems: upcomingItems.get(co.id) ?? [],
-      expiredCount: expired.get(co.id) ?? 0,
-    })),
+    hasMore: (companies.data?.length ?? 0) > COMPANY_LIST_LIMIT,
+    companies: visibleCompanies.map((co) => {
+      const stats = statsByCompany.get(co.id);
+      return {
+        id: co.id,
+        name: co.name,
+        industry: co.industry,
+        foundedDate: co.founded_date,
+        revenue: co.revenue,
+        headcount: co.headcount,
+        conditionTags: co.condition_tags,
+        createdAt: co.created_at,
+        status: (co.status as CompanyStatus) ?? "active",
+        contractEndDate: co.contract_end_date,
+        contractDaysLeft:
+          co.status === "active" && co.contract_end_date
+            ? daysFromToday(co.contract_end_date)
+            : null,
+        endedAt: co.ended_at,
+        endedReason: co.ended_reason,
+        credentialTypes: stats?.credential_types ?? [],
+        nearestDaysLeft: stats?.nearest_days_left ?? null,
+        upcomingCount: stats?.upcoming_count ?? 0,
+        upcomingItems: stats ? parseUpcomingItems(stats.upcoming_items) : [],
+        expiredCount: stats?.expired_count ?? 0,
+      };
+    }),
   };
 }

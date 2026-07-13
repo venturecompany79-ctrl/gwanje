@@ -18,15 +18,14 @@ export default async function BoardPage({
 }) {
   const { tab, journal } = await searchParams;
   const activeTab = resolveTab(tab);
-  const [data, todoData] = await Promise.all([
-    getBoardData(),
-    getTodoBoardData(journal),
-  ]);
-  const demo = data.demo || todoData.demo;
+  const view =
+    activeTab === "tasks"
+      ? ({ activeTab, data: await getBoardData() } as const)
+      : ({ activeTab, data: await getTodoBoardData(journal) } as const);
 
   return (
     <>
-      {demo ? (
+      {view.data.demo ? (
         <div className="demo-banner">
           <IconAlert />
           데모 데이터 표시 중 — Supabase 환경변수(.env.local)를 설정하면 실제
@@ -34,11 +33,7 @@ export default async function BoardPage({
         </div>
       ) : null}
 
-      <BoardView
-        initialActiveTab={activeTab}
-        data={data}
-        todoData={todoData}
-      />
+      <BoardView {...view} journal={journal} />
     </>
   );
 }

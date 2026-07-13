@@ -8,31 +8,57 @@ import type { CompanyDetailData, CompanyProfile } from "@/lib/data/company-detai
 import type { CompanyProgramMatchesData } from "@/lib/data/company-programs";
 import type { CompanyShareSettings } from "@/lib/data/company-share";
 import { ShareSettingsButton } from "./ShareSettingsSlideOver";
-import { CertsTab } from "./CertsTab";
-import { IpTab } from "./IpTab";
-import { TasksTab } from "./TasksTab";
-import { ScheduleTab, FilesTab } from "./ScheduleFilesTabs";
 import { EditCompanyButton } from "./EditCompanySlideOver";
 import {
   EndCompanyButton,
   EndedCompanyBanner,
 } from "./CompanyLifecycleControls";
 import { OverviewTab } from "./OverviewTab";
-import { RecommendTab } from "./RecommendTab";
 import { Badge } from "@/components/ui/Badge";
+
+function TabLoading({ title }: { title: string }) {
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{title}</h2>
+      </div>
+      <div className="panel-loading">불러오는 중...</div>
+    </div>
+  );
+}
+
+const CertsTab = dynamic(
+  () => import("./CertsTab").then((mod) => mod.CertsTab),
+  { loading: () => <TabLoading title="자격·인증" /> },
+);
+
+const IpTab = dynamic(() => import("./IpTab").then((mod) => mod.IpTab), {
+  loading: () => <TabLoading title="특허·상표" />,
+});
+
+const TasksTab = dynamic(
+  () => import("./TasksTab").then((mod) => mod.TasksTab),
+  { loading: () => <TabLoading title="Task" /> },
+);
+
+const ScheduleTab = dynamic(
+  () => import("./ScheduleFilesTabs").then((mod) => mod.ScheduleTab),
+  { loading: () => <TabLoading title="일정" /> },
+);
+
+const FilesTab = dynamic(
+  () => import("./ScheduleFilesTabs").then((mod) => mod.FilesTab),
+  { loading: () => <TabLoading title="자료" /> },
+);
 
 const ReportsTab = dynamic(
   () => import("./ReportsTab").then((mod) => mod.ReportsTab),
-  {
-    loading: () => (
-      <div className="panel">
-        <div className="panel-head">
-          <h2>보고서</h2>
-        </div>
-        <div className="panel-loading">불러오는 중...</div>
-      </div>
-    ),
-  },
+  { loading: () => <TabLoading title="보고서" /> },
+);
+
+const RecommendTab = dynamic(
+  () => import("./RecommendTab").then((mod) => mod.RecommendTab),
+  { loading: () => <TabLoading title="정부지원사업 추천" /> },
 );
 
 type TabKey =

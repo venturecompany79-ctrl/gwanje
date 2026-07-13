@@ -5,7 +5,7 @@
 //           자료 Storage 정책, RLS 멀티테넌트 격리(핵심 보안 속성).
 // 실행: npm run verify:migrations   (@electric-sql/pglite는 devDependency)
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 const USER_A = "11111111-1111-1111-1111-111111111111";
 const USER_B = "22222222-2222-2222-2222-222222222222";
@@ -99,38 +99,16 @@ await step(
    alter table storage.objects enable row level security;`,
 );
 // ── 2. 초기 스키마 + 신규 마이그레이션 ───────────────────────────────────
-// 0004는 가드(do/exception) 블록 덕분에 pg_cron이 없어도 실패하지 않아야 한다 —
-// PGlite에는 pg_cron이 없으므로, 이 실행이 곧 "확장 미설치 환경 복원력" 검증이다.
-await step("migration: 20260612000000_initial_schema", read("migrations/20260612000000_initial_schema.sql"));
-await step("migration: 20260613000001_deadline_item_kst", read("migrations/20260613000001_deadline_item_kst.sql"));
-await step("migration: 20260613000002_profile_rls_hardening", read("migrations/20260613000002_profile_rls_hardening.sql"));
-await step("migration: 20260613000003_task_renewal_unique", read("migrations/20260613000003_task_renewal_unique.sql"));
-await step("migration: 20260613000004_due_notifications_cron (pg_cron 미설치 환경 — 가드로 성공해야 함)", read("migrations/20260613000004_due_notifications_cron.sql"));
-await step("migration: 20260615000000_company_document_storage", read("migrations/20260615000000_company_document_storage.sql"));
-await step("migration: 20260615000001_company_document_mime_types", read("migrations/20260615000001_company_document_mime_types.sql"));
-await step("migration: 20260616000000_board_todos_task_files", read("migrations/20260616000000_board_todos_task_files.sql"));
-await step("migration: 20260617000000_todo_note_30_day_window", read("migrations/20260617000000_todo_note_30_day_window.sql"));
-await step("migration: 20260619000000_deadline_item_renewal_merge", read("migrations/20260619000000_deadline_item_renewal_merge.sql"));
-await step("migration: 20260619010000_normalize_growth_stage_tags", read("migrations/20260619010000_normalize_growth_stage_tags.sql"));
-await step("migration: 20260628000000_google_drive_sync", read("migrations/20260628000000_google_drive_sync.sql"));
-await step("migration: 20260629000000_billing_subscription", read("migrations/20260629000000_billing_subscription.sql"));
-await step("migration: 20260630000000_team_permissions", read("migrations/20260630000000_team_permissions.sql"));
-await step("migration: 20260701000000_gov_program_matching", read("migrations/20260701000000_gov_program_matching.sql"));
-await step("migration: 20260702000000_company_region_business_condition", read("migrations/20260702000000_company_region_business_condition.sql"));
-await step("migration: 20260703000000_document_credential_link", read("migrations/20260703000000_document_credential_link.sql"));
-await step("migration: 20260704000000_ip_rights", read("migrations/20260704000000_ip_rights.sql"));
-await step("migration: 20260705000000_company_lifecycle", read("migrations/20260705000000_company_lifecycle.sql"));
-await step("migration: 20260706000000_mobile_app_push", read("migrations/20260706000000_mobile_app_push.sql"));
-await step("migration: 20260707000000_security_mobile_review_fixes", read("migrations/20260707000000_security_mobile_review_fixes.sql"));
-await step("migration: 20260708000000_document_mime_hardening", read("migrations/20260708000000_document_mime_hardening.sql"));
-await step("migration: 20260709000000_deadline_item_task_due_guard", read("migrations/20260709000000_deadline_item_task_due_guard.sql"));
-await step("migration: 20260710000000_document_version_unique", read("migrations/20260710000000_document_version_unique.sql"));
-await step("migration: 20260711000000_company_tenant_consistency", read("migrations/20260711000000_company_tenant_consistency.sql"));
-await step("migration: 20260712000000_fk_indexes", read("migrations/20260712000000_fk_indexes.sql"));
-await step("migration: 20260713000000_todo_note_tag_unify", read("migrations/20260713000000_todo_note_tag_unify.sql"));
-await step("migration: 20260714000000_tag_backfill_perf_indexes", read("migrations/20260714000000_tag_backfill_perf_indexes.sql"));
-await step("migration: 20260715000000_company_share", read("migrations/20260715000000_company_share.sql"));
-await step("migration: 20260716000000_meeting_reports", read("migrations/20260716000000_meeting_reports.sql"));
+// due_notifications migration의 가드 덕분에 pg_cron이 없는 PGlite에서도 전체가
+// 성공해야 한다. 파일을 자동 발견해 새 migration이 검증 목록에서 빠지지 않게 한다.
+const migrationFiles = readdirSync(
+  new URL("../supabase/migrations/", import.meta.url),
+)
+  .filter((file) => file.endsWith(".sql"))
+  .sort();
+for (const file of migrationFiles) {
+  await step(`migration: ${file.slice(0, -4)}`, read(`migrations/${file}`));
+}
 
 const companyDocumentMime = await q(
   "company-documents octet-stream 허용 여부",
@@ -526,6 +504,165 @@ try {
 assert((isolation[0]?.leaked ?? 1) === 0, "사용자 A 세션에서 tenant B의 기업이 보이지 않음(RLS 격리)");
 assert((isolation[0]?.visible ?? 0) >= 6, "사용자 A는 자기 tenant 기업은 정상 조회");
 
+// ── 8-1. 목록 집계 + 기업 대량 가져오기 RPC ─────────────────────────────
+let bulkImportRows = [];
+let bulkImportStored = [];
+let importDuplicateCandidates = [];
+let companyListStats = [];
+let companyListCappedStats = [];
+let campaignListStats = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+
+  const bulk = await db.query(
+    `select *
+     from bulk_import_companies(
+       jsonb_build_array(
+         jsonb_build_object(
+           'row_id', 'verify-ok',
+           'name', 'RPC 검증 정상 기업',
+           'biz_no', '123-45-67890',
+           'condition_tags', jsonb_build_array('성장기'),
+           'credentials', jsonb_build_array(
+             jsonb_build_object(
+               'type', 'RPC 검증 자격',
+               'expires_date', (current_date + 10)::text
+             )
+           )
+         ),
+         jsonb_build_object(
+           'row_id', 'verify-company-fail',
+           'name', null,
+           'credentials', '[]'::jsonb
+         ),
+         jsonb_build_object(
+           'row_id', 'verify-credential-warning',
+           'name', 'RPC 검증 자격 경고 기업',
+           'credentials', jsonb_build_array(
+             jsonb_build_object('type', null)
+           )
+         )
+       )
+     )
+     order by row_index`,
+  );
+  bulkImportRows = bulk.rows;
+
+  const createdIds = bulkImportRows
+    .map((row) => row.company_id)
+    .filter(Boolean)
+    .map((id) => `'${id}'::uuid`)
+    .join(", ");
+  const stored = await db.query(
+    `select
+       (select count(*)::int from company where id = any(array[${createdIds}])) as companies,
+       (select count(*)::int from credential where company_id = any(array[${createdIds}])) as credentials`,
+  );
+  bulkImportStored = stored.rows;
+
+  const duplicates = await db.query(
+    `select *
+     from get_company_import_duplicate_candidates(
+       array['b사전용기업'],
+       array['1234567890']
+     )`,
+  );
+  importDuplicateCandidates = duplicates.rows;
+
+  const stats = await db.query(
+    `select *
+     from get_company_list_stats(
+       array['${bulkImportRows[0]?.company_id}'::uuid],
+       current_date,
+       365
+     )`,
+  );
+  companyListStats = stats.rows;
+
+  await db.exec(
+    `insert into schedule (tenant_id, company_id, title, date)
+     select
+       auth_tenant_id(),
+       '${bulkImportRows[0]?.company_id}',
+       'RPC 상세 제한 ' || offset_no,
+       current_date + offset_no
+     from generate_series(1, 12) as offsets(offset_no)`,
+  );
+  const cappedStats = await db.query(
+    `select *
+     from get_company_list_stats(
+       array['${bulkImportRows[0]?.company_id}'::uuid],
+       current_date,
+       365
+     )`,
+  );
+  companyListCappedStats = cappedStats.rows;
+
+  const campaign = await db.query(
+    `insert into campaign (tenant_id, title, status)
+     values (auth_tenant_id(), 'RPC 목록 집계 검증', 'sent')
+     returning id`,
+  );
+  await db.exec(
+    `insert into campaign_recipient (
+       tenant_id, campaign_id, company_id, delivered, responded
+     ) values
+       (auth_tenant_id(), '${campaign.rows[0]?.id}', '${bulkImportRows[0]?.company_id}', true, true),
+       (auth_tenant_id(), '${campaign.rows[0]?.id}', '${bulkImportRows[2]?.company_id}', true, false)`,
+  );
+  const campaignStats = await db.query(
+    `select *
+     from get_campaign_list_stats(array['${campaign.rows[0]?.id}'::uuid])`,
+  );
+  campaignListStats = campaignStats.rows;
+
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ 최적화 RPC 행동 검증 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert(
+  bulkImportRows.length === 3 &&
+    bulkImportRows[0]?.ok === true &&
+    bulkImportRows[1]?.ok === false &&
+    bulkImportRows[2]?.ok === true,
+  "대량 가져오기는 행별 성공/실패를 한 호출에서 반환",
+);
+assert(
+  typeof bulkImportRows[2]?.warning === "string" &&
+    bulkImportRows[2].warning.startsWith("기업은 저장됐지만"),
+  "자격 저장 실패는 기업을 유지하고 warning으로 반환",
+);
+assert(
+  bulkImportStored[0]?.companies === 2 && bulkImportStored[0]?.credentials === 1,
+  "대량 가져오기 부분 성공 결과와 실제 저장 건수가 일치",
+);
+assert(
+  importDuplicateCandidates.length === 1 &&
+    importDuplicateCandidates[0]?.name === "RPC 검증 정상 기업",
+  "가져오기 중복 후보 RPC는 입력 관련 현재 tenant 기업만 반환",
+);
+assert(
+  companyListStats.length === 1 &&
+    companyListStats[0]?.credential_types?.includes("RPC 검증 자격") &&
+    Number(companyListStats[0]?.upcoming_count) === 1,
+  "기업 목록 집계 RPC가 자격과 다가오는 항목을 반환",
+);
+assert(
+  Number(companyListCappedStats[0]?.upcoming_count) === 13 &&
+    companyListCappedStats[0]?.upcoming_items?.length === 10,
+  "기업 목록 집계 RPC는 전체 건수를 유지하고 상세 JSON을 10건으로 제한",
+);
+assert(
+  campaignListStats.length === 1 &&
+    Number(campaignListStats[0]?.recipient_count) === 2 &&
+    Number(campaignListStats[0]?.responded_count) === 1,
+  "캠페인 목록 집계 RPC가 수신자와 응답 건수를 반환",
+);
+
 // ── 9. 팀 권한 + 업무일지 개인/owner 조회 ───────────────────────────────
 await step(
   "테스트: tenant A 팀원 C + owner/팀원 업무일지 추가",
@@ -563,6 +700,23 @@ try {
 }
 assert((memberTodo[0]?.own_notes ?? 0) >= 1, "팀원은 본인 업무일지를 조회할 수 있음");
 assert((memberTodo[0]?.owner_notes ?? 1) === 0, "팀원은 owner 업무일지를 조회할 수 없음");
+
+let bulkImportDenied = false;
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_C}'`);
+  await db.query(
+    `select * from bulk_import_companies(
+       jsonb_build_array(jsonb_build_object('row_id', 'denied', 'name', '권한 없는 등록'))
+     )`,
+  );
+  await db.exec("rollback");
+} catch (e) {
+  bulkImportDenied = e.code === "42501" || /권한/.test(e.message);
+  try { await db.exec("rollback"); } catch {}
+}
+assert(bulkImportDenied, "companies.write 권한이 없는 팀원은 대량 가져오기 RPC를 실행할 수 없음");
 
 let ownerTodo = [];
 try {

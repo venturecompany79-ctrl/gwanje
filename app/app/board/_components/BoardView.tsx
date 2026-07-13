@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Toast, useToast } from "@/components/ui/Toast";
 import {
   IconKanban,
@@ -60,54 +60,49 @@ function TaskBoardFallback() {
   );
 }
 
-export function BoardView({
-  initialActiveTab,
-  data,
-  todoData,
-}: {
-  initialActiveTab: BoardTab;
-  data: BoardData;
-  todoData: TodoBoardData;
-}) {
+type BoardViewProps =
+  | {
+      activeTab: "todos";
+      data: TodoBoardData;
+      journal?: string;
+    }
+  | {
+      activeTab: "tasks";
+      data: BoardData;
+      journal?: string;
+    };
+
+export function BoardView(props: BoardViewProps) {
   const { toast, showToast } = useToast();
-  const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [todoAddRequest, setTodoAddRequest] = useState(0);
   const [taskAddRequest, setTaskAddRequest] = useState(0);
+  const activeTab = props.activeTab;
+  const todoData = activeTab === "todos" ? props.data : null;
+  const taskData = activeTab === "tasks" ? props.data : null;
 
-  useEffect(() => {
+  function preloadTaskBoard() {
     void import("./TaskBoard");
-  }, []);
-
-  useEffect(() => {
-    function handlePopState() {
-      const params = new URLSearchParams(window.location.search);
-      setActiveTab(params.get("tab") === "tasks" ? "tasks" : "todos");
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  function selectTab(tab: BoardTab) {
-    if (tab === activeTab) return;
-    setActiveTab(tab);
-    const href = tab === "tasks" ? "/app/board?tab=tasks" : "/app/board";
-    window.history.pushState(null, "", href);
   }
 
-  const todayTodoCount = useMemo(
-    () =>
-      todoData?.notes.filter((note) => note.noteDate === todoData.today)
-        .length ?? 0,
-    [todoData],
-  );
+  const selectedJournal =
+    props.journal && props.journal !== "me" ? props.journal : null;
+  const journalQuery = selectedJournal
+    ? `&journal=${encodeURIComponent(selectedJournal)}`
+    : "";
+  const todosHref = selectedJournal
+    ? `/app/board?journal=${encodeURIComponent(selectedJournal)}`
+    : "/app/board";
+  const tasksHref = `/app/board?tab=tasks${journalQuery}`;
+  const todayTodoCount =
+    todoData?.notes.filter((note) => note.noteDate === todoData.today).length ??
+    0;
 
   const pageSub =
     activeTab === "todos"
       ? `${todoData?.selectedLabel ?? "업무일지"} · 오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${todoData?.notes.length ?? 0}건`
-      : data?.tasks.length === 0
+      : taskData?.tasks.length === 0
         ? "첫 Task를 등록해 시작하세요"
-        : `전체 ${data?.tasks.length ?? 0}건`;
+        : `전체 ${taskData?.tasks.length ?? 0}건`;
 
   return (
     <>
@@ -126,7 +121,7 @@ export function BoardView({
             >
               <IconPlus /> 노트 추가
             </Button>
-          ) : activeTab === "tasks" && data?.canWriteTasks ? (
+          ) : activeTab === "tasks" && taskData?.canWriteTasks ? (
             <Button
               variant="cta"
               size="sm"
@@ -139,59 +134,42 @@ export function BoardView({
       </div>
 
       <div className="board-tab-row" role="tablist" aria-label="보드 종류">
-        <a
-          href="/app/board"
+        <Link
+          href={todosHref}
+          prefetch={false}
           className={`pill-tab${activeTab === "todos" ? " is-active" : ""}`}
           role="tab"
           aria-selected={activeTab === "todos"}
-          onClick={(e) => {
-            e.preventDefault();
-            selectTab("todos");
-          }}
         >
           <IconList /> 업무일지
-        </a>
-        <a
-          href="/app/board?tab=tasks"
+        </Link>
+        <Link
+          href={tasksHref}
+          prefetch={false}
           className={`pill-tab${activeTab === "tasks" ? " is-active" : ""}`}
           role="tab"
           aria-selected={activeTab === "tasks"}
-          onClick={(e) => {
-            e.preventDefault();
-            selectTab("tasks");
-          }}
+          onMouseEnter={preloadTaskBoard}
+          onFocus={preloadTaskBoard}
+          onTouchStart={preloadTaskBoard}
         >
           <IconKanban /> Task 보드
-        </a>
+        </Link>
       </div>
 
-      {activeTab === "todos" ? (
-        todoData ? (
-          <TodoBoard
-            data={todoData}
-            addRequest={todoAddRequest}
-            showToast={showToast}
-          />
-        ) : (
-          <EmptyState
-            icon={<IconList />}
-            title="To-dos를 불러오지 못했습니다"
-            description="잠시 후 다시 시도해주세요."
-          />
-        )
-      ) : data ? (
+      {activeTab === "todos" && todoData ? (
+        <TodoBoard
+          data={todoData}
+          addRequest={todoAddRequest}
+          showToast={showToast}
+        />
+      ) : activeTab === "tasks" && taskData ? (
         <TaskBoard
-          data={data}
+          data={taskData}
           addRequest={taskAddRequest}
           showToast={showToast}
         />
-      ) : (
-        <EmptyState
-          icon={<IconKanban />}
-          title="Task 보드를 불러오지 못했습니다"
-          description="잠시 후 다시 시도해주세요."
-        />
-      )}
+      ) : null}
 
       <Toast message={toast} />
     </>

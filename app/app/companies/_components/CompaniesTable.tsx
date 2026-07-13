@@ -291,9 +291,14 @@ export function CompaniesTable({
                           {co.upcomingCount > 1 ? (
                             <span
                               className="due-more num"
-                              title={co.upcomingItems
-                                .map((it) => `${it.title} · ${formatDday(it.daysLeft)}`)
-                                .join("\n")}
+                              title={[
+                                ...co.upcomingItems.map(
+                                  (it) => `${it.title} · ${formatDday(it.daysLeft)}`,
+                                ),
+                                ...(co.upcomingCount > co.upcomingItems.length
+                                  ? [`그 외 ${co.upcomingCount - co.upcomingItems.length}건`]
+                                  : []),
+                              ].join("\n")}
                             >
                               외 {co.upcomingCount - 1}건
                             </span>

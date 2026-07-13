@@ -26,6 +26,7 @@ import {
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 import { normalizeConditionTags } from "@/lib/company-tags";
+import { normalizeCompanyName } from "@/lib/import/validate";
 
 export type AddCompanyResult = ActionResult & {
   companyId?: string;
@@ -33,11 +34,6 @@ export type AddCompanyResult = ActionResult & {
   /** 상호·사업자번호 중복 의심 — 사용자 확인 후 confirm_duplicate=1로 재제출 (GWJ-016) */
   duplicate?: boolean;
 };
-
-/** 공백·대소문자 무시 정규화 (상호 유사중복 비교용) */
-function normalizeName(value: string): string {
-  return value.replace(/\s+/g, "").toLowerCase();
-}
 
 function optionalList(formData: FormData, key: string): string[] {
   return formData
@@ -172,11 +168,11 @@ export async function addCompany(formData: FormData): Promise<AddCompanyResult> 
     const { data: existing } = await supabase
       .from("company")
       .select("name, biz_no");
-    const normName = normalizeName(name);
+    const normName = normalizeCompanyName(name);
     const matches = (existing ?? []).filter((c) => {
       const cDigits = (c.biz_no ?? "").replace(/\D/g, "");
       if (bizNoDigits && cDigits && cDigits === bizNoDigits) return true;
-      return normalizeName(c.name) === normName;
+      return normalizeCompanyName(c.name) === normName;
     });
     if (matches.length > 0) {
       const names = [...new Set(matches.map((m) => m.name))].join(", ");

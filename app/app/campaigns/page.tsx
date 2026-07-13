@@ -3,7 +3,10 @@ import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Panel, PanelHead } from "@/components/ui/Panel";
 import { IconAlert, IconPlus, IconSend } from "@/components/ui/icons";
-import { getCampaignsData } from "@/lib/data/campaigns";
+import {
+  CAMPAIGN_LIST_LIMIT,
+  getCampaignsData,
+} from "@/lib/data/campaigns";
 import { CampaignsTable } from "./_components/CampaignsTable";
 
 export const metadata: Metadata = { title: "일괄안내" };
@@ -35,6 +38,14 @@ export default async function CampaignsPage() {
         </LinkButton>
       </div>
 
+      {data.hasMore ? (
+        <div className="demo-banner">
+          <IconAlert />
+          일괄안내가 {CAMPAIGN_LIST_LIMIT}건을 초과해 최근 {CAMPAIGN_LIST_LIMIT}
+          건까지만 표시됩니다. 이전 일괄안내는 목록에 나타나지 않을 수 있습니다.
+        </div>
+      ) : null}
+
       {data.campaigns.length === 0 ? (
         <EmptyState
           icon={<IconSend />}
@@ -48,7 +59,10 @@ export default async function CampaignsPage() {
         />
       ) : (
         <Panel>
-          <PanelHead title="일괄안내" count={`${data.campaigns.length}건`} />
+          <PanelHead
+            title="일괄안내"
+            count={`${data.campaigns.length}${data.hasMore ? "+" : ""}건`}
+          />
           <CampaignsTable campaigns={data.campaigns} />
         </Panel>
       )}
