@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { IconAlert, IconLink, IconX } from "@/components/ui/icons";
+import { IconAlert, IconArrow, IconLink, IconX } from "@/components/ui/icons";
 import type { CompanyShareSettings } from "@/lib/data/company-share";
 import {
   disableCompanyShare,
@@ -124,9 +124,10 @@ export function ShareSettingsButton({
 
             <p className="share-settings-desc">
               고객사 대표님이 로그인 없이 <b>관리포인트 진행현황과 성과 지표</b>
-              를 볼 수 있는 전용 링크입니다. 대표님이 첫 접속 때 직접 비밀번호를
-              설정하며, 링크와 비밀번호를 아는 사람은 누구나 볼 수 있으니 대표님께만
-              전달해 주세요.
+              를 볼 수 있는 전용 링크입니다. 로그인한 컨설턴트는 비밀번호 없이
+              조회할 수 있으며, 대표님은 첫 접속 때 직접 비밀번호를 설정합니다.
+              링크와 비밀번호를 아는 사람은 누구나 볼 수 있으니 대표님께만 전달해
+              주세요.
             </p>
 
             <div className="share-settings-status">
@@ -158,6 +159,15 @@ export function ShareSettingsButton({
                   <Button variant="secondary" size="sm" onClick={copyLink}>
                     복사
                   </Button>
+                  <LinkButton
+                    variant="secondary"
+                    size="sm"
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconArrow /> 조회
+                  </LinkButton>
                 </div>
               </div>
             ) : null}

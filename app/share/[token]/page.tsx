@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import {
+  canConsultantViewShare,
   getDemoSharedDashboard,
   getShareByToken,
   getSharedDashboard,
@@ -13,6 +14,7 @@ import {
   isSupabaseConfigured,
   isSupabaseDemoAllowed,
 } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 import { ShareDashboard } from "./_components/ShareDashboard";
 import { SharePasswordGate } from "./_components/SharePasswordGate";
 import { ShareUnavailable } from "./_components/ShareUnavailable";
@@ -43,7 +45,7 @@ export default async function SharePage({
 
   const secret = getShareCookieSecret();
   const cookieValue = (await cookies()).get(SHARE_SESSION_COOKIE)?.value;
-  const authed = Boolean(
+  const hasShareSession = Boolean(
     secret &&
       cookieValue &&
       verifyShareSessionCookieValue(
@@ -54,7 +56,14 @@ export default async function SharePage({
       ),
   );
 
-  if (!authed) {
+  // 앱에 로그인한 컨설턴트는 비밀번호 없이 확인한다. company RLS가
+  // 활성 멤버·tenant·companies.read 권한을 검증하므로 토큰만으로 우회할 수 없다.
+  const supabase = hasShareSession ? null : await createClient();
+  const hasConsultantAccess = Boolean(
+    supabase && (await canConsultantViewShare(supabase, share)),
+  );
+
+  if (!hasShareSession && !hasConsultantAccess) {
     const locked = Boolean(
       share.lockedUntil && new Date(share.lockedUntil).getTime() > Date.now(),
     );

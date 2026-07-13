@@ -251,6 +251,31 @@ export interface CompanyShareSettings {
   createdAt: string;
 }
 
+/**
+ * 로그인한 컨설턴트의 공유 화면 직접 조회 권한 확인.
+ * company RLS가 활성 멤버·tenant·companies.read를 모두 검증한다.
+ */
+export async function canConsultantViewShare(
+  supabase: Supabase,
+  share: Pick<ShareGateInfo, "tenantId" | "companyId">,
+): Promise<boolean> {
+  const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !claims?.claims?.sub) return false;
+
+  const { data, error } = await supabase
+    .from("company")
+    .select("id")
+    .eq("tenant_id", share.tenantId)
+    .eq("id", share.companyId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[canConsultantViewShare]", error.code, error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
 /** 컨설턴트용 공유 설정 조회 — authenticated client(RLS 경유). */
 export async function getCompanyShareSettings(
   supabase: Supabase,

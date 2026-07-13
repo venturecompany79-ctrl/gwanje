@@ -11,6 +11,7 @@ import { isSignupEnabled } from "@/lib/auth/config";
 // - 세션 있음 + `/`·`/login`·`/signup` → `/app`
 // - 세션 없음 + `/app/*` → `/login?redirect=`
 // - 세션 있음 + profile 없음(Google OAuth 가입 직후) → `/signup/complete` 온보딩
+// - `/share/*` → 공개 접근은 유지하되 컨설턴트 세션 갱신
 // - 그 외 공개 페이지 통과
 // Supabase env 미설정(데모 모드)이면 보호 없이 통과시켜 화면 확인을 허용한다.
 export async function middleware(request: NextRequest) {
@@ -166,6 +167,7 @@ export const config = {
     "/signup",
     "/signup/complete",
     "/reset",
+    "/share/:path*",
     "/app/:path*",
     "/app",
   ],
