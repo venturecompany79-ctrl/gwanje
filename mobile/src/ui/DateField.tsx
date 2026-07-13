@@ -21,6 +21,7 @@ export function DateField({
   min,
   max,
   disabled = false,
+  accessibilityLabel,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -29,6 +30,7 @@ export function DateField({
   /** 선택 가능한 최대 날짜(YYYY-MM-DD) — 웹 데이트피커에만 적용 */
   max?: string;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }) {
   if (Platform.OS === "web") {
     return (
@@ -38,6 +40,7 @@ export function DateField({
         min={min}
         max={max}
         disabled={disabled}
+        aria-label={accessibilityLabel}
         onChange={(event) => onChange((event.target as { value: string }).value)}
         style={{
           border: "none",
@@ -50,6 +53,8 @@ export function DateField({
           fontFamily: "inherit",
           textAlign: "right",
           padding: 0,
+          minHeight: 44,
+          boxSizing: "border-box",
           colorScheme: "light",
           opacity: disabled ? 0.65 : 1,
         }}
@@ -66,6 +71,8 @@ export function DateField({
       placeholderTextColor={colors.tertiaryLabel}
       keyboardType="number-pad"
       maxLength={10}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
       style={[styles.input, disabled && styles.inputDisabled]}
     />
   );
@@ -74,6 +81,7 @@ export function DateField({
 const styles = StyleSheet.create({
   input: {
     minWidth: 128,
+    minHeight: 44,
     fontSize: 16,
     fontWeight: "500",
     letterSpacing: -0.3,

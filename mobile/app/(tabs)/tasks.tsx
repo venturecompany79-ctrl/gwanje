@@ -1,44 +1,60 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Plus } from "lucide-react-native";
+import { Plus } from "@/ui/Icons";
 import { colors, spacing, typography } from "@/design/tokens";
-import { monthDayKo } from "@/lib/dates";
+import { ddayLabel, monthDayKo } from "@/lib/dates";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
-import { loadTasks, type MobileTask } from "@/lib/queries";
+import {
+  loadTaskSummary,
+  loadTasksPage,
+  type TaskListItem,
+} from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
+import { usePagedData } from "@/lib/usePagedData";
 import {
   Cell,
   Chip,
   ChipScroller,
   DdayBadge,
-  Group,
   InlineEmpty,
   Loading,
   StageBadge,
 } from "@/ui/Primitives";
-import { Screen } from "@/ui/Screen";
+import { ScreenList } from "@/ui/Screen";
 
 type StageFilter = "all" | TaskStage;
 
-function isActive(task: MobileTask) {
-  return task.stage !== "result";
-}
+const FILTERS: { value: StageFilter; label: string }[] = [
+  { value: "all", label: "전체" },
+  ...TASK_STAGES.map((stage) => ({
+    value: stage,
+    label: TASK_STAGE_LABEL[stage],
+  })),
+];
 
-function TaskCell({
+const TaskCell = memo(function TaskCell({
   task,
+  first,
   last,
   onPress,
 }: {
-  task: MobileTask;
+  task: TaskListItem;
+  first?: boolean;
   last?: boolean;
-  onPress: () => void;
+  onPress: (id: string) => void;
 }) {
   const done = task.stage === "result";
   const urgent =
     !done && task.daysLeft !== null && task.daysLeft !== undefined && task.daysLeft <= 3;
   return (
-    <Cell last={last} onPress={onPress}>
+    <Cell
+      grouped
+      first={first}
+      last={last}
+      onPress={() => onPress(task.id)}
+      accessibilityLabel={`${task.title}, ${task.companyName}, ${TASK_STAGE_LABEL[task.stage]}, ${monthDayKo(task.due_date)} 마감, ${ddayLabel(task.daysLeft)}`}
+    >
       {urgent ? <View style={styles.accent} /> : null}
       <View style={styles.main}>
         <Text style={styles.title} numberOfLines={1}>
@@ -58,111 +74,125 @@ function TaskCell({
       </View>
     </Cell>
   );
-}
+});
 
 export default function TasksScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<StageFilter>("all");
-  const { data, loading, refreshing, error, refresh } = useAsyncData(loadTasks);
+  const pageLoader = useCallback(
+    (offset: number) =>
+      loadTasksPage({
+        offset,
+        stage: filter === "all" ? undefined : filter,
+      }),
+    [filter],
+  );
+  const {
+    items: tasks,
+    hasMore,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    refresh,
+    loadMore,
+  } = usePagedData(pageLoader);
+  const {
+    data: summary,
+    refreshing: summaryRefreshing,
+    refresh: refreshSummary,
+  } = useAsyncData(loadTaskSummary);
+
+  const refreshAll = useCallback(() => {
+    void refresh();
+    void refreshSummary();
+  }, [refresh, refreshSummary]);
+  const refreshAllRef = useRef(refreshAll);
+  useEffect(() => {
+    refreshAllRef.current = refreshAll;
+  }, [refreshAll]);
+  const openTask = useCallback(
+    (id: string) => router.push(`/task/${id}`),
+    [router],
+  );
 
   // 새 Task 생성 후 돌아오면 목록을 다시 불러온다 (최초 포커스는 건너뜀)
   const hasFocused = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (hasFocused.current) refresh();
+      if (hasFocused.current) refreshAllRef.current();
       else hasFocused.current = true;
-    }, [refresh]),
-  );
-
-  const tasks = useMemo(() => data ?? [], [data]);
-  const activeCount = tasks.filter(isActive).length;
-  const overdueCount = tasks.filter(
-    (t) => isActive(t) && t.daysLeft !== null && t.daysLeft !== undefined && t.daysLeft < 0,
-  ).length;
-
-  const chips = useMemo(() => {
-    const base: { value: StageFilter; label: string; count: number }[] = [
-      { value: "all", label: "전체", count: tasks.length },
-    ];
-    for (const stage of TASK_STAGES) {
-      base.push({
-        value: stage,
-        label: TASK_STAGE_LABEL[stage],
-        count: tasks.filter((t) => t.stage === stage).length,
-      });
-    }
-    return base;
-  }, [tasks]);
-
-  const filtered = useMemo(
-    () =>
-      tasks
-        .filter((task) => filter === "all" || task.stage === filter)
-        .slice()
-        .sort((a, b) => {
-          const doneDiff = Number(a.stage === "result") - Number(b.stage === "result");
-          if (doneDiff !== 0) return doneDiff;
-          return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
-        }),
-    [tasks, filter],
+    }, []),
   );
 
   return (
-    <Screen
+    <ScreenList
       title="Task"
-      subtitle={`진행 ${activeCount} · 기한 지남 ${overdueCount}`}
-      refreshing={refreshing}
-      onRefresh={refresh}
+      subtitle={
+        summary
+          ? `진행 ${summary.activeCount} · 기한 지남 ${summary.overdueCount}`
+          : undefined
+      }
+      refreshing={refreshing || summaryRefreshing}
+      onRefresh={refreshAll}
       action={
         <Pressable
           onPress={() => router.push("/task/new")}
-          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="새 Task 만들기"
           style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
         >
           <Plus size={22} color={colors.canvas} strokeWidth={2.4} />
         </Pressable>
       }
-    >
-      <View style={styles.chipWrap}>
-        <ChipScroller>
-          {chips.map((chip) => (
-            <Chip
-              key={chip.value}
-              label={`${chip.label} ${chip.count}`}
-              active={filter === chip.value}
-              onPress={() => setFilter(chip.value)}
-            />
-          ))}
-        </ChipScroller>
-      </View>
-
-      {loading && !data ? <Loading /> : null}
-      {error ? <InlineEmpty>Task를 불러오지 못했습니다</InlineEmpty> : null}
-      {data ? (
-        filtered.length > 0 ? (
-          <Group>
-            {filtered.map((task, i) => (
-              <TaskCell
-                key={task.id}
-                task={task}
-                last={i === filtered.length - 1}
-                onPress={() => router.push(`/task/${task.id}`)}
-              />
-            ))}
-          </Group>
-        ) : (
+      header={
+        <>
+          <View style={styles.chipWrap}>
+            <ChipScroller>
+              {FILTERS.map((chip) => (
+                <Chip
+                  key={chip.value}
+                  label={chip.label}
+                  active={filter === chip.value}
+                  onPress={() => setFilter(chip.value)}
+                />
+              ))}
+            </ChipScroller>
+          </View>
+          {loading ? <Loading /> : null}
+          {error ? <InlineEmpty>Task를 불러오지 못했습니다</InlineEmpty> : null}
+        </>
+      }
+      data={tasks}
+      keyExtractor={(task) => task.id}
+      renderItem={({ item, index }) => (
+        <TaskCell
+          task={item}
+          first={index === 0}
+          last={index === tasks.length - 1}
+          onPress={openTask}
+        />
+      )}
+      ListEmptyComponent={
+        !loading && !error ? (
           <InlineEmpty>조건에 맞는 Task가 없습니다</InlineEmpty>
-        )
-      ) : null}
-    </Screen>
+        ) : null
+      }
+      ListFooterComponent={loadingMore ? <Loading /> : null}
+      onEndReached={hasMore ? loadMore : undefined}
+      onEndReachedThreshold={0.35}
+      initialNumToRender={12}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",

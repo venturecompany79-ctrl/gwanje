@@ -17,7 +17,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight } from "@/ui/Icons";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { ddayLabel } from "@/lib/dates";
 
@@ -66,16 +66,28 @@ export function Cell({
   children,
   onPress,
   last,
+  first,
+  grouped = false,
   sepInset = 16,
   style,
   align = "center",
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
+  disabled,
 }: {
   children: ReactNode;
   onPress?: PressableProps["onPress"];
   last?: boolean;
+  first?: boolean;
+  grouped?: boolean;
   sepInset?: number;
   style?: StyleProp<ViewStyle>;
   align?: "center" | "flex-start";
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityState?: PressableProps["accessibilityState"];
+  disabled?: boolean;
 }) {
   const inner = (
     <>
@@ -87,22 +99,51 @@ export function Cell({
     return (
       <Pressable
         onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ ...accessibilityState, disabled: Boolean(disabled) }}
         style={({ pressed }) => [
           styles.cell,
+          grouped && styles.cellGrouped,
+          grouped && first && styles.cellGroupedFirst,
+          grouped && last && styles.cellGroupedLast,
           { alignItems: align },
           style,
-          pressed && styles.cellPressed,
+          pressed && !disabled && styles.cellPressed,
         ]}
       >
         {inner}
       </Pressable>
     );
   }
-  return <View style={[styles.cell, { alignItems: align }, style]}>{inner}</View>;
+  return (
+    <View
+      accessible={Boolean(accessibilityLabel)}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={accessibilityState}
+      style={[
+        styles.cell,
+        grouped && styles.cellGrouped,
+        grouped && first && styles.cellGroupedFirst,
+        grouped && last && styles.cellGroupedLast,
+        { alignItems: align },
+        style,
+      ]}
+    >
+      {inner}
+    </View>
+  );
 }
 
 export function Chevron() {
-  return <ChevronRight size={17} color={colors.quaternary} strokeWidth={2.1} />;
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <ChevronRight size={17} color={colors.quaternary} strokeWidth={2.1} />
+    </View>
+  );
 }
 
 /* ---------- D-day badge ---------- */
@@ -154,13 +195,16 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <View style={styles.segment}>
+    <View style={styles.segment} accessibilityRole="tablist">
       {items.map((item) => {
         const active = item.value === value;
         return (
           <Pressable
             key={item.value}
             onPress={() => onChange(item.value)}
+            accessibilityRole="tab"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected: active }}
             style={[styles.segmentBtn, active && styles.segmentBtnActive]}
           >
             <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
@@ -201,6 +245,10 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={label}
+      accessibilityState={{ selected: Boolean(active), disabled: !onPress }}
+      disabled={!onPress}
       style={[
         styles.chip,
         variant === "tint" && styles.chipTintPad,
@@ -240,6 +288,8 @@ export function PrimaryButton({
   return (
     <Pressable
       {...props}
+      accessibilityRole={props.accessibilityRole ?? "button"}
+      accessibilityState={{ ...props.accessibilityState, disabled: Boolean(props.disabled) }}
       style={(state) => [
         styles.button,
         state.pressed && !props.disabled && styles.buttonPressed,
@@ -274,7 +324,11 @@ export function InlineEmpty({ children }: { children: ReactNode }) {
 
 export function Loading() {
   return (
-    <View style={styles.loading}>
+    <View
+      style={styles.loading}
+      accessibilityRole="progressbar"
+      accessibilityLabel="불러오는 중"
+    >
       <ActivityIndicator color={colors.brand} />
     </View>
   );
@@ -308,6 +362,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     position: "relative",
+  },
+  cellGrouped: {
+    marginHorizontal: spacing.base,
+    backgroundColor: colors.card,
+  },
+  cellGroupedFirst: {
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
+    overflow: "hidden",
+  },
+  cellGroupedLast: {
+    borderBottomLeftRadius: radius.card,
+    borderBottomRightRadius: radius.card,
+    overflow: "hidden",
   },
   cellPressed: {
     backgroundColor: "rgba(60,60,67,0.06)",
@@ -361,6 +429,7 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 7,
     borderRadius: radius.sm,
     alignItems: "center",
@@ -393,9 +462,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radius.chip,
+    justifyContent: "center",
   },
   chipTintPad: {
     paddingHorizontal: 11,

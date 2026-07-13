@@ -5,10 +5,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Check, ChevronLeft, ChevronRight, Trash2 } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Trash2 } from "@/ui/Icons";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
 import { longKstDate, monthDayKo, shiftDateString, todayKstDate } from "@/lib/dates";
@@ -63,10 +64,14 @@ function NoteCell({
     <Cell last={last} sepInset={46} align="flex-start">
       <Pressable
         onPress={onToggle}
-        hitSlop={8}
-        style={[styles.check, done ? styles.checkDone : styles.checkOff]}
+        accessibilityRole="checkbox"
+        accessibilityLabel={`${note.content} 완료 상태`}
+        accessibilityState={{ checked: done }}
+        style={styles.checkTarget}
       >
-        {done ? <Check size={12} color={colors.canvas} strokeWidth={2.4} /> : null}
+        <View style={[styles.check, done ? styles.checkDone : styles.checkOff]}>
+          {done ? <Check size={12} color={colors.canvas} strokeWidth={2.4} /> : null}
+        </View>
       </Pressable>
       <View style={styles.noteMain}>
         <Text style={[styles.noteText, done && styles.noteTextDone]}>
@@ -89,6 +94,7 @@ function NoteCell({
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel="삭제 취소"
+            accessibilityState={{ disabled: deleting }}
             style={styles.confirmCancel}
           >
             <Text style={styles.confirmCancelText}>취소</Text>
@@ -99,6 +105,7 @@ function NoteCell({
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel="삭제 확인"
+            accessibilityState={{ disabled: deleting, busy: deleting }}
             style={[styles.confirmDelete, deleting && styles.confirmDeleteBusy]}
           >
             <Text style={styles.confirmDeleteText}>{deleting ? "삭제 중" : "삭제"}</Text>
@@ -120,6 +127,7 @@ function NoteCell({
 }
 
 export default function TodayScreen() {
+  const { width, fontScale } = useWindowDimensions();
   const [draft, setDraft] = useState("");
   const [tag, setTag] = useState<TodoTag>("상담");
   const [noteDate, setNoteDate] = useState(todayKstDate());
@@ -149,6 +157,7 @@ export default function TodayScreen() {
   // ◀▶ 하루 이동. YYYY-MM-DD 문자열은 사전식 비교가 곧 날짜 순서라 그대로 범위 판정에 쓴다.
   const canPrev = listDate > minDate;
   const canNext = listDate < maxDate;
+  const compactDateRow = width < 390 || fontScale > 1.15;
 
   function stepDay(delta: number) {
     const next = shiftDateString(listDate, delta);
@@ -222,17 +231,24 @@ export default function TodayScreen() {
           placeholderTextColor={colors.tertiaryLabel}
           style={styles.input}
           multiline
+          accessibilityLabel="업무 메모"
         />
         <View style={styles.composerSep} />
-        <View style={styles.dateRow}>
+        <View style={[styles.dateRow, compactDateRow && styles.dateRowCompact]}>
           <Text style={styles.dateLabel}>작성 날짜</Text>
-          <View style={styles.dateControls}>
+          <View
+            style={[
+              styles.dateControls,
+              compactDateRow && styles.dateControlsCompact,
+            ]}
+          >
             <Pressable
               onPress={() => stepDay(-1)}
               disabled={!canPrev}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="전날로 이동"
+              accessibilityState={{ disabled: !canPrev }}
               style={[styles.stepBtn, !canPrev && styles.stepBtnOff]}
             >
               <ChevronLeft
@@ -246,6 +262,7 @@ export default function TodayScreen() {
               onChange={setNoteDate}
               min={minDate}
               max={maxDate}
+              accessibilityLabel="작성 날짜"
             />
             <Pressable
               onPress={() => stepDay(1)}
@@ -253,6 +270,7 @@ export default function TodayScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="다음날로 이동"
+              accessibilityState={{ disabled: !canNext }}
               style={[styles.stepBtn, !canNext && styles.stepBtnOff]}
             >
               <ChevronRight
@@ -276,6 +294,9 @@ export default function TodayScreen() {
                 <Pressable
                   key={item}
                   onPress={() => setTag(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item} 태그`}
+                  accessibilityState={{ selected: active }}
                   style={[styles.tag, active ? styles.tagActive : styles.tagOff]}
                 >
                   <Text style={[styles.tagText, active && styles.tagTextActive]}>
@@ -288,6 +309,9 @@ export default function TodayScreen() {
           <Pressable
             onPress={addNote}
             disabled={!canAdd}
+            accessibilityRole="button"
+            accessibilityLabel="업무 메모 추가"
+            accessibilityState={{ disabled: !canAdd }}
             style={[styles.add, canAdd ? styles.addOn : styles.addOff]}
           >
             <Text style={[styles.addText, canAdd ? styles.addTextOn : styles.addTextOff]}>
@@ -361,6 +385,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     gap: 10,
   },
+  dateRowCompact: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
   dateLabel: {
     fontSize: 14,
     fontWeight: "500",
@@ -372,10 +400,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  dateControlsCompact: {
+    width: "100%",
+    justifyContent: "space-between",
+  },
   stepBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -403,9 +435,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tag: {
+    minHeight: 44,
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 8,
+    justifyContent: "center",
   },
   tagActive: {
     backgroundColor: colors.brandTintStrong,
@@ -424,10 +458,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   add: {
+    minHeight: 44,
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: radius.chip,
     flexShrink: 0,
+    justifyContent: "center",
   },
   addOn: {
     backgroundColor: colors.brand,
@@ -446,11 +482,18 @@ const styles = StyleSheet.create({
   addTextOff: {
     color: colors.tertiaryLabel,
   },
+  checkTarget: {
+    width: 44,
+    height: 44,
+    marginHorizontal: -11,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingTop: 1,
+  },
   check: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    marginTop: 1,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.8,
@@ -499,10 +542,11 @@ const styles = StyleSheet.create({
     color: colors.tertiaryLabel,
   },
   deleteBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginTop: -3,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginTop: -10,
+    marginRight: -7,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -513,10 +557,12 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   confirmCancel: {
+    minHeight: 44,
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: radius.chip,
     backgroundColor: colors.fill,
+    justifyContent: "center",
   },
   confirmCancelText: {
     fontSize: 13,
@@ -525,10 +571,12 @@ const styles = StyleSheet.create({
     color: colors.subText,
   },
   confirmDelete: {
+    minHeight: 44,
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: radius.chip,
     backgroundColor: colors.critical,
+    justifyContent: "center",
   },
   confirmDeleteBusy: {
     opacity: 0.6,

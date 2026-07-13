@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { Building2, CalendarDays, ClipboardList } from "lucide-react-native";
+import { Building2, CalendarDays, ClipboardList } from "@/ui/Icons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius, spacing, typography } from "@/design/tokens";
-import { longKstDate, monthDayKo } from "@/lib/dates";
+import { ddayLabel, longKstDate, monthDayKo } from "@/lib/dates";
 import { loadHomeData, type DeadlineItem } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import {
@@ -30,7 +30,11 @@ function DeadlineCell({
   onPress?: () => void;
 }) {
   return (
-    <Cell last={last} onPress={onPress}>
+    <Cell
+      last={last}
+      onPress={onPress}
+      accessibilityLabel={`${item.company_name ?? "기업 미지정"}, ${item.title ?? "일정"}, ${monthDayKo(item.due_date)}, ${ddayLabel(item.days_left)}`}
+    >
       {accent ? <View style={styles.accent} /> : null}
       <View style={styles.cellMain}>
         <Text style={styles.eyebrow} numberOfLines={1}>
@@ -61,7 +65,13 @@ function QuickCell({
   last?: boolean;
 }) {
   return (
-    <Cell last={last} onPress={onPress} sepInset={57} style={styles.quickCell}>
+    <Cell
+      last={last}
+      onPress={onPress}
+      sepInset={57}
+      style={styles.quickCell}
+      accessibilityLabel={label}
+    >
       <View style={styles.quickIcon}>{icon}</View>
       <Text style={styles.quickLabel}>{label}</Text>
       <Chevron />
@@ -94,7 +104,13 @@ export default function HomeScreen() {
         refreshing={refreshing}
         onRefresh={refresh}
         action={
-          <Pressable style={styles.avatar} onPress={() => setMenuOpen(true)}>
+          <Pressable
+            style={styles.avatar}
+            onPress={() => setMenuOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="계정 메뉴 열기"
+            accessibilityState={{ expanded: menuOpen }}
+          >
             <Text style={styles.avatarText}>{initial}</Text>
           </Pressable>
         }
@@ -104,7 +120,12 @@ export default function HomeScreen() {
         {data ? (
           <>
             <View style={styles.strip}>
-              <Pressable style={styles.stripItem} onPress={() => router.push("/tasks")}>
+              <Pressable
+                style={styles.stripItem}
+                onPress={() => router.push("/tasks")}
+                accessibilityRole="button"
+                accessibilityLabel={`기한 지난 Task ${data.overdueCount}건`}
+              >
                 <Text
                   style={[
                     styles.stripValue,
@@ -116,12 +137,22 @@ export default function HomeScreen() {
                 <Text style={styles.stripLabel}>기한 지남</Text>
               </Pressable>
               <View style={styles.stripDivider} />
-              <Pressable style={styles.stripItem} onPress={() => router.push("/tasks")}>
+              <Pressable
+                style={styles.stripItem}
+                onPress={() => router.push("/tasks")}
+                accessibilityRole="button"
+                accessibilityLabel={`7일 내 마감 ${data.due7}건`}
+              >
                 <Text style={styles.stripValue}>{data.due7}</Text>
                 <Text style={styles.stripLabel}>7일 내 마감</Text>
               </Pressable>
               <View style={styles.stripDivider} />
-              <Pressable style={styles.stripItem} onPress={() => router.push("/tasks")}>
+              <Pressable
+                style={styles.stripItem}
+                onPress={() => router.push("/tasks")}
+                accessibilityRole="button"
+                accessibilityLabel={`진행 Task ${data.activeTasks}건`}
+              >
                 <Text style={styles.stripValue}>{data.activeTasks}</Text>
                 <Text style={styles.stripLabel}>진행 Task</Text>
               </Pressable>
@@ -194,8 +225,17 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setMenuOpen(false)}
       >
-        <Pressable style={styles.menuOverlay} onPress={() => setMenuOpen(false)}>
-          <Pressable style={styles.menuWrap} onPress={() => {}}>
+        <Pressable
+          style={styles.menuOverlay}
+          onPress={() => setMenuOpen(false)}
+          accessible={false}
+        >
+          <Pressable
+            style={styles.menuWrap}
+            onPress={() => {}}
+            accessible={false}
+            accessibilityViewIsModal
+          >
             <View style={styles.menuCard}>
               <View style={styles.menuHeader}>
                 <Text style={styles.menuEmail} numberOfLines={1}>
@@ -205,6 +245,8 @@ export default function HomeScreen() {
               <View style={styles.menuSep} />
               <Pressable
                 style={styles.menuBtn}
+                accessibilityRole="button"
+                accessibilityLabel="로그아웃"
                 onPress={async () => {
                   setMenuOpen(false);
                   await signOut();
@@ -213,7 +255,12 @@ export default function HomeScreen() {
                 <Text style={styles.menuLogout}>로그아웃</Text>
               </Pressable>
             </View>
-            <Pressable style={styles.menuCancel} onPress={() => setMenuOpen(false)}>
+            <Pressable
+              style={styles.menuCancel}
+              onPress={() => setMenuOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="계정 메뉴 취소"
+            >
               <Text style={styles.menuCancelText}>취소</Text>
             </Pressable>
           </Pressable>
@@ -225,8 +272,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   avatar: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
     backgroundColor: colors.brand,
     alignItems: "center",

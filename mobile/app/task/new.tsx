@@ -1,35 +1,36 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ListRenderItemInfo,
 } from "react-native";
 import { Redirect, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { Check, ChevronDown, Search } from "lucide-react-native";
+import { Check, ChevronDown, Search, X } from "@/ui/Icons";
 import { colors, radius, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
 import {
+  loadCompanyOptionsPage,
   loadTaskFormOptions,
   type CompanyOption,
   type TaskFormOptions,
 } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
+import { usePagedData } from "@/lib/usePagedData";
 import { useAuth } from "@/context/AuthContext";
-import {
-  Cell,
-  Group,
-  InlineEmpty,
-  Loading,
-  SectionLabel,
-} from "@/ui/Primitives";
+import { Cell, Group, InlineEmpty, Loading, SectionLabel } from "@/ui/Primitives";
 import { DateField } from "@/ui/DateField";
 
 export default function NewTaskModal() {
@@ -48,16 +49,27 @@ export default function NewTaskModal() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.root}
       >
-        <Pressable style={styles.backdrop} onPress={() => router.back()} />
-        <View style={styles.sheet}>
-          <View style={styles.grabberWrap}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => router.back()}
+          accessible={false}
+        />
+        <View style={styles.sheet} accessibilityViewIsModal>
+          <View style={styles.grabberWrap} accessibilityElementsHidden>
             <View style={styles.grabber} />
           </View>
           <View style={styles.header}>
-            <Pressable style={styles.cancel} onPress={() => router.back()} hitSlop={8}>
+            <Pressable
+              style={styles.cancel}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="새 Task 작성 취소"
+            >
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
-            <Text style={styles.sheetTitle}>새 Task</Text>
+            <Text style={styles.sheetTitle} accessibilityRole="header">
+              새 Task
+            </Text>
           </View>
 
           {loading ? (
@@ -66,13 +78,11 @@ export default function NewTaskModal() {
             </View>
           ) : null}
           {error ? (
-            <View style={styles.stateWrap}>
+            <View style={styles.stateWrap} accessibilityRole="alert">
               <InlineEmpty>작성 정보를 불러오지 못했습니다</InlineEmpty>
             </View>
           ) : null}
-          {data ? (
-            <NewTaskForm options={data} onClose={() => router.back()} />
-          ) : null}
+          {data ? <NewTaskForm options={data} onClose={() => router.back()} /> : null}
         </View>
       </KeyboardAvoidingView>
     </>
@@ -87,48 +97,31 @@ function NewTaskForm({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyOption | null>(null);
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [stage, setStage] = useState<TaskStage>("diagnosis");
   const [memo, setMemo] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [companyQuery, setCompanyQuery] = useState("");
   const [pending, setPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const selectedCompany = useMemo(
-    () => options.companies.find((c) => c.id === companyId) ?? null,
-    [options.companies, companyId],
-  );
+  const canSubmit = Boolean(selectedCompany) && title.trim().length > 0 && !pending;
 
-  const filteredCompanies = useMemo(() => {
-    const q = companyQuery.trim().toLowerCase();
-    if (!q) return options.companies;
-    return options.companies.filter((company) =>
-      [company.name, company.industry, company.region]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q)),
-    );
-  }, [options.companies, companyQuery]);
-
-  const canSubmit = Boolean(companyId) && title.trim().length > 0 && !pending;
-
-  function pickCompany(company: CompanyOption) {
-    setCompanyId(company.id);
+  const pickCompany = useCallback((company: CompanyOption) => {
+    setSelectedCompany(company);
     setPickerOpen(false);
-    setCompanyQuery("");
-  }
+  }, []);
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedCompany) return;
     setPending(true);
     setSaveError(null);
     try {
       await mobileApi("/api/mobile/tasks", {
         body: {
-          companyId,
+          companyId: selectedCompany.id,
           title: title.trim(),
           categoryId,
           dueDate: dueDate || null,
@@ -154,10 +147,19 @@ function NewTaskForm({
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 기업 */}
         <SectionLabel style={styles.tightLabel}>기업</SectionLabel>
         <Group>
-          <Cell onPress={() => setPickerOpen((open) => !open)} last={!pickerOpen}>
+          <Cell
+            onPress={() => setPickerOpen(true)}
+            last
+            accessibilityLabel={
+              selectedCompany
+                ? `기업 선택, 현재 ${selectedCompany.name}`
+                : "기업 선택"
+            }
+            accessibilityHint="기업 검색 목록을 엽니다"
+            accessibilityState={{ expanded: pickerOpen }}
+          >
             <Text
               style={[
                 styles.pickerValue,
@@ -167,76 +169,12 @@ function NewTaskForm({
             >
               {selectedCompany ? selectedCompany.name : "기업 선택"}
             </Text>
-            <ChevronDown
-              size={18}
-              color={colors.quaternary}
-              strokeWidth={2}
-              style={pickerOpen ? styles.chevronOpen : undefined}
-            />
-          </Cell>
-          {pickerOpen ? (
-            <View style={styles.picker}>
-              <View style={styles.search}>
-                <Search size={16} color={colors.secondaryLabel} strokeWidth={1.7} />
-                <TextInput
-                  value={companyQuery}
-                  onChangeText={setCompanyQuery}
-                  placeholder="기업 검색"
-                  placeholderTextColor={colors.secondaryLabel}
-                  style={styles.searchInput}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
-              </View>
-              <ScrollView
-                style={styles.pickerList}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                {filteredCompanies.length > 0 ? (
-                  filteredCompanies.map((company, i) => {
-                    const sub = [company.industry, company.region]
-                      .filter(Boolean)
-                      .join(" · ");
-                    const active = company.id === companyId;
-                    return (
-                      <Pressable
-                        key={company.id}
-                        onPress={() => pickCompany(company)}
-                        style={({ pressed }) => [
-                          styles.pickerRow,
-                          i === filteredCompanies.length - 1 && styles.pickerRowLast,
-                          pressed && styles.pickerRowPressed,
-                        ]}
-                      >
-                        <View style={styles.pickerRowMain}>
-                          <Text style={styles.pickerRowName} numberOfLines={1}>
-                            {company.name}
-                          </Text>
-                          {sub ? (
-                            <Text style={styles.pickerRowSub} numberOfLines={1}>
-                              {sub}
-                            </Text>
-                          ) : null}
-                        </View>
-                        {active ? (
-                          <Check size={17} color={colors.brand} strokeWidth={2.4} />
-                        ) : null}
-                      </Pressable>
-                    );
-                  })
-                ) : (
-                  <View style={styles.pickerEmpty}>
-                    <Text style={styles.pickerEmptyText}>검색 결과가 없습니다</Text>
-                  </View>
-                )}
-              </ScrollView>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <ChevronDown size={18} color={colors.quaternary} strokeWidth={2} />
             </View>
-          ) : null}
+          </Cell>
         </Group>
 
-        {/* 내용 */}
         <SectionLabel style={styles.tightLabel}>내용</SectionLabel>
         <Group>
           <Cell>
@@ -246,15 +184,20 @@ function NewTaskForm({
               placeholder="Task 제목"
               placeholderTextColor={colors.tertiaryLabel}
               style={styles.fieldInput}
+              accessibilityLabel="Task 제목"
+              returnKeyType="next"
             />
           </Cell>
           <Cell last>
             <Text style={styles.fieldLabel}>마감일</Text>
-            <DateField value={dueDate} onChange={setDueDate} />
+            <DateField
+              value={dueDate}
+              onChange={setDueDate}
+              accessibilityLabel="Task 마감일"
+            />
           </Cell>
         </Group>
 
-        {/* 분류 */}
         {options.categories.length > 0 ? (
           <>
             <SectionLabel style={styles.tightLabel}>분류</SectionLabel>
@@ -263,6 +206,8 @@ function NewTaskForm({
               showsHorizontalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.catRow}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Task 분류"
             >
               <CategoryChip
                 label="없음"
@@ -281,22 +226,29 @@ function NewTaskForm({
           </>
         ) : null}
 
-        {/* 단계 */}
         <SectionLabel style={styles.tightLabel}>단계</SectionLabel>
         <Group>
-          {TASK_STAGES.map((item, i) => {
+          {TASK_STAGES.map((item, index) => {
             const active = stage === item;
+            const label = TASK_STAGE_LABEL[item];
             return (
               <Cell
                 key={item}
-                last={i === TASK_STAGES.length - 1}
+                last={index === TASK_STAGES.length - 1}
                 onPress={() => setStage(item)}
+                accessibilityLabel={`${label} 단계`}
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
-                  {TASK_STAGE_LABEL[item]}
+                  {label}
                 </Text>
                 {active ? (
-                  <Check size={17} color={colors.brand} strokeWidth={2.4} />
+                  <View
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <Check size={17} color={colors.brand} strokeWidth={2.4} />
+                  </View>
                 ) : null}
               </Cell>
             );
@@ -311,15 +263,27 @@ function NewTaskForm({
           placeholderTextColor={colors.tertiaryLabel}
           multiline
           style={styles.memo}
+          accessibilityLabel="Task 메모"
         />
 
-        {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+        {saveError ? (
+          <Text
+            style={styles.saveError}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+          >
+            {saveError}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
         <Pressable
           onPress={submit}
           disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel={pending ? "Task 추가 중" : "Task 추가"}
+          accessibilityState={{ disabled: !canSubmit, busy: pending }}
           style={[styles.save, !canSubmit && styles.saveDisabled]}
         >
           <Text style={[styles.saveText, !canSubmit && styles.saveTextDisabled]}>
@@ -327,7 +291,229 @@ function NewTaskForm({
           </Text>
         </Pressable>
       </View>
+
+      {pickerOpen ? (
+        <CompanyPickerModal
+          selectedCompany={selectedCompany}
+          onSelect={pickCompany}
+          onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+function CompanyPickerModal({
+  selectedCompany,
+  onSelect,
+  onClose,
+}: {
+  selectedCompany: CompanyOption | null;
+  onSelect: (company: CompanyOption) => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const loadCompanies = useCallback(
+    (offset: number) =>
+      loadCompanyOptionsPage({ offset, query: debouncedQuery || undefined }),
+    [debouncedQuery],
+  );
+  const {
+    items,
+    hasMore,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    refresh,
+    loadMore,
+    reset,
+  } = usePagedData(loadCompanies);
+
+  const renderCompany = useCallback(
+    ({ item }: ListRenderItemInfo<CompanyOption>) => {
+      const selected = item.id === selectedCompany?.id;
+      const detail = [item.industry, item.region].filter(Boolean).join(" · ");
+      return (
+        <Pressable
+          onPress={() => onSelect(item)}
+          accessibilityRole="radio"
+          accessibilityLabel={detail ? `${item.name}, ${detail}` : item.name}
+          accessibilityState={{ selected }}
+          style={({ pressed }) => [
+            styles.pickerRow,
+            pressed && styles.pickerRowPressed,
+          ]}
+        >
+          <View style={styles.pickerRowMain}>
+            <Text style={styles.pickerRowName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {detail ? (
+              <Text style={styles.pickerRowSub} numberOfLines={1}>
+                {detail}
+              </Text>
+            ) : null}
+          </View>
+          {selected ? (
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Check size={18} color={colors.brand} strokeWidth={2.4} />
+            </View>
+          ) : null}
+        </Pressable>
+      );
+    },
+    [onSelect, selectedCompany?.id],
+  );
+
+  const emptyState = loading ? (
+    <View style={styles.pickerState} accessibilityRole="progressbar">
+      <ActivityIndicator color={colors.brand} />
+      <Text style={styles.pickerStateText}>기업을 불러오는 중입니다</Text>
+    </View>
+  ) : error ? (
+    <View style={styles.pickerState} accessibilityRole="alert">
+      <Text style={styles.pickerStateText}>기업을 불러오지 못했습니다</Text>
+      <Pressable
+        onPress={reset}
+        accessibilityRole="button"
+        accessibilityLabel="기업 목록 다시 불러오기"
+        style={styles.retryButton}
+      >
+        <Text style={styles.retryText}>다시 시도</Text>
+      </Pressable>
+    </View>
+  ) : (
+    <View style={styles.pickerState}>
+      <Text style={styles.pickerStateText}>
+        {debouncedQuery ? "검색 결과가 없습니다" : "선택할 기업이 없습니다"}
+      </Text>
+    </View>
+  );
+
+  const footerState = loadingMore ? (
+    <View style={styles.pickerFooter} accessibilityRole="progressbar">
+      <ActivityIndicator size="small" color={colors.brand} />
+      <Text style={styles.pickerFooterText}>더 불러오는 중…</Text>
+    </View>
+  ) : error && items.length > 0 ? (
+    <View style={styles.pickerFooter} accessibilityRole="alert">
+      <Text style={styles.pickerFooterText}>목록을 더 불러오지 못했습니다</Text>
+      <Pressable
+        onPress={refresh}
+        accessibilityRole="button"
+        accessibilityLabel="기업 목록 새로고침"
+        style={styles.footerRetry}
+      >
+        <Text style={styles.retryText}>새로고침</Text>
+      </Pressable>
+    </View>
+  ) : !hasMore && items.length > 0 ? (
+    <View style={styles.pickerFooter}>
+      <Text style={styles.pickerFooterText}>목록의 끝입니다</Text>
+    </View>
+  ) : null;
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.pickerModalRoot}
+      >
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={onClose}
+          accessible={false}
+        />
+        <View
+          style={[styles.pickerSheet, { paddingBottom: Math.max(insets.bottom, 12) }]}
+          accessibilityViewIsModal
+        >
+          <View style={styles.pickerHeader}>
+            <View>
+              <Text style={styles.pickerTitle} accessibilityRole="header">
+                기업 선택
+              </Text>
+              <Text style={styles.pickerCount}>
+                {loading ? "목록을 불러오는 중" : "활성 기업 목록"}
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="기업 선택 닫기"
+              style={styles.pickerClose}
+            >
+              <X size={17} color={colors.secondaryLabel} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+
+          <View style={styles.search}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Search size={17} color={colors.secondaryLabel} strokeWidth={1.7} />
+            </View>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="기업명, 업종, 지역 검색"
+              placeholderTextColor={colors.secondaryLabel}
+              style={styles.searchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              accessibilityLabel="기업 검색"
+            />
+          </View>
+
+          <FlatList
+            data={items}
+            renderItem={renderCompany}
+            keyExtractor={(item) => item.id}
+            style={styles.pickerList}
+            contentContainerStyle={[
+              styles.pickerListContent,
+              items.length === 0 && styles.pickerListEmpty,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="기업 검색 결과"
+            onEndReached={() => {
+              if (hasMore) void loadMore();
+            }}
+            onEndReachedThreshold={0.35}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refresh}
+                tintColor={colors.brand}
+                colors={[colors.brand]}
+              />
+            }
+            ListEmptyComponent={emptyState}
+            ListFooterComponent={footerState}
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            windowSize={7}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -343,6 +529,9 @@ function CategoryChip({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
       style={[styles.cat, active ? styles.catActive : styles.catOff]}
     >
       <Text style={[styles.catText, active && styles.catTextActive]}>{label}</Text>
@@ -390,10 +579,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(60,60,67,0.24)",
   },
   header: {
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 8,
-    paddingBottom: 10,
     paddingHorizontal: 16,
   },
   sheetTitle: {
@@ -404,10 +592,13 @@ const styles = StyleSheet.create({
   },
   cancel: {
     position: "absolute",
-    left: 14,
-    top: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    left: 8,
+    top: 0,
+    minWidth: 52,
+    minHeight: 44,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelText: {
     fontSize: 16,
@@ -442,78 +633,9 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: colors.tertiaryLabel,
   },
-  chevronOpen: {
-    transform: [{ rotate: "180deg" }],
-  },
-  picker: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.separator,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  search: {
-    minHeight: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.searchFill,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    letterSpacing: -0.3,
-    color: colors.label,
-    paddingVertical: 8,
-  },
-  pickerList: {
-    maxHeight: 216,
-    marginTop: 4,
-  },
-  pickerRow: {
-    minHeight: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 9,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.separator,
-  },
-  pickerRowLast: {
-    borderBottomWidth: 0,
-  },
-  pickerRowPressed: {
-    backgroundColor: "rgba(60,60,67,0.06)",
-  },
-  pickerRowMain: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  pickerRowName: {
-    ...typography.rowTitle,
-    color: colors.label,
-  },
-  pickerRowSub: {
-    fontSize: 13,
-    letterSpacing: -0.2,
-    color: colors.secondaryLabel,
-  },
-  pickerEmpty: {
-    paddingVertical: 22,
-    alignItems: "center",
-  },
-  pickerEmptyText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.muted,
-    letterSpacing: -0.2,
-  },
   fieldInput: {
     flex: 1,
+    minHeight: 44,
     fontSize: 16,
     fontWeight: "500",
     letterSpacing: -0.3,
@@ -533,9 +655,12 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   cat: {
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.chip,
+    alignItems: "center",
+    justifyContent: "center",
   },
   catActive: {
     backgroundColor: colors.brandTintStrong,
@@ -593,7 +718,8 @@ const styles = StyleSheet.create({
   },
   save: {
     width: "100%",
-    paddingVertical: 15,
+    minHeight: 50,
+    paddingVertical: 13,
     borderRadius: radius.card,
     backgroundColor: colors.brand,
     alignItems: "center",
@@ -610,5 +736,170 @@ const styles = StyleSheet.create({
   },
   saveTextDisabled: {
     color: colors.tertiaryLabel,
+  },
+  pickerModalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  pickerBackdrop: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(0,0,0,0.46)",
+  },
+  pickerSheet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
+    height: "84%",
+    backgroundColor: colors.grouped,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    overflow: "hidden",
+    ...Platform.select({
+      web: { boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" },
+      default: {
+        shadowColor: "#000",
+        shadowOpacity: 0.22,
+        shadowRadius: 40,
+        shadowOffset: { width: 0, height: -8 },
+      },
+    }),
+  },
+  pickerHeader: {
+    minHeight: 68,
+    paddingLeft: 20,
+    paddingRight: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pickerTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    color: colors.label,
+  },
+  pickerCount: {
+    marginTop: 2,
+    fontSize: 12.5,
+    color: colors.secondaryLabel,
+  },
+  pickerClose: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.fillStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  search: {
+    minHeight: 44,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.searchFill,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 44,
+    fontSize: 16,
+    letterSpacing: -0.3,
+    color: colors.label,
+    paddingVertical: 8,
+  },
+  pickerList: {
+    flex: 1,
+    marginHorizontal: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+  },
+  pickerListContent: {
+    paddingHorizontal: 14,
+  },
+  pickerListEmpty: {
+    flexGrow: 1,
+  },
+  pickerRow: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.separator,
+  },
+  pickerRowPressed: {
+    backgroundColor: "rgba(60,60,67,0.06)",
+  },
+  pickerRowMain: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  pickerRowName: {
+    ...typography.rowTitle,
+    color: colors.label,
+  },
+  pickerRowSub: {
+    fontSize: 13,
+    letterSpacing: -0.2,
+    color: colors.secondaryLabel,
+  },
+  pickerState: {
+    flex: 1,
+    minHeight: 180,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  pickerStateText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.muted,
+    letterSpacing: -0.2,
+    textAlign: "center",
+  },
+  retryButton: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderRadius: radius.md,
+    backgroundColor: colors.brandTintStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  footerRetry: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.brand,
+  },
+  pickerFooter: {
+    minHeight: 56,
+    paddingVertical: 8,
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerFooterText: {
+    fontSize: 12.5,
+    color: colors.secondaryLabel,
   },
 });

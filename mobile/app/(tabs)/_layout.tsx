@@ -8,7 +8,7 @@ import {
   CalendarDays,
   ClipboardList,
   Home,
-} from "lucide-react-native";
+} from "@/ui/Icons";
 import { colors } from "@/design/tokens";
 import { useAuth } from "@/context/AuthContext";
 

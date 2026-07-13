@@ -1,35 +1,43 @@
-import { useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { Search } from "lucide-react-native";
+import { Search } from "@/ui/Icons";
 import { colors, radius, spacing, typography } from "@/design/tokens";
-import { loadCompanies, type CompanyListItem } from "@/lib/queries";
-import { useAsyncData } from "@/lib/useAsyncData";
+import { ddayLabel } from "@/lib/dates";
+import { loadCompaniesPage, type CompanyListItem } from "@/lib/queries";
+import { usePagedData } from "@/lib/usePagedData";
 import {
   Cell,
   Chevron,
   DdayBadge,
-  Group,
   InlineEmpty,
   Loading,
 } from "@/ui/Primitives";
-import { Screen } from "@/ui/Screen";
+import { ScreenList } from "@/ui/Screen";
 
-function CompanyCell({
+const CompanyCell = memo(function CompanyCell({
   company,
+  first,
   last,
   onPress,
 }: {
   company: CompanyListItem;
+  first?: boolean;
   last?: boolean;
-  onPress: () => void;
+  onPress: (id: string) => void;
 }) {
   const sub = [company.contact_name, company.industry, company.region]
     .filter(Boolean)
     .join(" · ");
   const hasDeadline = company.nearestDaysLeft !== null && company.nearestDaysLeft !== undefined;
   return (
-    <Cell last={last} onPress={onPress}>
+    <Cell
+      grouped
+      first={first}
+      last={last}
+      onPress={() => onPress(company.id)}
+      accessibilityLabel={`${company.name}${sub ? `, ${sub}` : ""}, ${hasDeadline ? `가장 가까운 마감 ${ddayLabel(company.nearestDaysLeft)}` : "다가오는 마감 없음"}`}
+    >
       <View style={styles.main}>
         <Text style={styles.name} numberOfLines={1}>
           {company.name}
@@ -50,59 +58,94 @@ function CompanyCell({
       </View>
     </Cell>
   );
-}
+});
 
 export default function CompaniesScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const { data, loading, refreshing, error, refresh } = useAsyncData(loadCompanies);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data ?? [];
-    return (data ?? []).filter((company) =>
-      [company.name, company.industry, company.region, company.contact_name, company.ceo_name]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q)),
-    );
-  }, [data, query]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const pageLoader = useCallback(
+    (offset: number) =>
+      loadCompaniesPage({
+        offset,
+        query: debouncedQuery || undefined,
+      }),
+    [debouncedQuery],
+  );
+  const {
+    items: companies,
+    hasMore,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    refresh,
+    loadMore,
+  } = usePagedData(pageLoader);
+  const openCompany = useCallback(
+    (id: string) => router.push(`/company/${id}`),
+    [router],
+  );
 
   return (
-    <Screen title="기업" refreshing={refreshing} onRefresh={refresh}>
-      <View style={styles.searchWrap}>
-        <View style={styles.search}>
-          <Search size={16} color={colors.secondaryLabel} strokeWidth={1.7} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="검색"
-            placeholderTextColor={colors.secondaryLabel}
-            style={styles.searchInput}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-        </View>
-      </View>
-
-      {loading && !data ? <Loading /> : null}
-      {error ? <InlineEmpty>기업을 불러오지 못했습니다</InlineEmpty> : null}
-      {data ? (
-        filtered.length > 0 ? (
-          <Group>
-            {filtered.map((company, i) => (
-              <CompanyCell
-                key={company.id}
-                company={company}
-                last={i === filtered.length - 1}
-                onPress={() => router.push(`/company/${company.id}`)}
+    <ScreenList
+      title="기업"
+      refreshing={refreshing}
+      onRefresh={refresh}
+      header={
+        <>
+          <View style={styles.searchWrap}>
+            <View style={styles.search}>
+              <Search size={16} color={colors.secondaryLabel} strokeWidth={1.7} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="검색"
+                placeholderTextColor={colors.secondaryLabel}
+                style={styles.searchInput}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                accessibilityLabel="기업 검색"
               />
-            ))}
-          </Group>
-        ) : (
-          <InlineEmpty>검색 결과가 없습니다</InlineEmpty>
-        )
-      ) : null}
-    </Screen>
+            </View>
+          </View>
+          {loading ? <Loading /> : null}
+          {error ? <InlineEmpty>기업을 불러오지 못했습니다</InlineEmpty> : null}
+        </>
+      }
+      data={companies}
+      keyExtractor={(company) => company.id}
+      renderItem={({ item, index }) => (
+        <CompanyCell
+          company={item}
+          first={index === 0}
+          last={index === companies.length - 1}
+          onPress={openCompany}
+        />
+      )}
+      ListEmptyComponent={
+        !loading && !error ? (
+          <InlineEmpty>
+            {debouncedQuery ? "검색 결과가 없습니다" : "등록된 기업이 없습니다"}
+          </InlineEmpty>
+        ) : null
+      }
+      ListFooterComponent={loadingMore ? <Loading /> : null}
+      onEndReached={hasMore ? loadMore : undefined}
+      onEndReachedThreshold={0.35}
+      initialNumToRender={12}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+    />
   );
 }
 
@@ -112,7 +155,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   search: {
-    minHeight: 38,
+    minHeight: 44,
     borderRadius: radius.md,
     backgroundColor: colors.searchFill,
     paddingHorizontal: 12,

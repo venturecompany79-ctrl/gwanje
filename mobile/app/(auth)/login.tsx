@@ -13,7 +13,7 @@ import {
 import { Redirect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { Lock, Mail } from "lucide-react-native";
+import { Lock, Mail } from "@/ui/Icons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, radius } from "@/design/tokens";
 
@@ -96,6 +96,7 @@ export default function LoginScreen() {
             source={require("../../assets/images/gwanje-logo.png")}
             style={styles.logo}
             resizeMode="contain"
+            accessible={false}
           />
           <Text style={styles.brandCopy}>컨설턴트 운영 콘솔</Text>
         </View>
@@ -112,8 +113,11 @@ export default function LoginScreen() {
               placeholder="이메일"
               placeholderTextColor={colors.tertiaryLabel}
               keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
+              accessibilityLabel="이메일"
               style={styles.input}
             />
           </View>
@@ -129,11 +133,19 @@ export default function LoginScreen() {
               placeholder="비밀번호"
               placeholderTextColor={colors.tertiaryLabel}
               secureTextEntry={!showPassword}
+              textContentType="password"
+              autoComplete="current-password"
               autoCapitalize="none"
               autoCorrect={false}
+              accessibilityLabel="비밀번호"
               style={styles.input}
             />
-            <Pressable onPress={() => setShowPassword((value) => !value)} hitSlop={8}>
+            <Pressable
+              onPress={() => setShowPassword((value) => !value)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+              style={styles.toggleButton}
+            >
               <Text style={styles.toggle}>{showPassword ? "숨김" : "보기"}</Text>
             </Pressable>
           </View>
@@ -149,13 +161,18 @@ export default function LoginScreen() {
         {shownError ? (
           <View style={styles.errorRow}>
             <View style={styles.errorDot} />
-            <Text style={styles.errorText}>{shownError}</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+              {shownError}
+            </Text>
           </View>
         ) : null}
 
         <Pressable
           onPress={submit}
           disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={pending ? "로그인 중" : "로그인"}
+          accessibilityState={{ disabled: busy, busy: pending }}
           style={[styles.button, pending && styles.buttonPending]}
         >
           <Text style={styles.buttonText}>{pending ? "로그인 중…" : "로그인"}</Text>
@@ -170,6 +187,9 @@ export default function LoginScreen() {
         <Pressable
           onPress={submitGoogle}
           disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={googlePending ? "Google 인증 중" : "Google로 로그인"}
+          accessibilityState={{ disabled: busy, busy: googlePending }}
           style={[styles.googleButton, googlePending && styles.googleButtonPending]}
         >
           <Text style={styles.googleG}>G</Text>
@@ -244,6 +264,14 @@ const styles = StyleSheet.create({
     color: colors.tertiaryLabel,
     width: 32,
     textAlign: "right",
+  },
+  toggleButton: {
+    minWidth: 44,
+    minHeight: 44,
+    marginVertical: -12,
+    marginRight: -8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noticeRow: {
     flexDirection: "row",

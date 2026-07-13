@@ -12,7 +12,7 @@ import {
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { Check, X } from "lucide-react-native";
+import { Check, X } from "@/ui/Icons";
 import { colors, radius } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
 import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
@@ -55,14 +55,25 @@ export default function TaskModal() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.root}
       >
-        <Pressable style={styles.backdrop} onPress={() => router.back()} />
-        <View style={styles.sheet}>
-          <View style={styles.grabberWrap}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => router.back()}
+          accessible={false}
+        />
+        <View style={styles.sheet} accessibilityViewIsModal>
+          <View style={styles.grabberWrap} accessibilityElementsHidden>
             <View style={styles.grabber} />
           </View>
           <View style={styles.header}>
-            <Text style={styles.sheetTitle}>Task 상세</Text>
-            <Pressable style={styles.close} onPress={() => router.back()} hitSlop={8}>
+            <Text style={styles.sheetTitle} accessibilityRole="header">
+              Task 상세
+            </Text>
+            <Pressable
+              style={styles.close}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Task 상세 닫기"
+            >
               <X size={13} color={colors.secondaryLabel} strokeWidth={2.2} />
             </Pressable>
           </View>
@@ -73,7 +84,7 @@ export default function TaskModal() {
             </View>
           ) : null}
           {error ? (
-            <View style={styles.stateWrap}>
+            <View style={styles.stateWrap} accessibilityRole="alert">
               <InlineEmpty>Task를 불러오지 못했습니다</InlineEmpty>
             </View>
           ) : null}
@@ -155,7 +166,7 @@ function TaskForm({
 
         <SectionLabel style={styles.tightLabel}>기업</SectionLabel>
         <Group>
-          <Cell last>
+          <Cell last accessibilityLabel={`기업, ${task.companyName}`}>
             <Text style={styles.readonlyValue} numberOfLines={1}>
               {task.companyName}
             </Text>
@@ -172,6 +183,8 @@ function TaskForm({
               placeholder="Task 제목"
               placeholderTextColor={colors.tertiaryLabel}
               style={[styles.fieldInput, !isEditing && styles.fieldInputReadonly]}
+              accessibilityLabel="Task 제목"
+              accessibilityState={{ disabled: !isEditing }}
             />
           </Cell>
           <Cell last>
@@ -180,6 +193,7 @@ function TaskForm({
               value={dueDate}
               onChange={setDueDate}
               disabled={!isEditing}
+              accessibilityLabel="Task 마감일"
             />
           </Cell>
         </Group>
@@ -192,6 +206,8 @@ function TaskForm({
               showsHorizontalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.catRow}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Task 분류"
             >
               <CategoryChip
                 label="없음"
@@ -216,17 +232,26 @@ function TaskForm({
         <Group>
           {TASK_STAGES.map((item, i) => {
             const active = stage === item;
+            const label = TASK_STAGE_LABEL[item];
             return (
               <Cell
                 key={item}
                 last={i === TASK_STAGES.length - 1}
-                onPress={isEditing ? () => setStage(item) : undefined}
+                onPress={() => setStage(item)}
+                disabled={!isEditing}
+                accessibilityLabel={`${label} 단계`}
+                accessibilityState={{ selected: active, disabled: !isEditing }}
               >
                 <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
-                  {TASK_STAGE_LABEL[item]}
+                  {label}
                 </Text>
                 {active ? (
-                  <Check size={17} color={colors.brand} strokeWidth={2.4} />
+                  <View
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <Check size={17} color={colors.brand} strokeWidth={2.4} />
+                  </View>
                 ) : null}
               </Cell>
             );
@@ -242,9 +267,19 @@ function TaskForm({
           multiline
           editable={isEditing}
           style={[styles.memo, !isEditing && styles.memoReadonly]}
+          accessibilityLabel="Task 메모"
+          accessibilityState={{ disabled: !isEditing }}
         />
 
-        {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+        {saveError ? (
+          <Text
+            style={styles.saveError}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+          >
+            {saveError}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
@@ -252,6 +287,9 @@ function TaskForm({
           <Pressable
             onPress={save}
             disabled={!canSave}
+            accessibilityRole="button"
+            accessibilityLabel={pending ? "변경사항 저장 중" : "변경사항 저장"}
+            accessibilityState={{ disabled: !canSave, busy: pending }}
             style={[styles.save, !canSave && styles.saveDisabled]}
           >
             <Text style={styles.saveText}>
@@ -259,7 +297,13 @@ function TaskForm({
             </Text>
           </Pressable>
         ) : (
-          <Pressable onPress={() => setIsEditing(true)} style={styles.save}>
+          <Pressable
+            onPress={() => setIsEditing(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Task 수정하기"
+            accessibilityState={{ disabled: false }}
+            style={styles.save}
+          >
             <Text style={styles.saveText}>수정하기</Text>
           </Pressable>
         )}
@@ -283,6 +327,9 @@ function CategoryChip({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active, disabled }}
       style={[
         styles.cat,
         active ? styles.catActive : styles.catOff,
@@ -334,10 +381,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(60,60,67,0.24)",
   },
   header: {
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 8,
-    paddingBottom: 10,
     paddingHorizontal: 16,
   },
   sheetTitle: {
@@ -348,11 +394,11 @@ const styles = StyleSheet.create({
   },
   close: {
     position: "absolute",
-    right: 14,
-    top: 4,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    right: 8,
+    top: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.fillStrong,
     alignItems: "center",
     justifyContent: "center",
@@ -420,6 +466,7 @@ const styles = StyleSheet.create({
   },
   fieldInput: {
     flex: 1,
+    minHeight: 44,
     fontSize: 16,
     fontWeight: "500",
     letterSpacing: -0.3,
@@ -442,9 +489,12 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   cat: {
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.chip,
+    alignItems: "center",
+    justifyContent: "center",
   },
   catActive: {
     backgroundColor: colors.brandTintStrong,
@@ -507,7 +557,8 @@ const styles = StyleSheet.create({
   },
   save: {
     width: "100%",
-    paddingVertical: 15,
+    minHeight: 50,
+    paddingVertical: 13,
     borderRadius: radius.card,
     backgroundColor: colors.brand,
     alignItems: "center",

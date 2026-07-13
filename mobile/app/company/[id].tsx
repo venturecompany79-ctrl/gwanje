@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, Mail, Phone, ShieldCheck } from "lucide-react-native";
+import { ChevronLeft, Mail, Phone, ShieldCheck } from "@/ui/Icons";
 import { colors, radius, spacing, typography } from "@/design/tokens";
-import { daysFromDateString, monthDayKo } from "@/lib/dates";
+import { daysFromDateString, ddayLabel, monthDayKo } from "@/lib/dates";
 import { TASK_STAGE_LABEL } from "@/lib/labels";
 import { loadCompanyDetail } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
@@ -42,6 +42,9 @@ function ActionButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled) }}
       style={({ pressed }) => [
         styles.action,
         pressed && !disabled && styles.actionPressed,
@@ -80,7 +83,12 @@ export default function CompanyDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.root}>
         <View style={[styles.nav, { paddingTop: insets.top }]}>
-          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={8}>
+          <Pressable
+            style={styles.back}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="기업 목록으로 돌아가기"
+          >
             <ChevronLeft size={22} color={colors.brand} strokeWidth={2.1} />
             <Text style={styles.backText}>기업</Text>
           </Pressable>
@@ -95,7 +103,9 @@ export default function CompanyDetailScreen() {
           {data && company ? (
             <>
               <View style={styles.titleBlock}>
-                <Text style={styles.name}>{company.name}</Text>
+                <Text accessibilityRole="header" style={styles.name}>
+                  {company.name}
+                </Text>
                 {meta ? <Text style={styles.meta}>{meta}</Text> : null}
               </View>
 
@@ -130,7 +140,11 @@ export default function CompanyDetailScreen() {
                   <SectionLabel>다가오는 일정</SectionLabel>
                   <Group>
                     {data.deadlines.map((item, i) => (
-                      <Cell key={`${item.source}-${item.id}`} last={i === data.deadlines.length - 1}>
+                      <Cell
+                        key={`${item.source}-${item.id}`}
+                        last={i === data.deadlines.length - 1}
+                        accessibilityLabel={`${item.title ?? "일정"}, ${monthDayKo(item.due_date)}, ${ddayLabel(item.days_left)}`}
+                      >
                         <Text style={styles.scheduleTitle} numberOfLines={1}>
                           {item.title ?? "일정"}
                         </Text>
@@ -170,6 +184,7 @@ export default function CompanyDetailScreen() {
                         key={task.id}
                         last={i === arr.length - 1}
                         onPress={() => router.push(`/task/${task.id}`)}
+                        accessibilityLabel={`${task.title}, ${TASK_STAGE_LABEL[task.stage]}, ${ddayLabel(daysFromDateString(task.due_date))}`}
                       >
                         <View style={styles.taskMain}>
                           <Text style={styles.taskTitle} numberOfLines={1}>
@@ -248,6 +263,7 @@ const styles = StyleSheet.create({
   },
   action: {
     flex: 1,
+    minHeight: 64,
     alignItems: "center",
     gap: 5,
     paddingVertical: 12,
