@@ -9,6 +9,7 @@ export const PERMISSION_KEYS = [
   "settings.categories.write",
   "settings.rules.write",
   "settings.drive.write",
+  "ai.assistant.use",
   "billing.manage",
 ] as const;
 
@@ -44,6 +45,7 @@ export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   "settings.categories.write": "분류 카테고리 관리",
   "settings.rules.write": "알림 규칙 관리",
   "settings.drive.write": "Google Drive 연결 관리",
+  "ai.assistant.use": "AI 비서 사용",
   "billing.manage": "결제 관리",
 };
 
@@ -59,6 +61,10 @@ export const PERMISSION_GROUPS: { title: string; keys: PermissionKey[] }[] = [
   {
     title: "일괄안내",
     keys: ["campaigns.read", "campaigns.write"],
+  },
+  {
+    title: "AI",
+    keys: ["ai.assistant.use"],
   },
   {
     title: "운영",
@@ -85,12 +91,14 @@ export const ROLE_PRESETS: Record<MemberRole, PermissionKey[]> = {
     "settings.categories.write",
     "settings.rules.write",
     "settings.drive.write",
+    "ai.assistant.use",
   ],
   member: [
     "companies.read",
     "tasks.read",
     "tasks.write",
     "notifications.read",
+    "ai.assistant.use",
   ],
   viewer: [
     "companies.read",

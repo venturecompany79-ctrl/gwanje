@@ -36,6 +36,7 @@ import {
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 import { normalizeConditionTags } from "@/lib/company-tags";
+import { validatePrimaryConsultant } from "@/lib/data/consultants";
 
 type Supabase = NonNullable<Awaited<ReturnType<typeof createClient>>>;
 type DocumentInsertResult =
@@ -1074,6 +1075,23 @@ export async function updateCompany(
 
   const conditionTags = normalizeConditionTags(optionalText(formData, "condition_tags"));
 
+  let primaryConsultantUpdate: { primary_consultant_id?: string | null } = {};
+  if (formData.has("primary_consultant_id")) {
+    const ctx = await getTenantContext(supabase);
+    if ("error" in ctx) return { ok: false, error: ctx.error };
+    const primaryConsultant = await validatePrimaryConsultant(
+      supabase,
+      ctx.tenantId,
+      optionalText(formData, "primary_consultant_id"),
+    );
+    if (!primaryConsultant.ok) {
+      return { ok: false, error: primaryConsultant.error };
+    }
+    primaryConsultantUpdate = {
+      primary_consultant_id: primaryConsultant.value,
+    };
+  }
+
   const { error } = await supabase
     .from("company")
     .update({
@@ -1093,6 +1111,7 @@ export async function updateCompany(
       contract_start_date: contractStartDate.value,
       contract_end_date: contractEndDate.value,
       memo: optionalText(formData, "memo"),
+      ...primaryConsultantUpdate,
     })
     .eq("id", companyId);
   if (error) {

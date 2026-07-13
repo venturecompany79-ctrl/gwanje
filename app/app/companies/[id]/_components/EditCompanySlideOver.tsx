@@ -7,14 +7,17 @@ import { InputField } from "@/components/ui/Input";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { IconAlert, IconEdit, IconX } from "@/components/ui/icons";
 import type { CompanyProfile } from "@/lib/data/company-detail";
+import type { ConsultantOption } from "@/lib/data/consultants";
 import { updateCompany } from "../actions";
 
 export function EditCompanyButton({
   company,
+  consultants,
   demo,
   showToast,
 }: {
   company: CompanyProfile;
+  consultants: ConsultantOption[];
   demo: boolean;
   showToast: (message: string) => void;
 }) {
@@ -77,6 +80,23 @@ export function EditCompanyButton({
                   defaultValue={company.name}
                   autoFocus
                 />
+                <div className="field">
+                  <label htmlFor="company-primary-consultant">주담당 컨설턴트</label>
+                  <select
+                    id="company-primary-consultant"
+                    name="primary_consultant_id"
+                    className="input"
+                    defaultValue={company.primaryConsultantId ?? ""}
+                  >
+                    <option value="">미배정</option>
+                    {consultants.map((consultant) => (
+                      <option key={consultant.id} value={consultant.id}>
+                        {consultant.name}
+                        {consultant.title ? ` · ${consultant.title}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="form-grid2">
                   <InputField
                     label="사업자등록번호"

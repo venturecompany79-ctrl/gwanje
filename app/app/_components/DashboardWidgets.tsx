@@ -17,29 +17,29 @@ import type { NotificationType } from "@/lib/database.types";
 function alertIcon(type: NotificationType, urgent: boolean) {
   if (urgent) {
     return (
-      <div className="alert-ico alert-ico--urgent">
+      <span className="alert-ico alert-ico--urgent">
         <IconAlert />
-      </div>
+      </span>
     );
   }
   switch (type) {
     case "expiry":
       return (
-        <div className="alert-ico alert-ico--expiry">
+        <span className="alert-ico alert-ico--expiry">
           <IconClock />
-        </div>
+        </span>
       );
     case "deadline":
       return (
-        <div className="alert-ico alert-ico--deadline">
+        <span className="alert-ico alert-ico--deadline">
           <IconCalendar />
-        </div>
+        </span>
       );
     case "program_match":
       return (
-        <div className="alert-ico alert-ico--match">
+        <span className="alert-ico alert-ico--match">
           <IconTarget />
-        </div>
+        </span>
       );
   }
 }
@@ -52,64 +52,78 @@ export function DashboardWidgets({
   files: DashboardFile[];
 }) {
   return (
-    <aside className="widgets">
-      <section className="panel">
-        <div className="wpanel-head">
-          <h3>오늘의 알림</h3>
-          <div className="spacer" />
-          <Link href="/app/notifications">전체</Link>
-        </div>
-        {alerts.length === 0 ? (
-          <div className="empty-w">
+    <section className="panel monitor-activity" aria-labelledby="activity-title">
+      <header className="monitor-section-head monitor-section-head--compact">
+        <div className="monitor-section-title">
+          <span className="monitor-section-icon">
             <IconBell />
-            <p>아직 알림이 없습니다</p>
+          </span>
+          <div>
+            <h2 id="activity-title">최근 활동</h2>
+            <p>새 알림과 기업 자료를 간결하게 모았습니다.</p>
           </div>
-        ) : (
-          <div className="wpanel-body">
-            {alerts.map((a) => (
-              <Link key={a.id} href={notificationHref(a)} className="alert-item">
-                {alertIcon(a.type, a.urgent)}
-                <div className="alert-body">
-                  <div className="alert-title">{a.title}</div>
-                  {a.sub ? <div className="alert-sub">{a.sub}</div> : null}
-                </div>
-                <div className="alert-time">{a.timeAgo}</div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="panel">
-        <div className="wpanel-head">
-          <h3>최근 자료 제출</h3>
-          <div className="spacer" />
-          <Link href="/app/companies">전체</Link>
         </div>
-        {files.length === 0 ? (
-          <div className="empty-w">
-            <IconFile />
-            <p>제출된 자료가 없습니다</p>
+      </header>
+
+      <div className="monitor-activity-grid">
+        <div className="monitor-activity-group">
+          <div className="monitor-activity-label">
+            <strong>주요 알림</strong>
+            <Link href="/app/notifications">전체 보기</Link>
           </div>
-        ) : (
-          <div className="wpanel-body">
-            {files.map((f) => (
-              <Link
-                key={f.id}
-                href={`/app/companies/${f.companyId}?tab=files`}
-                className="file-item"
-              >
-                <div className="file-type">{f.fileType}</div>
-                <div className="file-body">
-                  <div className="file-name">{f.name}</div>
-                  <div className="file-co">{f.companyName}</div>
-                </div>
-                <div className="file-when num">{f.when}</div>
-              </Link>
-            ))}
+          {alerts.length === 0 ? (
+            <div className="monitor-mini-empty">
+              <IconBell /> 새 알림이 없습니다
+            </div>
+          ) : (
+            <div className="monitor-activity-list">
+              {alerts.slice(0, 3).map((alert) => (
+                <Link
+                  key={alert.id}
+                  href={notificationHref(alert)}
+                  className="monitor-activity-item"
+                >
+                  {alertIcon(alert.type, alert.urgent)}
+                  <span className="monitor-activity-copy">
+                    <strong>{alert.title}</strong>
+                    {alert.sub ? <small>{alert.sub}</small> : null}
+                  </span>
+                  <time>{alert.timeAgo}</time>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="monitor-activity-group">
+          <div className="monitor-activity-label">
+            <strong>최근 자료</strong>
+            <Link href="/app/companies">기업 보기</Link>
           </div>
-        )}
-      </section>
-    </aside>
+          {files.length === 0 ? (
+            <div className="monitor-mini-empty">
+              <IconFile /> 새로 제출된 자료가 없습니다
+            </div>
+          ) : (
+            <div className="monitor-activity-list">
+              {files.slice(0, 3).map((file) => (
+                <Link
+                  key={file.id}
+                  href={`/app/companies/${file.companyId}?tab=files`}
+                  className="monitor-activity-item"
+                >
+                  <span className="monitor-file-type">{file.fileType.slice(0, 3)}</span>
+                  <span className="monitor-activity-copy">
+                    <strong>{file.name}</strong>
+                    <small>{file.companyName}</small>
+                  </span>
+                  <time className="num">{file.when}</time>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

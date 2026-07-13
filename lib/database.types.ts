@@ -14,6 +14,213 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_action: {
+        Row: {
+          action_type: string
+          conversation_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          payload: Json
+          preview: Json
+          requested_by: string
+          result: Json | null
+          status: string
+          target_id: string | null
+          target_type: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          conversation_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload?: Json
+          preview?: Json
+          requested_by: string
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload?: Json
+          preview?: Json
+          requested_by?: string
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_conversation_tenant_fk"
+            columns: ["tenant_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversation"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_action_decider_tenant_fk"
+            columns: ["tenant_id", "decided_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_action_requester_tenant_fk"
+            columns: ["tenant_id", "requested_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_action_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_conversation: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          owner_id: string
+          scope: Json
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          owner_id: string
+          scope?: Json
+          tenant_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          owner_id?: string
+          scope?: Json
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversation_owner_tenant_fk"
+            columns: ["tenant_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_conversation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_message: {
+        Row: {
+          author_id: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          input_tokens: number | null
+          latency_ms: number | null
+          model: string | null
+          output_tokens: number | null
+          role: string
+          sources: Json
+          tenant_id: string
+          total_tokens: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          role: string
+          sources?: Json
+          tenant_id: string
+          total_tokens?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          role?: string
+          sources?: Json
+          tenant_id?: string
+          total_tokens?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_message_author_tenant_fk"
+            columns: ["tenant_id", "author_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_message_conversation_tenant_fk"
+            columns: ["tenant_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversation"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_message_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_customer: {
         Row: {
           billing_email: string | null
@@ -251,6 +458,7 @@ export type Database = {
           industry: string | null
           memo: string | null
           name: string
+          primary_consultant_id: string | null
           region: string | null
           revenue: number | null
           status: string
@@ -275,6 +483,7 @@ export type Database = {
           industry?: string | null
           memo?: string | null
           name: string
+          primary_consultant_id?: string | null
           region?: string | null
           revenue?: number | null
           status?: string
@@ -299,12 +508,20 @@ export type Database = {
           industry?: string | null
           memo?: string | null
           name?: string
+          primary_consultant_id?: string | null
           region?: string | null
           revenue?: number | null
           status?: string
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "company_primary_consultant_tenant_fk"
+            columns: ["tenant_id", "primary_consultant_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["tenant_id", "id"]
+          },
           {
             foreignKeyName: "company_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -538,6 +755,8 @@ export type Database = {
           output_document_id: string | null
           report_json: Json | null
           requested_by: string | null
+          summary_output_document_id: string | null
+          summary_report_json: Json | null
           status: Database["public"]["Enums"]["meeting_report_status"]
           summary: string | null
           tenant_id: string
@@ -556,6 +775,8 @@ export type Database = {
           output_document_id?: string | null
           report_json?: Json | null
           requested_by?: string | null
+          summary_output_document_id?: string | null
+          summary_report_json?: Json | null
           status?: Database["public"]["Enums"]["meeting_report_status"]
           summary?: string | null
           tenant_id: string
@@ -574,6 +795,8 @@ export type Database = {
           output_document_id?: string | null
           report_json?: Json | null
           requested_by?: string | null
+          summary_output_document_id?: string | null
+          summary_report_json?: Json | null
           status?: Database["public"]["Enums"]["meeting_report_status"]
           summary?: string | null
           tenant_id?: string
@@ -600,6 +823,13 @@ export type Database = {
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_summary_output_document_id_fkey"
+            columns: ["summary_output_document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
             referencedColumns: ["id"]
           },
           {
@@ -1740,6 +1970,24 @@ export type Database = {
       }
     }
     Views: {
+      ai_action_audit: {
+        Row: {
+          action_type: string | null
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          error_message: string | null
+          executed_at: string | null
+          id: string | null
+          requested_by: string | null
+          result_summary: string | null
+          status: string | null
+          target_id: string | null
+          target_type: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       deadline_item: {
         Row: {
           category_id: string | null
@@ -1749,6 +1997,7 @@ export type Database = {
           days_left: number | null
           due_date: string | null
           id: string | null
+          primary_consultant_id: string | null
           source: string | null
           status: string | null
           tenant_id: string | null
@@ -2078,11 +2327,19 @@ export type CredentialStatus = "valid" | "expiring" | "expired"
 
 export type DeadlineItem = Omit<
   Tables<"deadline_item">,
-  "days_left" | "due_date" | "id" | "source" | "status" | "tenant_id" | "title"
+  | "days_left"
+  | "due_date"
+  | "id"
+  | "primary_consultant_id"
+  | "source"
+  | "status"
+  | "tenant_id"
+  | "title"
 > & {
   days_left: number
   due_date: string
   id: string
+  primary_consultant_id?: string | null
   source: "credential" | "task" | "schedule" | "ip_deadline"
   status: CredentialStatus | TaskStage | ScheduleType | IpDeadlineType
   tenant_id: string

@@ -27,6 +27,7 @@ import {
   IconTarget,
 } from "@/components/ui/icons";
 import { addCompany } from "../../actions";
+import type { ConsultantOption } from "@/lib/data/consultants";
 
 const technologyOptions = [
   "AI(인공지능)",
@@ -286,7 +287,15 @@ function ChoiceGroup({
   );
 }
 
-export function CompanyIntakeForm({ demo }: { demo: boolean }) {
+export function CompanyIntakeForm({
+  demo,
+  consultants,
+  currentConsultantId,
+}: {
+  demo: boolean;
+  consultants: ConsultantOption[];
+  currentConsultantId: string | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [bizNoError, setBizNoError] = useState<string | undefined>();
@@ -501,6 +510,25 @@ export function CompanyIntakeForm({ demo }: { demo: boolean }) {
             <h2 id="basic-section">기본 기업정보</h2>
             <p>기업 상세 프로파일과 지원사업 필터링의 기준값으로 사용합니다.</p>
           </div>
+        </div>
+        <div className="field">
+          <label htmlFor="company-intake-primary-consultant">
+            주담당 컨설턴트
+          </label>
+          <select
+            id="company-intake-primary-consultant"
+            name="primary_consultant_id"
+            className="input"
+            defaultValue={currentConsultantId ?? ""}
+          >
+            <option value="">미배정</option>
+            {consultants.map((consultant) => (
+              <option key={consultant.id} value={consultant.id}>
+                {consultant.name}
+                {consultant.title ? ` · ${consultant.title}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="form-grid2">
           <InputField

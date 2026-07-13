@@ -1,61 +1,134 @@
-// GWJ-019: 대시보드 패널을 Suspense 경계로 분리해 스트리밍한다.
-// 각 섹션은 자체 로더로 데이터를 가져오는 async Server Component이며,
-// page.tsx는 KPI(헤드)만 await하고 이 섹션들은 fallback을 먼저 그린 뒤 채운다.
+// 대시보드 패널은 독립 Suspense 경계로 스트리밍한다.
+import { cache } from "react";
 import {
   getDashboardActivity,
-  getDashboardDeadlines,
-  type DeadlineFilter,
+  getDashboardQueue,
+  getDashboardTeam,
+  parseDashboardSearchParams,
+  type DashboardConsultantOption,
+  type DashboardScope,
 } from "@/lib/data/dashboard";
+import { assistantEnabled } from "@/lib/assistant/config";
+import { isReportSourceSupported } from "@/lib/reports/file-types";
+import { AssistantPanel } from "./AssistantPanel";
 import { DashboardWidgets } from "./DashboardWidgets";
-import { DeadlinePanel } from "./DeadlinePanel";
+import { PriorityQueue } from "./PriorityQueue";
+import { TeamHealthTable } from "./TeamHealthTable";
 
-export async function DeadlinePanelSection({
-  filter,
-  filterLabel,
+type DashboardQuery = ReturnType<typeof parseDashboardSearchParams>;
+const getDashboardActivityCached = cache(getDashboardActivity);
+
+export async function PriorityQueueSection({
+  query,
+  scope,
+  consultants,
 }: {
-  filter: DeadlineFilter;
-  filterLabel: string | null;
+  query: DashboardQuery;
+  scope: DashboardScope;
+  consultants: DashboardConsultantOption[];
 }) {
-  const { deadlines, overdue } = await getDashboardDeadlines(filter);
+  const { items } = await getDashboardQueue(query);
   return (
-    <DeadlinePanel
-      deadlines={deadlines}
-      overdue={overdue}
-      filterLabel={filterLabel}
+    <PriorityQueue
+      items={items}
+      scope={scope}
+      queueFilter={query.queueFilter}
+      consultantId={query.consultantId}
+      consultants={consultants}
     />
   );
 }
 
-export async function WidgetsSection() {
-  const { alerts, files } = await getDashboardActivity();
+export async function TeamHealthSection({ query }: { query: DashboardQuery }) {
+  const { rows } = await getDashboardTeam(query);
+  return <TeamHealthTable rows={rows} />;
+}
+
+export async function ActivitySection({ query }: { query: DashboardQuery }) {
+  const { alerts, files } = await getDashboardActivityCached(query);
   return <DashboardWidgets alerts={alerts} files={files} />;
 }
 
-/** 마감 패널 자리 스켈레톤 (loading.tsx와 동일 톤) */
-export function DeadlinePanelSkeleton() {
+export async function AssistantSection({
+  query,
+  scope,
+  consultantId,
+}: {
+  query: DashboardQuery;
+  scope: DashboardScope;
+  consultantId: string | null;
+}) {
+  const { files } = await getDashboardActivityCached(query);
   return (
-    <div className="panel" style={{ padding: 22 }}>
-      <div className="skeleton" style={{ width: 140, height: 22 }} />
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="skeleton" style={{ height: 44, marginTop: 14 }} />
+    <AssistantPanel
+      scope={scope}
+      consultantId={consultantId}
+      configured={assistantEnabled()}
+      documents={files.filter((file) => isReportSourceSupported(file.fileType))}
+    />
+  );
+}
+
+export function QueueSkeleton() {
+  return (
+    <div className="panel monitor-skeleton-panel" aria-label="우선 처리 큐 불러오는 중">
+      <div className="monitor-skeleton-head">
+        <div className="skeleton" style={{ width: 176, height: 22 }} />
+        <div className="skeleton" style={{ width: 92, height: 36 }} />
+      </div>
+      <div className="monitor-skeleton-filters">
+        {Array.from({ length: 3 }, (_, index) => (
+          <div key={index} className="skeleton" style={{ width: 148, height: 38 }} />
+        ))}
+      </div>
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="skeleton monitor-skeleton-row" />
       ))}
     </div>
   );
 }
 
-/** 우측 위젯 자리 스켈레톤 */
-export function WidgetsSkeleton() {
+export function TeamSkeleton() {
   return (
-    <div className="widgets">
-      <div className="panel" style={{ padding: 18 }}>
-        <div className="skeleton" style={{ width: 100, height: 18 }} />
-        <div className="skeleton" style={{ height: 52, marginTop: 14 }} />
-        <div className="skeleton" style={{ height: 52, marginTop: 10 }} />
+    <div className="panel monitor-skeleton-panel" aria-label="팀 관제 현황 불러오는 중">
+      <div className="monitor-skeleton-head">
+        <div className="skeleton" style={{ width: 210, height: 22 }} />
       </div>
-      <div className="panel" style={{ padding: 18 }}>
-        <div className="skeleton" style={{ width: 100, height: 18 }} />
-        <div className="skeleton" style={{ height: 46, marginTop: 14 }} />
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="skeleton monitor-skeleton-row" />
+      ))}
+    </div>
+  );
+}
+
+export function ActivitySkeleton() {
+  return (
+    <div className="panel monitor-skeleton-panel" aria-label="최근 활동 불러오는 중">
+      <div className="monitor-skeleton-head">
+        <div className="skeleton" style={{ width: 130, height: 22 }} />
+      </div>
+      <div className="monitor-skeleton-activity">
+        <div className="skeleton" />
+        <div className="skeleton" />
       </div>
     </div>
+  );
+}
+
+export function AssistantSkeleton() {
+  return (
+    <aside className="assistant-panel assistant-panel--skeleton" aria-label="AI 비서 불러오는 중">
+      <div className="assistant-head">
+        <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 9999 }} />
+        <div>
+          <div className="skeleton" style={{ width: 142, height: 17 }} />
+          <div className="skeleton" style={{ width: 98, height: 11, marginTop: 7 }} />
+        </div>
+      </div>
+      <div className="assistant-log">
+        <div className="skeleton" style={{ width: "88%", height: 92 }} />
+        <div className="skeleton" style={{ width: "72%", height: 66, marginLeft: "auto" }} />
+      </div>
+    </aside>
   );
 }

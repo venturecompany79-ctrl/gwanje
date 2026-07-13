@@ -5,7 +5,6 @@ import { Panel, PanelHead } from "@/components/ui/Panel";
 import { IconAlert, IconCalendar, IconKanban, IconList } from "@/components/ui/icons";
 import { deadlineHref } from "@/lib/data/dashboard";
 import type { DeadlineItem } from "@/lib/database.types";
-import { DeadlineRow } from "./DeadlineRow";
 
 export function DeadlinePanel({
   deadlines,
@@ -62,20 +61,27 @@ export function DeadlinePanel({
           </div>
           <table className="dlist dlist--cards">
             <tbody>
-              {overdue.map((row) => (
-                <DeadlineRow
-                  key={`${row.source}-${row.id}`}
-                  href={deadlineHref(row)}
-                  className="row-expired"
-                >
-                  <td className="co" data-label="기업명">{row.company_name}</td>
-                  <td className="item" data-label="항목">{row.title}</td>
-                  <td className="date num" data-label="마감일">{row.due_date}</td>
-                  <td className="r" data-label="D-day">
-                    <DdayBadge daysLeft={row.days_left} />
-                  </td>
-                </DeadlineRow>
-              ))}
+              {overdue.map((row) => {
+                const href = deadlineHref(row);
+                return (
+                  <tr key={`${row.source}-${row.id}`} className="row-expired">
+                    <td className="co" data-label="기업명">
+                      {href ? (
+                        <Link href={href} className="deadline-row-link">
+                          {row.company_name}
+                        </Link>
+                      ) : (
+                        row.company_name
+                      )}
+                    </td>
+                    <td className="item" data-label="항목">{row.title}</td>
+                    <td className="date num" data-label="마감일">{row.due_date}</td>
+                    <td className="r" data-label="D-day">
+                      <DdayBadge daysLeft={row.days_left} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -98,22 +104,30 @@ export function DeadlinePanel({
             </tr>
           </thead>
           <tbody>
-            {deadlines.map((row) => (
-              <DeadlineRow
-                key={`${row.source}-${row.id}`}
-                href={deadlineHref(row)}
-              >
-                <td className="co" data-label="기업명">{row.company_name}</td>
-                <td className="item" data-label="항목">{row.title}</td>
-                <td data-label="분류">
-                  <CategoryChip name={row.category_name} />
-                </td>
-                <td className="date num" data-label="마감일">{row.due_date}</td>
-                <td className="r" data-label="D-day">
-                  <DdayBadge daysLeft={row.days_left} />
-                </td>
-              </DeadlineRow>
-            ))}
+            {deadlines.map((row) => {
+              const href = deadlineHref(row);
+              return (
+                <tr key={`${row.source}-${row.id}`}>
+                  <td className="co" data-label="기업명">
+                    {href ? (
+                      <Link href={href} className="deadline-row-link">
+                        {row.company_name}
+                      </Link>
+                    ) : (
+                      row.company_name
+                    )}
+                  </td>
+                  <td className="item" data-label="항목">{row.title}</td>
+                  <td data-label="분류">
+                    <CategoryChip name={row.category_name} />
+                  </td>
+                  <td className="date num" data-label="마감일">{row.due_date}</td>
+                  <td className="r" data-label="D-day">
+                    <DdayBadge daysLeft={row.days_left} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
