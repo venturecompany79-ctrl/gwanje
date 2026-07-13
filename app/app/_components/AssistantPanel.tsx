@@ -11,6 +11,7 @@ import {
   IconX,
 } from "@/components/ui/icons";
 import type { DashboardFile, DashboardScope } from "@/lib/data/dashboard";
+import { AssistantMessageContent } from "./AssistantMessageContent";
 
 interface AssistantSource {
   id: string;
@@ -861,10 +862,7 @@ export function AssistantPanel({
                 </span>
               ) : null}
               <div className="assistant-message-body">
-                <p>
-                  {message.text}
-                  {message.pending ? <span className="assistant-typing" aria-label="답변 작성 중" /> : null}
-                </p>
+                <AssistantMessageContent text={message.text} pending={message.pending} />
                 {message.sources && message.sources.length > 0 ? (
                   <div className="assistant-sources" aria-label="답변 근거">
                     <span>근거</span>

@@ -8403,7 +8403,7 @@ a.monitor-alert-strip:focus-visible {
   min-width: 0;
   max-width: calc(100% - 31px);
 }
-.assistant-message-body > p {
+.assistant-message-content {
   margin: 0;
   padding: 9px 10px;
   border-radius: 5px var(--radius-lg) var(--radius-lg) var(--radius-lg);
@@ -8413,12 +8413,40 @@ a.monitor-alert-strip:focus-visible {
   line-height: 1.55;
   white-space: pre-wrap;
 }
-.assistant-message--user .assistant-message-body > p {
+.assistant-message-content > :first-child {
+  margin-top: 0;
+}
+.assistant-message-content > :last-child {
+  margin-bottom: 0;
+}
+.assistant-message-content p,
+.assistant-message-content h3,
+.assistant-message-content ul,
+.assistant-message-content ol {
+  margin: 7px 0 0;
+  font: inherit;
+}
+.assistant-message-content h3,
+.assistant-message-content strong {
+  color: var(--color-ink-deep);
+  font-weight: 800;
+}
+.assistant-message-content ul,
+.assistant-message-content ol {
+  padding-left: 17px;
+}
+.assistant-message-content li + li {
+  margin-top: 4px;
+}
+.assistant-message--user .assistant-message-content {
   border-radius: var(--radius-lg) var(--radius-lg) 5px var(--radius-lg);
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
-.assistant-message--error .assistant-message-body > p {
+.assistant-message--user .assistant-message-content strong {
+  color: inherit;
+}
+.assistant-message--error .assistant-message-content {
   background: var(--app-st-expired-bg);
   color: var(--app-st-expired-text);
 }
