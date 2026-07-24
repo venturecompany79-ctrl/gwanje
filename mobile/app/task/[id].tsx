@@ -15,7 +15,14 @@ import * as Haptics from "expo-haptics";
 import { Check, X } from "lucide-react-native";
 import { colors, radius } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
+import {
+  TASK_STAGE_LABEL,
+  TASK_STAGES,
+  TASK_WORK_STATUS_LABEL,
+  TASK_WORK_STATUSES,
+  type TaskStage,
+  type TaskWorkStatus,
+} from "@/lib/labels";
 import {
   loadTask,
   loadTaskFormOptions,
@@ -79,7 +86,7 @@ export default function TaskModal() {
           ) : null}
           {data ? (
             <TaskForm
-              key={data.task.id}
+              key={`${data.task.id}-${data.task.updated_at}`}
               task={data.task}
               options={data.options}
               onClose={() => router.back()}
@@ -109,6 +116,9 @@ function TaskForm({
   const [categoryId, setCategoryId] = useState<string | null>(task.category_id);
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
   const [stage, setStage] = useState<TaskStage>(task.stage);
+  const [workStatus, setWorkStatus] = useState<TaskWorkStatus>(
+    task.work_status,
+  );
   const [memo, setMemo] = useState(task.memo ?? "");
   const [pending, setPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -127,6 +137,8 @@ function TaskForm({
           categoryId,
           dueDate: dueDate || null,
           stage,
+          workStatus,
+          expectedUpdatedAt: task.updated_at,
           memo,
         },
       });
@@ -135,7 +147,12 @@ function TaskForm({
       onClose();
     } catch (err) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setSaveError(err instanceof Error ? err.message : "저장에 실패했습니다.");
+      const message =
+        err instanceof Error ? err.message : "저장에 실패했습니다.";
+      setSaveError(message);
+      if (message.includes("다른 사용자가 먼저")) {
+        await onSaved();
+      }
     } finally {
       setPending(false);
     }
@@ -224,6 +241,27 @@ function TaskForm({
               >
                 <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
                   {TASK_STAGE_LABEL[item]}
+                </Text>
+                {active ? (
+                  <Check size={17} color={colors.brand} strokeWidth={2.4} />
+                ) : null}
+              </Cell>
+            );
+          })}
+        </Group>
+
+        <SectionLabel style={styles.tightLabel}>업무상태</SectionLabel>
+        <Group>
+          {TASK_WORK_STATUSES.map((item, i) => {
+            const active = workStatus === item;
+            return (
+              <Cell
+                key={item}
+                last={i === TASK_WORK_STATUSES.length - 1}
+                onPress={isEditing ? () => setWorkStatus(item) : undefined}
+              >
+                <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
+                  {TASK_WORK_STATUS_LABEL[item]}
                 </Text>
                 {active ? (
                   <Check size={17} color={colors.brand} strokeWidth={2.4} />

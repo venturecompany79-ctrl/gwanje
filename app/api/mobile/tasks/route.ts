@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import type { TaskStage } from "@/lib/database.types";
+import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
 import { isValidDateString } from "@/lib/datetime";
 import {
   mobileError,
@@ -9,6 +9,13 @@ import {
 } from "@/lib/mobile/api";
 
 const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
+const TASK_WORK_STATUSES: TaskWorkStatus[] = [
+  "planned",
+  "in_progress",
+  "waiting",
+  "on_hold",
+  "completed",
+];
 
 interface CreateTaskBody {
   companyId?: string;
@@ -16,6 +23,7 @@ interface CreateTaskBody {
   categoryId?: string | null;
   dueDate?: string | null;
   stage?: TaskStage;
+  workStatus?: TaskWorkStatus;
   memo?: string | null;
 }
 
@@ -38,6 +46,10 @@ export async function POST(request: NextRequest) {
   const stage = body?.stage ?? "diagnosis";
   if (!TASK_STAGES.includes(stage)) {
     return mobileError("단계 값이 올바르지 않습니다.");
+  }
+  const workStatus = body?.workStatus ?? "planned";
+  if (!TASK_WORK_STATUSES.includes(workStatus)) {
+    return mobileError("업무상태 값이 올바르지 않습니다.");
   }
 
   let dueDate: string | null = null;
@@ -70,11 +82,14 @@ export async function POST(request: NextRequest) {
       title,
       category_id: categoryId,
       stage,
+      work_status: workStatus,
       due_date: dueDate,
       assignee_id: ctx.member.userId,
       memo,
     })
-    .select("id, company_id, title, stage, due_date, category_id, memo, created_at")
+    .select(
+      "id, company_id, title, stage, work_status, due_date, category_id, memo, created_at, updated_at",
+    )
     .single();
   if (error) {
     return mobileError(`저장에 실패했습니다: ${error.message}`, 500);

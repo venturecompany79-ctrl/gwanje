@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, Mail, Phone, ShieldCheck } from "lucide-react-native";
 import { colors, radius, spacing, typography } from "@/design/tokens";
 import { daysFromDateString, monthDayKo } from "@/lib/dates";
-import { TASK_STAGE_LABEL } from "@/lib/labels";
+import { TASK_STAGE_LABEL, TASK_WORK_STATUS_LABEL } from "@/lib/labels";
 import { loadCompanyDetail } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { useAuth } from "@/context/AuthContext";
@@ -164,7 +164,7 @@ export default function CompanyDetailScreen() {
               <Group>
                 {data.tasks.length > 0 ? (
                   data.tasks.slice(0, 10).map((task, i, arr) => {
-                    const done = task.stage === "result";
+                    const done = task.work_status === "completed";
                     return (
                       <Cell
                         key={task.id}
@@ -176,7 +176,10 @@ export default function CompanyDetailScreen() {
                             {task.title}
                           </Text>
                           <View style={styles.taskMeta}>
-                            <StageBadge label={TASK_STAGE_LABEL[task.stage]} done={done} />
+                            <StageBadge
+                              label={`${TASK_STAGE_LABEL[task.stage]} · ${TASK_WORK_STATUS_LABEL[task.work_status]}`}
+                              done={done}
+                            />
                           </View>
                         </View>
                         <DdayBadge

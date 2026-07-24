@@ -1657,6 +1657,7 @@ export type Database = {
           tenant_id: string
           title: string
           updated_at: string
+          work_status: Database["public"]["Enums"]["task_work_status"]
         }
         Insert: {
           assignee_id?: string | null
@@ -1671,6 +1672,7 @@ export type Database = {
           tenant_id: string
           title: string
           updated_at?: string
+          work_status?: Database["public"]["Enums"]["task_work_status"]
         }
         Update: {
           assignee_id?: string | null
@@ -1685,6 +1687,7 @@ export type Database = {
           tenant_id?: string
           title?: string
           updated_at?: string
+          work_status?: Database["public"]["Enums"]["task_work_status"]
         }
         Relationships: [
           {
@@ -1717,6 +1720,76 @@ export type Database = {
           },
           {
             foreignKeyName: "task_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_state_change: {
+        Row: {
+          created_at: string
+          changed_by: string | null
+          id: string
+          next_stage: Database["public"]["Enums"]["task_stage"] | null
+          next_work_status:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          previous_stage: Database["public"]["Enums"]["task_stage"] | null
+          previous_work_status:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          task_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          changed_by?: string | null
+          id?: string
+          next_stage?: Database["public"]["Enums"]["task_stage"] | null
+          next_work_status?:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          previous_stage?: Database["public"]["Enums"]["task_stage"] | null
+          previous_work_status?:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          task_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          changed_by?: string | null
+          id?: string
+          next_stage?: Database["public"]["Enums"]["task_stage"] | null
+          next_work_status?:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          previous_stage?: Database["public"]["Enums"]["task_stage"] | null
+          previous_work_status?:
+            | Database["public"]["Enums"]["task_work_status"]
+            | null
+          task_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_state_change_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_state_change_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "task"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_state_change_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
@@ -2060,12 +2133,27 @@ export type Database = {
           p_upcoming_window_days?: number
         }
         Returns: {
+          active_task_count: number
+          application_task_count: number
           company_id: string
+          completed_task_count: number
           credential_types: string[]
+          diagnosis_task_count: number
+          due7_task_count: number
           expired_count: number
+          in_progress_task_count: number
+          latest_task_updated_at: string | null
           nearest_days_left: number | null
+          on_hold_task_count: number
+          planned_task_count: number
+          priority_task: Json | null
+          proposal_task_count: number
+          result_task_count: number
+          overdue_task_count: number
+          unassigned_task_count: number
           upcoming_count: number
           upcoming_items: Json
+          waiting_task_count: number
         }[]
       }
       gov_program_to_search_vector: {
@@ -2146,6 +2234,12 @@ export type Database = {
         | "canceled"
         | "expired"
       task_stage: "diagnosis" | "proposal" | "application" | "result"
+      task_work_status:
+        | "planned"
+        | "in_progress"
+        | "waiting"
+        | "on_hold"
+        | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2308,11 +2402,19 @@ export const Constants = {
         "expired",
       ],
       task_stage: ["diagnosis", "proposal", "application", "result"],
+      task_work_status: [
+        "planned",
+        "in_progress",
+        "waiting",
+        "on_hold",
+        "completed",
+      ],
     },
   },
 } as const
 
 export type TaskStage = Enums<"task_stage">
+export type TaskWorkStatus = Enums<"task_work_status">
 export type ScheduleType = Enums<"schedule_type">
 export type DocumentUploader = Enums<"document_uploader">
 export type CampaignStatus = Enums<"campaign_status">

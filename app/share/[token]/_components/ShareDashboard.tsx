@@ -4,6 +4,7 @@ import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Panel, PanelHead } from "@/components/ui/Panel";
+import { TaskWorkStatusBadge } from "@/components/tasks/Stepper";
 import { IconAlert, IconChecks, IconKanban } from "@/components/ui/icons";
 import type { SharedDashboardData, SharedTaskRow } from "@/lib/data/company-share";
 import { formatDotDateString, formatKstShortDateTime } from "@/lib/datetime";
@@ -17,8 +18,6 @@ import type { TaskStage } from "@/lib/database.types";
 // 고객사 대표용 읽기 전용 대시보드 — task 진행현황 + 성과 KPI만 노출.
 // 내부 메모·담당자·자격·일정·문서는 이 화면에 절대 올리지 않는다.
 
-const IN_PROGRESS_STAGES = TASK_STAGE_ORDER.filter((s) => s !== "result");
-
 function TaskRow({ task }: { task: SharedTaskRow }) {
   return (
     <li className="share-task">
@@ -26,12 +25,13 @@ function TaskRow({ task }: { task: SharedTaskRow }) {
         {TASK_STAGE_LABEL[task.stage]}
       </span>
       <span className="share-task-title">{task.title}</span>
+      <TaskWorkStatusBadge status={task.workStatus} />
       <CategoryChip name={task.categoryName} />
       <span className="spacer" />
       {task.dueDate ? (
         <span className="share-task-due">
           {formatDotDateString(task.dueDate)}
-          {task.daysLeft !== null && task.stage !== "result" ? (
+          {task.daysLeft !== null && task.workStatus !== "completed" ? (
             <DdayBadge daysLeft={task.daysLeft} />
           ) : null}
         </span>
@@ -42,8 +42,10 @@ function TaskRow({ task }: { task: SharedTaskRow }) {
 
 export function ShareDashboard({ data }: { data: SharedDashboardData }) {
   const { kpi } = data;
-  const inProgressTasks = data.tasks.filter((t) => t.stage !== "result");
-  const doneTasks = data.tasks.filter((t) => t.stage === "result");
+  const inProgressTasks = data.tasks.filter(
+    (t) => t.workStatus !== "completed",
+  );
+  const doneTasks = data.tasks.filter((t) => t.workStatus === "completed");
   const barStages = TASK_STAGE_ORDER.filter((s) => kpi.byStage[s] > 0);
   const categoryCss = buildCategoryColorCss(data.categoryColors);
   const kpiTiles = [
@@ -143,7 +145,7 @@ export function ShareDashboard({ data }: { data: SharedDashboardData }) {
             description="새 관리포인트가 시작되면 이곳에서 확인할 수 있습니다."
           />
         ) : (
-          IN_PROGRESS_STAGES.map((stage) => {
+          TASK_STAGE_ORDER.map((stage) => {
             const tasks = inProgressTasks.filter((t) => t.stage === stage);
             if (tasks.length === 0) return null;
             return (
@@ -194,6 +196,7 @@ export function ShareDashboard({ data }: { data: SharedDashboardData }) {
                   {TASK_STAGE_LABEL[t.stage]}
                 </span>
                 <span className="share-task-title">{t.title}</span>
+                <TaskWorkStatusBadge status={t.workStatus} />
                 <span className="spacer" />
                 <span className="share-task-due">
                   {formatKstShortDateTime(t.updatedAt)}

@@ -1,6 +1,11 @@
 // Supabase env 미설정 시 화면 확인용 데모 데이터 (와이어프레임 시나리오와 동일).
 // 날짜는 오늘 기준 상대값으로 생성해 D-day가 항상 자연스럽게 보인다.
-import type { DeadlineItem, IpDeadlineType, TaskStage } from "@/lib/database.types";
+import type {
+  DeadlineItem,
+  IpDeadlineType,
+  TaskStage,
+  TaskWorkStatus,
+} from "@/lib/database.types";
 import type { DashboardData } from "@/lib/data/dashboard";
 import type { CompaniesData, CompanyListRow } from "@/lib/data/companies";
 import type {
@@ -162,13 +167,32 @@ function demoCompany(
     nearestDaysLeft === null
       ? []
       : Array.from({ length: upcomingCount }, (_, i) => ({
+          source: i === 0 ? ("task" as const) : ("credential" as const),
           title: credentialTypes[i]
             ? `${credentialTypes[i]} 갱신`
             : "다가오는 마감",
           daysLeft: nearestDaysLeft + i * 7,
         }));
+  const companyId = `00000000-0000-0000-0000-0000000000c${n}`;
+  const companyTasks = DEMO_TASKS().filter((task) => task.companyId === companyId);
+  const activeTasks = companyTasks.filter(
+    (task) => task.workStatus !== "completed",
+  );
+  const priorityTask =
+    [...activeTasks].sort((a, b) => {
+      const overdueA = a.daysLeft !== null && a.daysLeft < 0 ? 0 : 1;
+      const overdueB = b.daysLeft !== null && b.daysLeft < 0 ? 0 : 1;
+      if (overdueA !== overdueB) return overdueA - overdueB;
+      const holdA = a.workStatus === "on_hold" ? 0 : 1;
+      const holdB = b.workStatus === "on_hold" ? 0 : 1;
+      if (holdA !== holdB) return holdA - holdB;
+      return (
+        (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
+        (b.daysLeft ?? Number.MAX_SAFE_INTEGER)
+      );
+    })[0] ?? null;
   return {
-    id: `00000000-0000-0000-0000-0000000000c${n}`,
+    id: companyId,
     name,
     industry,
     foundedDate,
@@ -176,6 +200,8 @@ function demoCompany(
     headcount,
     conditionTags,
     createdAt: dateAfter(-createdDaysAgo),
+    primaryConsultantId: DEMO_CONSULTANTS[0].id,
+    primaryConsultantName: DEMO_CONSULTANTS[0].name,
     status: "active",
     contractEndDate: null,
     contractDaysLeft: null,
@@ -186,10 +212,57 @@ function demoCompany(
     upcomingCount,
     upcomingItems,
     expiredCount,
+    activeTaskCount: activeTasks.length,
+    overdueTaskCount: activeTasks.filter(
+      (task) => task.daysLeft !== null && task.daysLeft < 0,
+    ).length,
+    due7TaskCount: activeTasks.filter(
+      (task) =>
+        task.daysLeft !== null && task.daysLeft >= 0 && task.daysLeft <= 7,
+    ).length,
+    unassignedTaskCount: activeTasks.filter(
+      (task) => task.assigneeName === null,
+    ).length,
+    stageCounts: {
+      diagnosis: activeTasks.filter((task) => task.stage === "diagnosis").length,
+      proposal: activeTasks.filter((task) => task.stage === "proposal").length,
+      application: activeTasks.filter((task) => task.stage === "application").length,
+      result: activeTasks.filter((task) => task.stage === "result").length,
+    },
+    workStatusCounts: {
+      planned: companyTasks.filter((task) => task.workStatus === "planned").length,
+      in_progress: companyTasks.filter(
+        (task) => task.workStatus === "in_progress",
+      ).length,
+      waiting: companyTasks.filter((task) => task.workStatus === "waiting").length,
+      on_hold: companyTasks.filter((task) => task.workStatus === "on_hold").length,
+      completed: companyTasks.filter(
+        (task) => task.workStatus === "completed",
+      ).length,
+    },
+    priorityTask: priorityTask
+      ? {
+          id: priorityTask.id,
+          title: priorityTask.title,
+          categoryId: priorityTask.categoryId,
+          categoryName: priorityTask.categoryName,
+          stage: priorityTask.stage,
+          workStatus: priorityTask.workStatus,
+          dueDate: priorityTask.dueDate,
+          daysLeft: priorityTask.daysLeft,
+          assigneeId: DEMO_CONSULTANTS[0].id,
+          assigneeName: priorityTask.assigneeName,
+          updatedAt: priorityTask.updatedAt,
+        }
+      : null,
+    latestTaskUpdatedAt:
+      companyTasks
+        .map((task) => task.updatedAt)
+        .sort((a, b) => b.localeCompare(a))[0] ?? null,
   };
 }
 
-const DEMO_CATEGORIES: CategoryOption[] = [
+export const DEMO_CATEGORIES: CategoryOption[] = [
   { id: "00000000-0000-0000-0000-0000000000a1", name: "정부지원사업" },
   { id: "00000000-0000-0000-0000-0000000000a2", name: "벤처기업확인" },
   { id: "00000000-0000-0000-0000-0000000000a3", name: "기업부설연구소" },
@@ -279,6 +352,16 @@ function demoTask(
   dueInDays: number | null,
   memo: string | null,
 ): BoardTask {
+  const workStatus: TaskWorkStatus =
+    stage === "result"
+      ? "completed"
+      : n === 2
+        ? "waiting"
+        : n === 7
+          ? "on_hold"
+          : n === 9
+            ? "planned"
+            : "in_progress";
   return {
     id: `00000000-0000-0000-0000-0000000000e${n}`,
     title,
@@ -286,10 +369,13 @@ function demoTask(
     categoryName:
       categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].name,
     stage,
+    workStatus,
     dueDate: dueInDays === null ? null : dateAfter(dueInDays),
     daysLeft: dueInDays,
+    assigneeId: DEMO_CONSULTANTS[0].id,
     assigneeName: "김컨설턴트",
     memo,
+    updatedAt: dateTimeAfter(-Math.min(n, 6), `${9 + (n % 8)}`.padStart(2, "0") + ":20"),
     companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
     companyName,
   };
@@ -325,6 +411,9 @@ export function DEMO_BOARD(): BoardData {
     })),
     categories: DEMO_CATEGORIES,
     canWriteTasks: true,
+    currentProfileId: DEMO_CONSULTANTS[0].id,
+    canViewTeam: true,
+    consultants: DEMO_CONSULTANTS,
   };
 }
 
@@ -381,6 +470,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
     );
     return {
       demo: true,
+      canWriteTasks: true,
       company,
       credentials,
       ipRights: [],
@@ -397,6 +487,7 @@ export function DEMO_COMPANY_DETAIL(id: string): CompanyDetailData | null {
 
   return {
     demo: true,
+    canWriteTasks: true,
     company,
     credentials: [
       demoCredential(1, "벤처기업확인", 1, "2023-06-13", 2, 60, true),
@@ -693,6 +784,11 @@ export function DEMO_COMPANIES(): CompaniesData {
   return {
     demo: true,
     hasMore: false,
+    currentProfileId: DEMO_CONSULTANTS[0].id,
+    canViewTeam: true,
+    canWriteTasks: true,
+    consultants: DEMO_CONSULTANTS,
+    categories: DEMO_CATEGORIES,
     companies: [
       demoCompany(1, "(주)테크노바", "IT·소프트웨어", "2019-03-12", 4_200_000_000, 28, ["성장기"], ["벤처기업확인"], 2, 2, 0, 120),
       demoCompany(2, "한빛정밀", "정밀기계 제조", "2012-07-01", 18_500_000_000, 64, ["성숙기"], ["ISO 9001"], 5, 3, 0, 300),

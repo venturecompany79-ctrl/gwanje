@@ -426,7 +426,7 @@ export async function getDashboardKpi(): Promise<DashboardKpiResult> {
       supabase
         .from("task")
         .select("id", { count: "exact", head: true })
-        .neq("stage", "result"),
+        .neq("work_status", "completed"),
       supabase
         .from("deadline_item")
         .select(DEADLINE_SELECT)
@@ -804,12 +804,12 @@ export async function getDashboardOverview(
         .from("task")
         .select("id", { count: "exact", head: true })
         .in("company_id", companyIds)
-        .neq("stage", "result"),
+        .neq("work_status", "completed"),
       supabase
         .from("task")
         .select("id", { count: "exact", head: true })
         .in("company_id", companyIds)
-        .neq("stage", "result")
+        .neq("work_status", "completed")
         .is("assignee_id", null),
       supabase
         .from("deadline_item")
@@ -924,10 +924,10 @@ export async function getDashboardQueue(
     supabase
       .from("task")
       .select(
-        "id, title, company_id, category_id, stage, due_date, assignee_id",
+        "id, title, company_id, category_id, stage, work_status, due_date, assignee_id",
       )
       .in("company_id", companyIds)
-      .neq("stage", "result")
+      .neq("work_status", "completed")
       .limit(500),
     supabase
       .from("profile")
@@ -1111,7 +1111,7 @@ export async function getDashboardTeam(
     supabase
       .from("task")
       .select("company_id, assignee_id")
-      .neq("stage", "result"),
+      .neq("work_status", "completed"),
   ]);
   const firstError =
     profiles.error ?? companies.error ?? deadlines.error ?? tasks.error;

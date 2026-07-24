@@ -4,7 +4,12 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Plus } from "lucide-react-native";
 import { colors, spacing, typography } from "@/design/tokens";
 import { monthDayKo } from "@/lib/dates";
-import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
+import {
+  TASK_STAGE_LABEL,
+  TASK_STAGES,
+  TASK_WORK_STATUS_LABEL,
+  type TaskStage,
+} from "@/lib/labels";
 import { loadTasks, type MobileTask } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
 import {
@@ -22,7 +27,7 @@ import { Screen } from "@/ui/Screen";
 type StageFilter = "all" | TaskStage;
 
 function isActive(task: MobileTask) {
-  return task.stage !== "result";
+  return task.work_status !== "completed";
 }
 
 function TaskCell({
@@ -34,7 +39,7 @@ function TaskCell({
   last?: boolean;
   onPress: () => void;
 }) {
-  const done = task.stage === "result";
+  const done = task.work_status === "completed";
   const urgent =
     !done && task.daysLeft !== null && task.daysLeft !== undefined && task.daysLeft <= 3;
   return (
@@ -49,7 +54,10 @@ function TaskCell({
             {task.companyName}
           </Text>
           <View style={styles.dotSep} />
-          <StageBadge label={TASK_STAGE_LABEL[task.stage]} done={done} />
+          <StageBadge
+            label={`${TASK_STAGE_LABEL[task.stage]} · ${TASK_WORK_STATUS_LABEL[task.work_status]}`}
+            done={done}
+          />
         </View>
       </View>
       <View style={styles.right}>
@@ -100,7 +108,9 @@ export default function TasksScreen() {
         .filter((task) => filter === "all" || task.stage === filter)
         .slice()
         .sort((a, b) => {
-          const doneDiff = Number(a.stage === "result") - Number(b.stage === "result");
+          const doneDiff =
+            Number(a.work_status === "completed") -
+            Number(b.work_status === "completed");
           if (doneDiff !== 0) return doneDiff;
           return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
         }),

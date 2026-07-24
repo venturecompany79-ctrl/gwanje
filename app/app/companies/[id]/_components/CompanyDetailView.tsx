@@ -259,6 +259,8 @@ export function CompanyDetailView({
           tasks={data.tasks}
           categories={data.categories}
           demo={data.demo}
+          canWriteTasks={data.canWriteTasks}
+          companyStatus={company.status}
           showToast={showToast}
         />
       ) : null}

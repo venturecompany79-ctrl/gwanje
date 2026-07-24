@@ -100,7 +100,7 @@ export async function buildAssistantGrounding(
               "id, company_id, title, stage, due_date, assignee_id, memo, updated_at",
             )
             .in("company_id", companyIds)
-            .neq("stage", "result")
+            .neq("work_status", "completed")
             .order("due_date", { ascending: true, nullsFirst: false })
             .limit(80),
           supabase

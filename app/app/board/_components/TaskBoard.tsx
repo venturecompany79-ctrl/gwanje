@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
   type DragEvent,
 } from "react";
 import { Button } from "@/components/ui/Button";
+import type { ToastOptions } from "@/components/ui/Toast";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
@@ -20,13 +22,22 @@ import {
 } from "@/components/ui/icons";
 import { TaskDday } from "@/components/tasks/Stepper";
 import {
+  TaskStateControls,
+  type TaskStateSnapshot,
+} from "@/components/tasks/TaskStateControls";
+import {
   AddTaskSlideOver,
   TaskSlideOver,
 } from "@/components/tasks/TaskSlideOver";
 import { updateTaskStage } from "@/lib/actions/tasks";
-import type { TaskStage } from "@/lib/database.types";
+import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
 import type { BoardData, BoardTask } from "@/lib/data/board";
-import { TASK_STAGE_LABEL, TASK_STAGE_ORDER } from "@/lib/labels";
+import {
+  TASK_STAGE_LABEL,
+  TASK_STAGE_ORDER,
+  TASK_WORK_STATUS_LABEL,
+  TASK_WORK_STATUS_ORDER,
+} from "@/lib/labels";
 
 type DueFilter = "all" | "7" | "30" | "overdue";
 
@@ -39,51 +50,67 @@ const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
 
 function BoardCard({
   task,
-  stage,
+  state,
   dragging,
   canWrite,
   onDragStart,
   onDragEnd,
   onOpen,
+  showToast,
+  onStateChange,
 }: {
   task: BoardTask;
-  stage: TaskStage;
+  state: TaskStateSnapshot;
   dragging: boolean;
   canWrite: boolean;
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onOpen: () => void;
+  showToast: (message: string, options?: ToastOptions) => void;
+  onStateChange: (snapshot: TaskStateSnapshot) => void;
 }) {
   return (
     <div
-      role="button"
-      tabIndex={0}
       className={`kcard${dragging ? " is-dragging" : ""}`}
       draggable={canWrite}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
     >
-      <div className="kc-co">
-        <IconBuilding /> {task.companyName}
-      </div>
-      <div className="kc-task">{task.title}</div>
-      <div className="kc-foot">
-        <CategoryChip name={task.categoryName} />
-        <TaskDday stage={stage} daysLeft={task.daysLeft} />
-      </div>
-      {task.assigneeName ? (
-        <div className="kc-owner">
-          <span className="avatar">{task.assigneeName.slice(0, 1)}</span>
-          {task.assigneeName}
-        </div>
-      ) : null}
+      <button
+        type="button"
+        className="kcard-open"
+        onClick={onOpen}
+        aria-label={`${task.title} 상세 열기`}
+      >
+        <span className="kc-co">
+          <IconBuilding /> {task.companyName}
+        </span>
+        <span className="kc-task">{task.title}</span>
+        <span className="kc-foot">
+          <CategoryChip name={task.categoryName} />
+          <TaskDday workStatus={state.workStatus} daysLeft={task.daysLeft} />
+        </span>
+        {task.assigneeName ? (
+          <span className="kc-owner">
+            <span className="avatar">{task.assigneeName.slice(0, 1)}</span>
+            {task.assigneeName}
+          </span>
+        ) : (
+          <span className="kc-owner is-unassigned">담당 미배정</span>
+        )}
+      </button>
+      <TaskStateControls
+        companyId={task.companyId}
+        taskId={task.id}
+        taskTitle={task.title}
+        stage={state.stage}
+        workStatus={state.workStatus}
+        updatedAt={state.updatedAt}
+        canEdit={canWrite}
+        compact
+        showToast={showToast}
+        onChange={onStateChange}
+      />
     </div>
   );
 }
@@ -95,23 +122,51 @@ export function TaskBoard({
 }: {
   data: BoardData;
   addRequest: number;
-  showToast: (message: string) => void;
+  showToast: (message: string, options?: ToastOptions) => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
   const handledAddRequestRef = useRef(addRequest);
 
-  const [query, setQuery] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const initialDue = searchParams.get("due");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [companyFilter, setCompanyFilter] = useState(
+    searchParams.get("company") ?? "all",
+  );
+  const [categoryFilter, setCategoryFilter] = useState(
+    searchParams.get("category") ?? "all",
+  );
+  const [dueFilter, setDueFilter] = useState<DueFilter>(
+    DUE_OPTIONS.some((option) => option.value === initialDue)
+      ? (initialDue as DueFilter)
+      : "all",
+  );
+  const [scope, setScope] = useState<"mine" | "team">(
+    data.canViewTeam && searchParams.get("scope") === "team" ? "team" : "mine",
+  );
+  const [assigneeFilter, setAssigneeFilter] = useState(
+    searchParams.get("assignee") ?? "all",
+  );
+  const [workStatusFilter, setWorkStatusFilter] = useState<
+    "all" | TaskWorkStatus
+  >(
+    TASK_WORK_STATUS_ORDER.includes(
+      searchParams.get("status") as TaskWorkStatus,
+    )
+      ? (searchParams.get("status") as TaskWorkStatus)
+      : "all",
+  );
+  const [showCompleted, setShowCompleted] = useState(
+    searchParams.get("completed") === "1",
+  );
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<TaskStage | null>(null);
-  const [stageOverride, setStageOverride] = useState<Record<string, TaskStage>>(
-    {},
-  );
+  const [stateById, setStateById] = useState<
+    Record<string, TaskStateSnapshot>
+  >({});
 
   useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
@@ -120,15 +175,65 @@ export function TaskBoard({
     setAdding(true);
   }, [addRequest, data.canWriteTasks]);
 
-  const effectiveStage = (t: BoardTask): TaskStage =>
-    stageOverride[t.id] ?? t.stage;
+  const effectiveState = useCallback(
+    (task: BoardTask): TaskStateSnapshot =>
+      stateById[task.id] ?? {
+        stage: task.stage,
+        workStatus: task.workStatus,
+        updatedAt: task.updatedAt,
+      },
+    [stateById],
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("tab", "tasks");
+    if (scope === "team") params.set("scope", "team");
+    if (scope === "team" && assigneeFilter !== "all") {
+      params.set("assignee", assigneeFilter);
+    }
+    if (workStatusFilter !== "all") params.set("status", workStatusFilter);
+    if (showCompleted) params.set("completed", "1");
+    if (companyFilter !== "all") params.set("company", companyFilter);
+    if (categoryFilter !== "all") params.set("category", categoryFilter);
+    if (dueFilter !== "all") params.set("due", dueFilter);
+    if (query.trim()) params.set("q", query.trim());
+    window.history.replaceState(null, "", `/app/board?${params.toString()}`);
+  }, [
+    assigneeFilter,
+    categoryFilter,
+    companyFilter,
+    dueFilter,
+    query,
+    scope,
+    showCompleted,
+    workStatusFilter,
+  ]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return data.tasks.filter((t) => {
+      const taskState = effectiveState(t);
+      if (!showCompleted && taskState.workStatus === "completed") return false;
+      if (
+        workStatusFilter !== "all" &&
+        taskState.workStatus !== workStatusFilter
+      ) {
+        return false;
+      }
+      if (scope === "mine" && t.assigneeId !== data.currentProfileId) return false;
+      if (scope === "team") {
+        if (assigneeFilter === "unassigned" && t.assigneeId !== null) return false;
+        if (
+          assigneeFilter !== "all" &&
+          assigneeFilter !== "unassigned" &&
+          t.assigneeId !== assigneeFilter
+        ) {
+          return false;
+        }
+      }
       if (companyFilter !== "all" && t.companyId !== companyFilter) return false;
       if (categoryFilter !== "all" && t.categoryId !== categoryFilter) return false;
-      const stage = stageOverride[t.id] ?? t.stage;
       if (
         dueFilter === "7" &&
         !(t.daysLeft !== null && t.daysLeft >= 0 && t.daysLeft <= 7)
@@ -143,7 +248,7 @@ export function TaskBoard({
       }
       if (
         dueFilter === "overdue" &&
-        !(t.daysLeft !== null && t.daysLeft < 0 && stage !== "result")
+        !(t.daysLeft !== null && t.daysLeft < 0 && taskState.workStatus !== "completed")
       ) {
         return false;
       }
@@ -153,13 +258,29 @@ export function TaskBoard({
         t.companyName.toLowerCase().includes(needle)
       );
     });
-  }, [data.tasks, query, companyFilter, categoryFilter, dueFilter, stageOverride]);
+  }, [
+    assigneeFilter,
+    categoryFilter,
+    companyFilter,
+    data.currentProfileId,
+    data.tasks,
+    dueFilter,
+    query,
+    scope,
+    showCompleted,
+    effectiveState,
+    workStatusFilter,
+  ]);
 
   const isFiltered =
     query.trim() !== "" ||
     companyFilter !== "all" ||
     categoryFilter !== "all" ||
-    dueFilter !== "all";
+    dueFilter !== "all" ||
+    scope !== "mine" ||
+    assigneeFilter !== "all" ||
+    workStatusFilter !== "all" ||
+    showCompleted;
 
   const selected = data.tasks.find((t) => t.id === selectedId) ?? null;
 
@@ -167,21 +288,85 @@ export function TaskBoard({
     const task = data.tasks.find((t) => t.id === draggingId) ?? null;
     setDraggingId(null);
     setOverStage(null);
-    if (!task || effectiveStage(task) === stage) return;
+    if (!task || effectiveState(task).stage === stage) return;
 
-    setStageOverride((prev) => ({ ...prev, [task.id]: stage }));
+    const previous = effectiveState(task);
+    setStateById((current) => ({
+      ...current,
+      [task.id]: { ...previous, stage },
+    }));
     startTransition(async () => {
-      const result = await updateTaskStage(task.companyId, task.id, stage);
-      if (!result.ok) {
-        setStageOverride((prev) => {
-          const next = { ...prev };
-          delete next[task.id];
-          return next;
-        });
+      const result = await updateTaskStage(
+        task.companyId,
+        task.id,
+        stage,
+        previous.updatedAt,
+      );
+      if (!result.ok || !result.updatedAt) {
+        const fallback =
+          result.conflict &&
+          result.stage &&
+          result.workStatus &&
+          result.updatedAt
+            ? {
+                stage: result.stage,
+                workStatus: result.workStatus,
+                updatedAt: result.updatedAt,
+              }
+            : previous;
+        setStateById((current) => ({ ...current, [task.id]: fallback }));
         showToast(result.error ?? "변경에 실패했습니다.");
         return;
       }
-      showToast(`'${TASK_STAGE_LABEL[stage]}' 단계로 변경되었습니다`);
+      const applied: TaskStateSnapshot = {
+        stage: result.stage ?? stage,
+        workStatus: result.workStatus ?? previous.workStatus,
+        updatedAt: result.updatedAt,
+      };
+      setStateById((current) => ({ ...current, [task.id]: applied }));
+      showToast(`'${TASK_STAGE_LABEL[stage]}' 단계로 변경되었습니다`, {
+        actionLabel: "되돌리기",
+        durationMs: 5000,
+        onAction: async () => {
+          const undo = await updateTaskStage(
+            task.companyId,
+            task.id,
+            previous.stage,
+            applied.updatedAt,
+          );
+          if (!undo.ok || !undo.updatedAt) {
+            if (
+              undo.conflict &&
+              undo.stage &&
+              undo.workStatus &&
+              undo.updatedAt
+            ) {
+              setStateById((current) => ({
+                ...current,
+                [task.id]: {
+                  stage: undo.stage!,
+                  workStatus: undo.workStatus!,
+                  updatedAt: undo.updatedAt!,
+                },
+              }));
+            }
+            showToast(undo.error ?? "되돌리기에 실패했습니다.");
+            router.refresh();
+            return;
+          }
+          const undoUpdatedAt = undo.updatedAt;
+          setStateById((current) => ({
+            ...current,
+            [task.id]: {
+              stage: undo.stage ?? previous.stage,
+              workStatus: undo.workStatus ?? previous.workStatus,
+              updatedAt: undoUpdatedAt,
+            },
+          }));
+          showToast("단계 변경을 되돌렸습니다.");
+          router.refresh();
+        },
+      });
       router.refresh();
     });
   }
@@ -207,7 +392,54 @@ export function TaskBoard({
         />
       ) : (
         <>
+          <div className="board-scope-row">
+            <div className="portfolio-scope" role="group" aria-label="Task 관제 범위">
+              <button
+                type="button"
+                className={`pill-tab${scope === "mine" ? " is-active" : ""}`}
+                onClick={() => {
+                  setScope("mine");
+                  setAssigneeFilter("all");
+                }}
+              >
+                내 Task
+              </button>
+              {data.canViewTeam ? (
+                <button
+                  type="button"
+                  className={`pill-tab${scope === "team" ? " is-active" : ""}`}
+                  onClick={() => setScope("team")}
+                >
+                  팀 전체
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className={`pill-tab${showCompleted ? " is-active" : ""}`}
+              aria-pressed={showCompleted}
+              onClick={() => setShowCompleted((value) => !value)}
+            >
+              완료 포함
+            </button>
+          </div>
           <div className="filter-bar">
+            {scope === "team" ? (
+              <select
+                className="select-pill"
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                aria-label="Task 담당자 필터"
+              >
+                <option value="all">담당자 전체</option>
+                <option value="unassigned">담당 미배정</option>
+                {data.consultants.map((consultant) => (
+                  <option key={consultant.id} value={consultant.id}>
+                    {consultant.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <select
               className="select-pill"
               value={companyFilter}
@@ -231,6 +463,21 @@ export function TaskBoard({
               {data.categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="select-pill"
+              value={workStatusFilter}
+              onChange={(e) =>
+                setWorkStatusFilter(e.target.value as "all" | TaskWorkStatus)
+              }
+              aria-label="업무상태 필터"
+            >
+              <option value="all">업무상태 전체</option>
+              {TASK_WORK_STATUS_ORDER.map((status) => (
+                <option key={status} value={status}>
+                  {TASK_WORK_STATUS_LABEL[status]}
                 </option>
               ))}
             </select>
@@ -272,6 +519,9 @@ export function TaskBoard({
                     setCompanyFilter("all");
                     setCategoryFilter("all");
                     setDueFilter("all");
+                    setAssigneeFilter("all");
+                    setWorkStatusFilter("all");
+                    setShowCompleted(false);
                   }}
                 >
                   필터 초기화
@@ -282,7 +532,7 @@ export function TaskBoard({
             <div className="board">
               {TASK_STAGE_ORDER.map((stage) => {
                 const columnTasks = filtered.filter(
-                  (t) => effectiveStage(t) === stage,
+                  (t) => effectiveState(t).stage === stage,
                 );
                 return (
                   <section
@@ -316,7 +566,7 @@ export function TaskBoard({
                         <BoardCard
                           key={t.id}
                           task={t}
-                          stage={effectiveStage(t)}
+                          state={effectiveState(t)}
                           dragging={draggingId === t.id}
                           canWrite={data.canWriteTasks}
                           onDragStart={(e) => {
@@ -330,6 +580,13 @@ export function TaskBoard({
                             setOverStage(null);
                           }}
                           onOpen={() => setSelectedId(t.id)}
+                          showToast={showToast}
+                          onStateChange={(snapshot) =>
+                            setStateById((current) => ({
+                              ...current,
+                              [t.id]: snapshot,
+                            }))
+                          }
                         />
                       ))}
                     </div>
@@ -346,7 +603,10 @@ export function TaskBoard({
           key={selected.id}
           companyId={selected.companyId}
           companyName={selected.companyName}
-          task={{ ...selected, stage: effectiveStage(selected) }}
+          task={{
+            ...selected,
+            ...effectiveState(selected),
+          }}
           categories={data.categories}
           demo={data.demo}
           canEdit={data.canWriteTasks}

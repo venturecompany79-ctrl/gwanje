@@ -9,7 +9,7 @@ import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
 import { daysFromToday } from "@/lib/datetime";
 import { TASK_STAGE_ORDER, type CompanyStatus } from "@/lib/labels";
 import type { Supabase } from "@/lib/actions/shared";
-import type { TaskStage } from "@/lib/database.types";
+import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
 
 export interface ShareGateInfo {
   id: string;
@@ -29,6 +29,7 @@ export interface SharedTaskRow {
   title: string;
   categoryName: string | null;
   stage: TaskStage;
+  workStatus: TaskWorkStatus;
   dueDate: string | null;
   daysLeft: number | null;
   updatedAt: string;
@@ -96,7 +97,7 @@ function buildKpi(tasks: SharedTaskRow[]): SharedDashboardData["kpi"] {
   ) as Record<TaskStage, number>;
   for (const t of tasks) byStage[t.stage] += 1;
   const total = tasks.length;
-  const done = byStage.result;
+  const done = tasks.filter((task) => task.workStatus === "completed").length;
   return {
     total,
     inProgress: total - done,
@@ -107,11 +108,11 @@ function buildKpi(tasks: SharedTaskRow[]): SharedDashboardData["kpi"] {
 }
 
 function sortSharedTasks(tasks: SharedTaskRow[]): SharedTaskRow[] {
-  // 진행 중(마감 임박순) 먼저, 완료(결과)는 최근 업데이트순으로 마지막
+  // 진행 중(마감 임박순) 먼저, 완료는 최근 업데이트순으로 마지막
   // — 기업 상세 Task 탭과 동일 규칙(완료 구간만 결정적 정렬로 보강)
   return [...tasks].sort((a, b) => {
-    const doneA = a.stage === "result" ? 1 : 0;
-    const doneB = b.stage === "result" ? 1 : 0;
+    const doneA = a.workStatus === "completed" ? 1 : 0;
+    const doneB = b.workStatus === "completed" ? 1 : 0;
     if (doneA !== doneB) return doneA - doneB;
     if (doneA === 1) return b.updatedAt.localeCompare(a.updatedAt);
     return (
@@ -167,7 +168,9 @@ export async function getSharedDashboard(
       .maybeSingle(),
     service
       .from("task")
-      .select("id, title, category_id, stage, due_date, updated_at")
+      .select(
+        "id, title, category_id, stage, work_status, due_date, updated_at",
+      )
       .eq("tenant_id", share.tenantId)
       .eq("company_id", share.companyId)
       .order("updated_at", { ascending: false }),
@@ -199,6 +202,7 @@ export async function getSharedDashboard(
       ? (categoryName.get(t.category_id) ?? null)
       : null,
     stage: t.stage,
+    workStatus: t.work_status,
     dueDate: t.due_date,
     daysLeft: t.due_date ? daysFromToday(t.due_date) : null,
     updatedAt: t.updated_at,
@@ -225,6 +229,7 @@ export function getDemoSharedDashboard(): SharedDashboardData {
     title: t.title,
     categoryName: t.categoryName,
     stage: t.stage,
+    workStatus: t.workStatus,
     dueDate: t.dueDate,
     daysLeft: t.daysLeft,
     // 데모 데이터에는 updated_at이 없어 순서 기반 가짜 시각 생성(최신순 유지)

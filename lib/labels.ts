@@ -10,6 +10,7 @@ import type {
   NotificationType,
   ScheduleType,
   TaskStage,
+  TaskWorkStatus,
 } from "@/lib/database.types";
 import type { SourceCode, SupportField } from "@/lib/gov-programs/types";
 
@@ -25,6 +26,22 @@ export const TASK_STAGE_ORDER: TaskStage[] = [
   "proposal",
   "application",
   "result",
+];
+
+export const TASK_WORK_STATUS_LABEL: Record<TaskWorkStatus, string> = {
+  planned: "예정",
+  in_progress: "진행중",
+  waiting: "대기",
+  on_hold: "보류",
+  completed: "완료",
+};
+
+export const TASK_WORK_STATUS_ORDER: TaskWorkStatus[] = [
+  "planned",
+  "in_progress",
+  "waiting",
+  "on_hold",
+  "completed",
 ];
 
 export const SCHEDULE_TYPE_LABEL: Record<ScheduleType, string> = {

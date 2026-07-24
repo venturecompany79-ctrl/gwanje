@@ -100,7 +100,7 @@ export async function loadHomeData(): Promise<HomeData> {
     supabase
       .from("task")
       .select("id", { count: "exact", head: true })
-      .neq("stage", "result"),
+      .neq("work_status", "completed"),
     supabase
       .from("notification")
       .select("id", { count: "exact", head: true })

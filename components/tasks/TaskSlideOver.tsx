@@ -9,6 +9,7 @@ import {
   type FormEvent,
 } from "react";
 import { Button } from "@/components/ui/Button";
+import type { ToastOptions } from "@/components/ui/Toast";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { CategorySelect } from "@/components/ui/CategorySelect";
 import { InputField } from "@/components/ui/Input";
@@ -21,11 +22,19 @@ import {
   IconPlus,
   IconX,
 } from "@/components/ui/icons";
-import { TASK_STAGE_LABEL, TASK_STAGE_ORDER } from "@/lib/labels";
+import {
+  TASK_STAGE_LABEL,
+  TASK_STAGE_ORDER,
+  TASK_WORK_STATUS_LABEL,
+  TASK_WORK_STATUS_ORDER,
+} from "@/lib/labels";
 import { addTask, updateTask } from "@/lib/actions/tasks";
-import type { TaskStage } from "@/lib/database.types";
 import type { CategoryOption, TaskRow } from "@/lib/data/company-detail";
 import { TaskDday } from "./Stepper";
+import {
+  TaskStateControls,
+  type TaskStateSnapshot,
+} from "./TaskStateControls";
 
 function formatFileSize(size: number): string {
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`;
@@ -63,11 +72,15 @@ export function TaskSlideOver({
   categories: CategoryOption[];
   demo: boolean;
   canEdit?: boolean;
-  showToast: (message: string) => void;
+  showToast: (message: string, options?: ToastOptions) => void;
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [stage, setStage] = useState<TaskStage>(task.stage);
+  const [stateSnapshot, setStateSnapshot] = useState<TaskStateSnapshot>({
+    stage: task.stage,
+    workStatus: task.workStatus,
+    updatedAt: task.updatedAt,
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<SelectedTaskFile[]>([]);
@@ -121,7 +134,10 @@ export function TaskSlideOver({
                 </span>
               ) : null}
               <CategoryChip name={task.categoryName} />
-              <TaskDday stage={task.stage} daysLeft={task.daysLeft} />
+              <TaskDday
+                workStatus={stateSnapshot.workStatus}
+                daysLeft={task.daysLeft}
+              />
             </div>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -168,32 +184,30 @@ export function TaskSlideOver({
               placeholder="벤처기업확인 갱신"
               disabled={!editable}
             />
-            <div className="form-grid2">
-              <CategorySelect
-                name="category_id"
-                categories={categories}
-                defaultValue={task.categoryId}
-                demo={demo}
-                disabled={!editable}
+            <div className="field">
+              <label>진행단계 · 업무상태</label>
+              <TaskStateControls
+                companyId={companyId}
+                taskId={task.id}
+                taskTitle={task.title}
+                stage={stateSnapshot.stage}
+                workStatus={stateSnapshot.workStatus}
+                updatedAt={stateSnapshot.updatedAt}
+                canEdit={canEdit}
+                showToast={showToast}
+                onChange={setStateSnapshot}
               />
-              <div className="field">
-                <label htmlFor="task-detail-stage">단계</label>
-                <select
-                  id="task-detail-stage"
-                  name="stage"
-                  className="input"
-                  value={stage}
-                  disabled={!editable}
-                  onChange={(e) => setStage(e.target.value as TaskStage)}
-                >
-                  {TASK_STAGE_ORDER.map((s) => (
-                    <option key={s} value={s}>
-                      {TASK_STAGE_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="form-hint">
+                단계와 상태는 상세 수정 모드와 관계없이 바로 변경됩니다.
+              </p>
             </div>
+            <CategorySelect
+              name="category_id"
+              categories={categories}
+              defaultValue={task.categoryId}
+              demo={demo}
+              disabled={!editable}
+            />
             <InputField
               label="마감일"
               name="due_date"
@@ -312,7 +326,7 @@ export function AddTaskSlideOver({
   companies?: { id: string; name: string }[];
   categories: CategoryOption[];
   demo: boolean;
-  showToast: (message: string) => void;
+  showToast: (message: string, options?: ToastOptions) => void;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -414,6 +428,21 @@ export function AddTaskSlideOver({
                   ))}
                 </select>
               </div>
+            </div>
+            <div className="field">
+              <label htmlFor="task-work-status">업무상태</label>
+              <select
+                id="task-work-status"
+                name="work_status"
+                className="input"
+                defaultValue="planned"
+              >
+                {TASK_WORK_STATUS_ORDER.map((status) => (
+                  <option key={status} value={status}>
+                    {TASK_WORK_STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
             </div>
             <InputField label="마감일" name="due_date" type="date" />
             <div className="field">

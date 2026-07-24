@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 type BadgeTone =
+  | "primary"
   | "success"
   | "attention"
   | "warning"

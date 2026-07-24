@@ -15,12 +15,21 @@ export const dynamic = "force-dynamic";
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string; sort?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    tag?: string;
+    sort?: string;
+    scope?: string;
+    view?: string;
+    consultant?: string;
+    work?: string;
+  }>;
 }) {
-  const [{ q, tag, sort }, data] = await Promise.all([
+  const [{ q, tag, sort, scope, view, consultant, work }, data] =
+    await Promise.all([
     searchParams,
     getCompaniesData(),
-  ]);
+    ]);
   const count = data.companies.length;
 
   return (
@@ -77,10 +86,14 @@ export default async function CompaniesPage({
         />
       ) : (
         <CompaniesTable
-          companies={data.companies}
+          data={data}
           initialQuery={q ?? ""}
           initialTag={tag ?? null}
           initialSort={sort ?? null}
+          initialScope={scope ?? null}
+          initialView={view ?? null}
+          initialConsultant={consultant ?? null}
+          initialWorkStatus={work ?? null}
         />
       )}
     </>

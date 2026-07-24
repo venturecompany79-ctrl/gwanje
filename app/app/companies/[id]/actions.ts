@@ -997,7 +997,7 @@ export async function createIpTask(
     .select("id")
     .eq("company_id", companyId)
     .eq("title", taskTitle)
-    .neq("stage", "result")
+    .neq("work_status", "completed")
     .limit(1);
   existingQuery =
     dueDate === null

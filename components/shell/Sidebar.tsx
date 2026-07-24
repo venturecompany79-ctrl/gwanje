@@ -16,7 +16,7 @@ import { hasPermission, type MemberRole, type PermissionKey } from "@/lib/permis
 const NAV_ITEMS = [
   { href: "/app", label: "대시보드", icon: IconGrid },
   { href: "/app/companies", label: "기업", icon: IconBuilding, permission: "companies.read" },
-  { href: "/app/board", label: "Task 보드", icon: IconKanban, permission: "tasks.read" },
+  { href: "/app/board?tab=tasks", label: "Task 보드", icon: IconKanban, permission: "tasks.read" },
   { href: "/app/campaigns", label: "일괄안내", icon: IconSend, permission: "campaigns.read" },
   { href: "/app/notifications", label: "알림", icon: IconBell, permission: "notifications.read" },
   { href: "/app/settings", label: "설정", icon: IconGear },
@@ -58,7 +58,9 @@ export function Sidebar({
           : true,
       ).map(({ href, label, icon: Icon }) => {
         const active =
-          href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+          href === "/app"
+            ? pathname === "/app"
+            : pathname.startsWith(href.split("?")[0]);
         return (
           <Link
             key={href}

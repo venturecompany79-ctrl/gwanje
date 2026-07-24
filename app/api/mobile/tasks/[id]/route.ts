@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import type { TaskStage } from "@/lib/database.types";
+import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
 import { isValidDateString } from "@/lib/datetime";
 import {
   mobileError,
@@ -9,12 +9,21 @@ import {
 } from "@/lib/mobile/api";
 
 const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
+const TASK_WORK_STATUSES: TaskWorkStatus[] = [
+  "planned",
+  "in_progress",
+  "waiting",
+  "on_hold",
+  "completed",
+];
 
 interface UpdateTaskBody {
   title?: string;
   categoryId?: string | null;
   dueDate?: string | null;
   stage?: TaskStage;
+  workStatus?: TaskWorkStatus;
+  expectedUpdatedAt?: string;
   memo?: string | null;
 }
 
@@ -47,6 +56,7 @@ export async function PATCH(
     category_id?: string | null;
     due_date?: string | null;
     stage?: TaskStage;
+    work_status?: TaskWorkStatus;
     memo?: string | null;
     updated_at: string;
   } = {
@@ -79,6 +89,12 @@ export async function PATCH(
     }
     update.stage = body.stage;
   }
+  if (body.workStatus !== undefined) {
+    if (!TASK_WORK_STATUSES.includes(body.workStatus)) {
+      return mobileError("업무상태 값이 올바르지 않습니다.");
+    }
+    update.work_status = body.workStatus;
+  }
 
   const memo = optionalMemo(body.memo);
   if (memo !== undefined) update.memo = memo;
@@ -88,19 +104,32 @@ export async function PATCH(
     update.category_id === undefined &&
     update.due_date === undefined &&
     update.stage === undefined &&
+    update.work_status === undefined &&
     memo === undefined
   ) {
     return mobileError("수정할 내용이 없습니다.");
   }
 
-  const { data, error } = await ctx.supabase
+  let query = ctx.supabase
     .from("task")
     .update(update)
-    .eq("id", id)
-    .select("id, company_id, title, category_id, stage, due_date, memo, updated_at")
+    .eq("id", id);
+  if (body.expectedUpdatedAt) {
+    query = query.eq("updated_at", body.expectedUpdatedAt);
+  }
+  const { data, error } = await query
+    .select(
+      "id, company_id, title, category_id, stage, work_status, due_date, memo, updated_at",
+    )
     .maybeSingle();
   if (error) {
     return mobileError(`저장에 실패했습니다: ${error.message}`, 500);
+  }
+  if (!data && body.expectedUpdatedAt) {
+    return mobileError(
+      "다른 사용자가 먼저 Task를 변경했습니다. 최신 내용을 확인해 주세요.",
+      409,
+    );
   }
   if (!data) return mobileError("Task를 찾을 수 없습니다.", 404);
 

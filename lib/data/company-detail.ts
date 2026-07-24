@@ -13,9 +13,12 @@ import type {
   MeetingReportStatus,
   ScheduleType,
   TaskStage,
+  TaskWorkStatus,
 } from "@/lib/database.types";
 import { isReportSourceSupported } from "@/lib/reports/file-types";
 import type { ConsultantOption } from "@/lib/data/consultants";
+import { getMemberContext } from "@/lib/actions/shared";
+import { hasPermission } from "@/lib/permissions";
 
 // daysFromToday는 KST 기준 공용 헬퍼(lib/datetime). 보드 등에서 재사용하므로 재노출.
 export { daysFromToday };
@@ -115,10 +118,13 @@ export interface TaskRow {
   categoryId: string | null;
   categoryName: string | null;
   stage: TaskStage;
+  workStatus: TaskWorkStatus;
   dueDate: string | null;
   daysLeft: number | null;
+  assigneeId: string | null;
   assigneeName: string | null;
   memo: string | null;
+  updatedAt: string;
 }
 
 export interface ScheduleRow {
@@ -192,6 +198,7 @@ export interface CategoryOption {
 export interface CompanyDetailData {
   /** true면 Supabase 미연결 — 데모 데이터 표시 중 */
   demo: boolean;
+  canWriteTasks: boolean;
   company: CompanyProfile;
   credentials: CredentialRow[];
   ipRights: IpRightRow[];
@@ -219,13 +226,6 @@ export function deriveCredentialStatus(
   return "valid";
 }
 
-const STAGE_SORT: Record<TaskStage, number> = {
-  diagnosis: 0,
-  proposal: 1,
-  application: 2,
-  result: 3,
-};
-
 function logRelatedQueryError(label: string, error: { message: string } | null) {
   if (!error) return;
   console.error(`[getCompanyDetail:${label}]`, error.message);
@@ -249,6 +249,7 @@ export async function getCompanyDetail(
     categories,
     profiles,
     connection,
+    member,
   ] = await Promise.all([
       supabase
         .from("company")
@@ -276,7 +277,7 @@ export async function getCompanyDetail(
       supabase
         .from("task")
         .select(
-          "id, title, category_id, stage, due_date, assignee_id, memo, source_credential_id",
+          "id, title, category_id, stage, work_status, due_date, assignee_id, memo, source_credential_id, updated_at",
         )
         .eq("company_id", companyId),
       supabase
@@ -305,6 +306,7 @@ export async function getCompanyDetail(
         .select("id")
         .is("revoked_at", null)
         .maybeSingle(),
+      getMemberContext(supabase),
     ]);
 
   // 잘못된 uuid 형식(22P02)은 '없는 기업'으로 처리 → 404
@@ -314,6 +316,9 @@ export async function getCompanyDetail(
     throw new Error(`기업 정보를 불러오지 못했습니다: ${company.error.message}`);
   }
   if (!company.data) return null;
+  if ("error" in member) {
+    throw new Error(member.error);
+  }
 
   logRelatedQueryError("credentials", credentials.error);
   logRelatedQueryError("ip_rights", ipRights.error);
@@ -509,19 +514,24 @@ export async function getCompanyDetail(
         ? (categoryName.get(t.category_id) ?? null)
         : null,
       stage: t.stage,
+      workStatus: t.work_status,
       dueDate: t.due_date,
       daysLeft: t.due_date ? daysFromToday(t.due_date) : null,
+      assigneeId: t.assignee_id,
       assigneeName: t.assignee_id
         ? (profileName.get(t.assignee_id) ?? null)
         : null,
       memo: t.memo,
+      updatedAt: t.updated_at,
     }))
-    // 진행 중(마감 임박순) 먼저, 결과(완료) 단계는 마지막
+    // 진행 중(마감 임박순) 먼저, 완료 상태는 마지막
     .sort((a, b) => {
-      const doneA = a.stage === "result" ? 1 : 0;
-      const doneB = b.stage === "result" ? 1 : 0;
+      const doneA = a.workStatus === "completed" ? 1 : 0;
+      const doneB = b.workStatus === "completed" ? 1 : 0;
       if (doneA !== doneB) return doneA - doneB;
-      if (doneA === 1) return STAGE_SORT[a.stage] - STAGE_SORT[b.stage];
+      if (doneA === 1) {
+        return b.updatedAt.localeCompare(a.updatedAt);
+      }
       return (
         (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
         (b.daysLeft ?? Number.MAX_SAFE_INTEGER)
@@ -564,6 +574,7 @@ export async function getCompanyDetail(
 
   return {
     demo: false,
+    canWriteTasks: hasPermission(member, "tasks.write"),
     company: {
       id: company.data.id,
       name: company.data.name,

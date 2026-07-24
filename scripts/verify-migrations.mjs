@@ -1,7 +1,7 @@
 // 마이그레이션 실 실행 검증 — PGlite(WASM Postgres)로 Docker 없이 SQL을 실제 실행한다.
 // Supabase 고유 객체(auth 스키마·역할·auth.uid())와 pg_cron은 스텁으로 대체.
 // 검증 범위: 초기 스키마 + 신규 마이그레이션 + 시드 적용, deadline_item(KST) 뷰,
-//           generate_due_notifications() 멱등 동작, task 갱신과제 유니크, profile 컬럼 권한,
+//           generate_due_notifications() 멱등 동작, Task 상태/이력·갱신과제 유니크, profile 컬럼 권한,
 //           자료 Storage 정책, RLS 멀티테넌트 격리(핵심 보안 속성).
 // 실행: npm run verify:migrations   (@electric-sql/pglite는 devDependency)
 import { PGlite } from "@electric-sql/pglite";
@@ -290,6 +290,60 @@ try {
   dupBlocked = /unique|중복|duplicate/i.test(e.message);
 }
 assert(dupBlocked, "동일 source_credential_id 두 번째 과제는 유니크 인덱스로 차단(23505)");
+
+// ── 6-1. Task 단계·업무상태 분리 + 변경이력 ─────────────────────────────
+let taskStateHistory = [];
+try {
+  await db.exec("begin");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const stateChange = await db.query(
+    `with target as (
+       select t.id
+       from task t
+       join profile p on p.tenant_id = t.tenant_id
+       where p.id = '${USER_A}'
+       order by t.created_at
+       limit 1
+     )
+     update task
+        set stage = 'result',
+            work_status = 'on_hold'
+      where id = (select id from target)
+     returning id, stage, work_status, updated_at`,
+  );
+  const taskId = stateChange.rows[0]?.id;
+  if (taskId) {
+    const history = await db.query(
+      `select
+         previous_stage,
+         next_stage,
+         previous_work_status,
+         next_work_status,
+         changed_by
+       from task_state_change
+       where task_id = '${taskId}'
+       order by created_at desc
+       limit 1`,
+    );
+    taskStateHistory = history.rows;
+  }
+  console.log(`→ Task 상태 변경이력: ${JSON.stringify(taskStateHistory)}`);
+  await db.exec("rollback");
+} catch (e) {
+  failures++;
+  console.error(`✗ Task 상태 변경이력 테스트 실행 오류\n   ${e.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+assert(
+  taskStateHistory[0]?.next_stage === "result" &&
+    taskStateHistory[0]?.next_work_status === "on_hold",
+  "결과 단계와 보류 업무상태를 독립적으로 저장",
+);
+assert(
+  taskStateHistory[0]?.changed_by === USER_A,
+  "Task 상태 변경이력에 변경자를 기록",
+);
 
 // ── 7. profile 컬럼 권한 (tenant_id·id 잠금) ─────────────────────────────
 const cols = await q(
