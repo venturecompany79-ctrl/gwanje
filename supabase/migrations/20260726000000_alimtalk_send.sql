@@ -145,27 +145,11 @@ alter table campaign_recipient
 -- 기존 가짜 발송 기록 정합 — delivered=true 행은 도달로 간주한다.
 update campaign_recipient set status = 'delivered' where delivered;
 
--- unique 인덱스 생성 전 중복 정리. AI 어시스턴트 초안 경로가 companyIds를
--- 중복 제거 없이 적재해 왔으므로 같은 (캠페인, 기업) 쌍이 남아 있을 수 있다.
--- 응답/도달 기록이 있는 행을 우선 남기고 나머지를 지운다.
-delete from campaign_recipient
-where id in (
-  select id
-  from (
-    select
-      id,
-      row_number() over (
-        partition by campaign_id, company_id
-        order by responded desc, delivered desc, created_at, id
-      ) as rn
-    from campaign_recipient
-  ) ranked
-  where ranked.rn > 1
-);
+-- 같은 (캠페인, 기업) 중복 적재 차단은 이미 걸려 있다 —
+-- 20260707000000_security_mobile_review_fixes.sql의
+-- campaign_recipient_campaign_company_uniq (campaign_id, company_id).
+-- 여기서 다시 만들면 같은 컬럼에 중복 인덱스가 생겨 적재 비용만 늘어난다.
 
--- 재시도·중복 적재로 같은 기업이 두 번 들어가는 것을 DB에서 막는다.
-create unique index campaign_recipient_campaign_company_uq
-  on campaign_recipient (campaign_id, company_id);
 create index idx_recipient_campaign_status
   on campaign_recipient (campaign_id, status);
 create index idx_recipient_group

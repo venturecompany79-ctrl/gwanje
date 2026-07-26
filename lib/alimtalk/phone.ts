@@ -16,7 +16,10 @@ export function normalizeKoreanMobile(raw: string | null | undefined): string | 
   if (digits.startsWith("8210")) digits = `0${digits.slice(2)}`;
   else if (digits.startsWith("82") && digits.length >= 11) digits = `0${digits.slice(2)}`;
 
-  return /^01[016789]\d{7,8}$/.test(digits) ? digits : null;
+  // 010은 항상 11자리다. 10자리까지 받아주면 자릿수를 빠뜨린 오타가
+  // 유효 번호로 통과해 "제외될 기업" 미리보기에 잡히지 않고 발송 시도로 넘어간다.
+  // 011·016~019는 10자리(구형)와 11자리가 모두 실재해 둘 다 허용한다.
+  return /^01(?:0\d{8}|[16789]\d{7,8})$/.test(digits) ? digits : null;
 }
 
 /** 화면 표시용 마스킹 — 010-1234-**** */
