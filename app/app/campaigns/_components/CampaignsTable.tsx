@@ -71,6 +71,16 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignListRow[] }) 
               </td>
               <td data-label="상태">
                 <CampaignStatusBadge status={c.status} />
+                {c.failedCount > 0 ? (
+                  <span
+                    className="st-badge st-badge--rcp-failed"
+                    style={{ marginLeft: 6 }}
+                    title="발송에 실패한 기업 수"
+                  >
+                    <span className="sd" />
+                    실패 {c.failedCount}
+                  </span>
+                ) : null}
               </td>
             </tr>
           );

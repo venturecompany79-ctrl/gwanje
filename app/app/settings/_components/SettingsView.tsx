@@ -16,6 +16,7 @@ import {
   IconLink,
   IconPalette,
   IconPlus,
+  IconSend,
   IconTag,
   IconTeam,
   IconUser,
@@ -34,6 +35,7 @@ import {
   updateProfile,
 } from "@/lib/actions/settings";
 import { CATEGORY_COLORS } from "@/lib/categoryColors";
+import { AlimtalkSection } from "./AlimtalkSection";
 import type {
   SettingsCategory,
   SettingsData,
@@ -54,7 +56,13 @@ import {
   type PermissionKey,
 } from "@/lib/permissions";
 
-type SectionKey = "profile" | "rules" | "cats" | "drive" | "team";
+type SectionKey =
+  | "profile"
+  | "rules"
+  | "cats"
+  | "alimtalk"
+  | "drive"
+  | "team";
 
 const SECTIONS: {
   key: SectionKey | "sub" | "team";
@@ -67,6 +75,7 @@ const SECTIONS: {
   { key: "profile", label: "프로필", icon: <IconUser /> },
   { key: "rules", label: "알림 규칙", icon: <IconBell />, permission: "settings.rules.write" },
   { key: "cats", label: "분류 카테고리", icon: <IconTag />, permission: "settings.categories.write" },
+  { key: "alimtalk", label: "알림톡 발송", icon: <IconSend />, permission: "campaigns.write" },
   { key: "drive", label: "Google Drive 연결", icon: <IconLink />, permission: "settings.drive.write" },
   { key: "sub", label: "구독", icon: <IconCard />, soon: true },
   { key: "team", label: "팀·회원", icon: <IconTeam />, ownerOnly: true },
@@ -1196,6 +1205,9 @@ export function SettingsView({ data }: { data: SettingsData }) {
           ) : null}
           {section === "cats" ? (
             <CatsSection categories={data.categories} onSaved={onSaved} />
+          ) : null}
+          {section === "alimtalk" ? (
+            <AlimtalkSection alimtalk={data.alimtalk} onSaved={onSaved} />
           ) : null}
           {section === "drive" ? (
             <DriveSection drive={data.drive} showToast={showToast} />

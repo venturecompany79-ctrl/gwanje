@@ -601,8 +601,9 @@ export function DEMO_SEGMENT_COMPANIES(): SegmentCompaniesData {
       conditionTags: co.conditionTags,
       credentialTypes: co.credentialTypes,
       nearestDaysLeft: co.nearestDaysLeft,
-      // 기업 상세 데모와 동일 — 담당자명은 테크노바만 보유
+      // 기업 상세 데모와 동일 — 담당자 연락처는 테크노바만 보유
       contactName: co.id.endsWith("c1") ? "박지훈" : null,
+      contactPhone: co.id.endsWith("c1") ? "010-1234-5678" : null,
     })),
   };
 }
@@ -620,6 +621,8 @@ function demoRecipient(
     companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
     companyName,
     delivered,
+    status: delivered ? "delivered" : "sent",
+    errorMessage: null,
     responded: responseNote !== null,
     responseNote,
     respondedAt,
@@ -648,6 +651,7 @@ export function DEMO_CAMPAIGNS(): CampaignsData {
         sentAt: dateTimeAfter(-7, "10:00"),
         scheduledAt: null,
         responseRate: 67,
+        failedCount: 0,
       },
       {
         id: CAMPAIGN_IDS.taxCredit,
@@ -658,6 +662,7 @@ export function DEMO_CAMPAIGNS(): CampaignsData {
         sentAt: dateTimeAfter(-10, "14:00"),
         scheduledAt: null,
         responseRate: 50,
+        failedCount: 0,
       },
       {
         id: CAMPAIGN_IDS.didimdol,
@@ -668,6 +673,7 @@ export function DEMO_CAMPAIGNS(): CampaignsData {
         sentAt: null,
         scheduledAt: dateTimeAfter(3, "09:00"),
         responseRate: null,
+        failedCount: 0,
       },
       {
         id: CAMPAIGN_IDS.fund,
@@ -678,6 +684,7 @@ export function DEMO_CAMPAIGNS(): CampaignsData {
         sentAt: null,
         scheduledAt: null,
         responseRate: null,
+        failedCount: 0,
       },
     ],
   };
@@ -825,6 +832,12 @@ export function DEMO_SETTINGS(): SettingsData {
       sortOrder: i + 1,
     })),
     drive: { configured: false, connection: null, failedCount: 0 },
+    alimtalk: {
+      configured: false,
+      connected: false,
+      connection: null,
+      templates: [],
+    },
     currentMember: {
       id: "00000000-0000-0000-0000-0000000000u1",
       role: "owner",
