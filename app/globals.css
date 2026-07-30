@@ -2767,11 +2767,11 @@ table.dlist .name {
 }
 
 /* =============================================================
-   관리포인트 보드 (/app/board) — 4열 칸반
+   Task 보드 (/app/board) — 업무상태 기준 5열 칸반
    ============================================================= */
 .board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -2813,6 +2813,21 @@ table.dlist .name {
   background: var(--color-primary);
 }
 .kdot--result {
+  background: var(--color-success);
+}
+.kdot--planned {
+  background: var(--color-stone);
+}
+.kdot--in_progress {
+  background: var(--color-primary);
+}
+.kdot--waiting {
+  background: var(--color-attention);
+}
+.kdot--on_hold {
+  background: var(--color-critical);
+}
+.kdot--completed {
   background: var(--color-success);
 }
 .kcol-head h3 {

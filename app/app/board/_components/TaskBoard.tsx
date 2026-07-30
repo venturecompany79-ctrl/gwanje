@@ -29,12 +29,10 @@ import {
   AddTaskSlideOver,
   TaskSlideOver,
 } from "@/components/tasks/TaskSlideOver";
-import { updateTaskStage } from "@/lib/actions/tasks";
-import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
+import { updateTaskWorkStatus } from "@/lib/actions/tasks";
+import type { TaskWorkStatus } from "@/lib/database.types";
 import type { BoardData, BoardTask } from "@/lib/data/board";
 import {
-  TASK_STAGE_LABEL,
-  TASK_STAGE_ORDER,
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
 } from "@/lib/labels";
@@ -163,7 +161,8 @@ export function TaskBoard({
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [overStage, setOverStage] = useState<TaskStage | null>(null);
+  const [overWorkStatus, setOverWorkStatus] =
+    useState<TaskWorkStatus | null>(null);
   const [stateById, setStateById] = useState<
     Record<string, TaskStateSnapshot>
   >({});
@@ -284,22 +283,22 @@ export function TaskBoard({
 
   const selected = data.tasks.find((t) => t.id === selectedId) ?? null;
 
-  function handleDrop(stage: TaskStage) {
+  function handleDrop(workStatus: TaskWorkStatus) {
     const task = data.tasks.find((t) => t.id === draggingId) ?? null;
     setDraggingId(null);
-    setOverStage(null);
-    if (!task || effectiveState(task).stage === stage) return;
+    setOverWorkStatus(null);
+    if (!task || effectiveState(task).workStatus === workStatus) return;
 
     const previous = effectiveState(task);
     setStateById((current) => ({
       ...current,
-      [task.id]: { ...previous, stage },
+      [task.id]: { ...previous, workStatus },
     }));
     startTransition(async () => {
-      const result = await updateTaskStage(
+      const result = await updateTaskWorkStatus(
         task.companyId,
         task.id,
-        stage,
+        workStatus,
         previous.updatedAt,
       );
       if (!result.ok || !result.updatedAt) {
@@ -319,19 +318,19 @@ export function TaskBoard({
         return;
       }
       const applied: TaskStateSnapshot = {
-        stage: result.stage ?? stage,
-        workStatus: result.workStatus ?? previous.workStatus,
+        stage: result.stage ?? previous.stage,
+        workStatus: result.workStatus ?? workStatus,
         updatedAt: result.updatedAt,
       };
       setStateById((current) => ({ ...current, [task.id]: applied }));
-      showToast(`'${TASK_STAGE_LABEL[stage]}' 단계로 변경되었습니다`, {
+      showToast(`'${TASK_WORK_STATUS_LABEL[workStatus]}' 상태로 변경되었습니다`, {
         actionLabel: "되돌리기",
         durationMs: 5000,
         onAction: async () => {
-          const undo = await updateTaskStage(
+          const undo = await updateTaskWorkStatus(
             task.companyId,
             task.id,
-            previous.stage,
+            previous.workStatus,
             applied.updatedAt,
           );
           if (!undo.ok || !undo.updatedAt) {
@@ -363,7 +362,7 @@ export function TaskBoard({
               updatedAt: undoUpdatedAt,
             },
           }));
-          showToast("단계 변경을 되돌렸습니다.");
+          showToast("업무상태 변경을 되돌렸습니다.");
           router.refresh();
         },
       });
@@ -379,7 +378,7 @@ export function TaskBoard({
           title="첫 Task를 추가하세요"
           description={
             data.canWriteTasks
-              ? "관리 중인 기업의 Task를 등록하면 단계별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
+              ? "관리 중인 기업의 Task를 등록하면 업무상태별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
               : "조회할 Task가 아직 없습니다."
           }
           action={
@@ -530,35 +529,41 @@ export function TaskBoard({
             </div>
           ) : (
             <div className="board">
-              {TASK_STAGE_ORDER.map((stage) => {
+              {TASK_WORK_STATUS_ORDER.map((workStatus) => {
                 const columnTasks = filtered.filter(
-                  (t) => effectiveState(t).stage === stage,
+                  (t) => effectiveState(t).workStatus === workStatus,
                 );
                 return (
                   <section
-                    key={stage}
-                    className={`kcol${overStage === stage ? " is-over" : ""}`}
-                    aria-label={`${TASK_STAGE_LABEL[stage]} 컬럼`}
+                    key={workStatus}
+                    className={`kcol${
+                      overWorkStatus === workStatus ? " is-over" : ""
+                    }`}
+                    aria-label={`${TASK_WORK_STATUS_LABEL[workStatus]} 업무상태 컬럼`}
                     onDragOver={(e) => {
                       if (!data.canWriteTasks) return;
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "move";
-                      if (overStage !== stage) setOverStage(stage);
+                      if (overWorkStatus !== workStatus) {
+                        setOverWorkStatus(workStatus);
+                      }
                     }}
                     onDragLeave={(e) => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                        setOverStage((o) => (o === stage ? null : o));
+                        setOverWorkStatus((current) =>
+                          current === workStatus ? null : current,
+                        );
                       }
                     }}
                     onDrop={(e) => {
                       if (!data.canWriteTasks) return;
                       e.preventDefault();
-                      handleDrop(stage);
+                      handleDrop(workStatus);
                     }}
                   >
                     <div className="kcol-head">
-                      <span className={`kdot kdot--${stage}`} />
-                      <h3>{TASK_STAGE_LABEL[stage]}</h3>
+                      <span className={`kdot kdot--${workStatus}`} />
+                      <h3>{TASK_WORK_STATUS_LABEL[workStatus]}</h3>
                       <span className="cnt num">{columnTasks.length}</span>
                     </div>
                     <div className="kcol-body">
@@ -577,7 +582,7 @@ export function TaskBoard({
                           }}
                           onDragEnd={() => {
                             setDraggingId(null);
-                            setOverStage(null);
+                            setOverWorkStatus(null);
                           }}
                           onOpen={() => setSelectedId(t.id)}
                           showToast={showToast}
