@@ -63,6 +63,7 @@ export function TaskSlideOver({
   demo,
   canEdit = true,
   showToast,
+  onStateChange,
   onClose,
 }: {
   companyId: string;
@@ -73,6 +74,7 @@ export function TaskSlideOver({
   demo: boolean;
   canEdit?: boolean;
   showToast: (message: string, options?: ToastOptions) => void;
+  onStateChange?: (snapshot: TaskStateSnapshot) => void;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -195,7 +197,10 @@ export function TaskSlideOver({
                 updatedAt={stateSnapshot.updatedAt}
                 canEdit={canEdit}
                 showToast={showToast}
-                onChange={setStateSnapshot}
+                onChange={(snapshot) => {
+                  setStateSnapshot(snapshot);
+                  onStateChange?.(snapshot);
+                }}
               />
               <p className="form-hint">
                 단계와 상태는 상세 수정 모드와 관계없이 바로 변경됩니다.

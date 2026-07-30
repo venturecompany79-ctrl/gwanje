@@ -156,7 +156,8 @@ export function TaskBoard({
       : "all",
   );
   const [showCompleted, setShowCompleted] = useState(
-    searchParams.get("completed") === "1",
+    searchParams.get("completed") === "1" ||
+      searchParams.get("status") === "completed",
   );
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -166,6 +167,16 @@ export function TaskBoard({
   const [stateById, setStateById] = useState<
     Record<string, TaskStateSnapshot>
   >({});
+
+  const applyTaskState = useCallback(
+    (taskId: string, snapshot: TaskStateSnapshot) => {
+      if (snapshot.workStatus === "completed") {
+        setShowCompleted(true);
+      }
+      setStateById((current) => ({ ...current, [taskId]: snapshot }));
+    },
+    [],
+  );
 
   useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
@@ -290,10 +301,7 @@ export function TaskBoard({
     if (!task || effectiveState(task).workStatus === workStatus) return;
 
     const previous = effectiveState(task);
-    setStateById((current) => ({
-      ...current,
-      [task.id]: { ...previous, workStatus },
-    }));
+    applyTaskState(task.id, { ...previous, workStatus });
     startTransition(async () => {
       const result = await updateTaskWorkStatus(
         task.companyId,
@@ -313,7 +321,7 @@ export function TaskBoard({
                 updatedAt: result.updatedAt,
               }
             : previous;
-        setStateById((current) => ({ ...current, [task.id]: fallback }));
+        applyTaskState(task.id, fallback);
         showToast(result.error ?? "변경에 실패했습니다.");
         return;
       }
@@ -322,7 +330,7 @@ export function TaskBoard({
         workStatus: result.workStatus ?? workStatus,
         updatedAt: result.updatedAt,
       };
-      setStateById((current) => ({ ...current, [task.id]: applied }));
+      applyTaskState(task.id, applied);
       showToast(`'${TASK_WORK_STATUS_LABEL[workStatus]}' 상태로 변경되었습니다`, {
         actionLabel: "되돌리기",
         durationMs: 5000,
@@ -340,28 +348,22 @@ export function TaskBoard({
               undo.workStatus &&
               undo.updatedAt
             ) {
-              setStateById((current) => ({
-                ...current,
-                [task.id]: {
-                  stage: undo.stage!,
-                  workStatus: undo.workStatus!,
-                  updatedAt: undo.updatedAt!,
-                },
-              }));
+              applyTaskState(task.id, {
+                stage: undo.stage,
+                workStatus: undo.workStatus,
+                updatedAt: undo.updatedAt,
+              });
             }
             showToast(undo.error ?? "되돌리기에 실패했습니다.");
             router.refresh();
             return;
           }
           const undoUpdatedAt = undo.updatedAt;
-          setStateById((current) => ({
-            ...current,
-            [task.id]: {
-              stage: undo.stage ?? previous.stage,
-              workStatus: undo.workStatus ?? previous.workStatus,
-              updatedAt: undoUpdatedAt,
-            },
-          }));
+          applyTaskState(task.id, {
+            stage: undo.stage ?? previous.stage,
+            workStatus: undo.workStatus ?? previous.workStatus,
+            updatedAt: undoUpdatedAt,
+          });
           showToast("업무상태 변경을 되돌렸습니다.");
           router.refresh();
         },
@@ -419,7 +421,7 @@ export function TaskBoard({
               aria-pressed={showCompleted}
               onClick={() => setShowCompleted((value) => !value)}
             >
-              완료 포함
+              {showCompleted ? "완료 숨기기" : "완료 보기"}
             </button>
           </div>
           <div className="filter-bar">
@@ -468,9 +470,11 @@ export function TaskBoard({
             <select
               className="select-pill"
               value={workStatusFilter}
-              onChange={(e) =>
-                setWorkStatusFilter(e.target.value as "all" | TaskWorkStatus)
-              }
+              onChange={(e) => {
+                const next = e.target.value as "all" | TaskWorkStatus;
+                setWorkStatusFilter(next);
+                if (next === "completed") setShowCompleted(true);
+              }}
               aria-label="업무상태 필터"
             >
               <option value="all">업무상태 전체</option>
@@ -587,10 +591,7 @@ export function TaskBoard({
                           onOpen={() => setSelectedId(t.id)}
                           showToast={showToast}
                           onStateChange={(snapshot) =>
-                            setStateById((current) => ({
-                              ...current,
-                              [t.id]: snapshot,
-                            }))
+                            applyTaskState(t.id, snapshot)
                           }
                         />
                       ))}
@@ -616,6 +617,9 @@ export function TaskBoard({
           demo={data.demo}
           canEdit={data.canWriteTasks}
           showToast={showToast}
+          onStateChange={(snapshot) =>
+            applyTaskState(selected.id, snapshot)
+          }
           onClose={() => setSelectedId(null)}
         />
       ) : null}
