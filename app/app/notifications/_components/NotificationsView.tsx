@@ -140,7 +140,7 @@ function NotifRow({
                 onGo();
               }}
             >
-              <IconArrow /> 기업으로 이동
+              <IconArrow /> {n.refTable === "gov_program" ? "공고 보기" : "기업으로 이동"}
             </button>
           ) : null}
         </div>
@@ -221,6 +221,11 @@ export function NotificationsView({ data }: { data: NotificationsData }) {
     if (!data.demo && !isRead(n)) {
       setReadOverride((prev) => ({ ...prev, [n.id]: true }));
       void markNotificationRead(n.id);
+    }
+    if (n.refTable === "gov_program") {
+      const query = n.refId ? `?program=${encodeURIComponent(n.refId)}` : "";
+      router.push(`/app/companies/${n.companyId}/gov-programs${query}`);
+      return;
     }
     const tab = n.refTable ? REF_TAB[n.refTable] : null;
     router.push(tab ? `/app/companies/${n.companyId}?tab=${tab}` : `/app/companies/${n.companyId}`);

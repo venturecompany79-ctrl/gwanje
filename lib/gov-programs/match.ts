@@ -1,4 +1,8 @@
 import type { CompanyProfile } from "@/lib/data/company-detail";
+import type {
+  CompanyMatchProfile,
+  MatchProfileSourceKind,
+} from "@/lib/gov-programs/profile-types";
 import { todayKstDate } from "@/lib/datetime";
 import {
   companyRegionOption,
@@ -38,6 +42,35 @@ export interface ProgramMatch {
   program: GovProgramSlim;
   score: number;
   reasons: string[];
+  eligibility: MatchEligibility;
+  confidence: MatchConfidence;
+  warnings: string[];
+  scoreBreakdown: MatchScorePart[];
+  evidence: ProgramMatchEvidence[];
+}
+
+export type MatchEligibility = "eligible" | "review" | "ineligible";
+export type MatchConfidence = "high" | "medium" | "low";
+
+export interface MatchScorePart {
+  key: "profile" | "eligibility" | "history";
+  label: string;
+  score: number;
+  max: number;
+}
+
+export interface ProgramMatchEvidence {
+  sourceKind: MatchProfileSourceKind;
+  sourceId: string;
+  label: string;
+  detail: string;
+  href: string;
+}
+
+interface EligibilityResult {
+  eligibility: MatchEligibility;
+  warnings: string[];
+  checks: number;
 }
 
 type AgeOperator = "lt" | "lte" | "gt" | "gte";
@@ -53,7 +86,9 @@ function programText(program: GovProgramSlim): string {
       program.title,
       program.support_field,
       program.org_name,
+      program.summary,
       program.target_text,
+      program.support_amount,
       program.hashtags.join(" "),
     ].join(" "),
   );
@@ -300,6 +335,157 @@ function scoreScaleAndAge(
   return score;
 }
 
+function evaluateEligibility(
+  company: CompanyProfile,
+  program: GovProgramSlim,
+): EligibilityResult {
+  const text = programText(program);
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+  let checks = 0;
+
+  if (!isNationalProgram(program)) {
+    const regions = extractProgramRegions(program);
+    if (regions.length > 0) {
+      checks += 1;
+      const companyRegion = companyRegionOption(company.region);
+      if (!companyRegion) warnings.push("기업 소재지 정보가 없어 지역 조건 확인이 필요합니다.");
+      else if (!regions.includes(companyRegion)) blockers.push(`기업 소재지(${companyRegion})가 지원 지역과 다릅니다.`);
+    }
+  }
+
+  const ageGroups = extractAgeRequirementGroups(text);
+  if (ageGroups.length > 0) {
+    checks += 1;
+    const age = companyAgeYears(company);
+    if (age === null) warnings.push("설립일 정보가 없어 업력 조건 확인이 필요합니다.");
+    else if (!ageGroups.some((group) => group.every((requirement) => meetsAgeRequirement(age, requirement)))) {
+      blockers.push(`업력 ${age}년이 공고의 업력 조건과 다릅니다.`);
+    }
+  }
+
+  const headcountLimit = text.match(/(\d+)\s*명\s*(미만|이하)/);
+  if (headcountLimit) {
+    checks += 1;
+    if (company.headcount === null) warnings.push("상시 인원 정보가 없어 인원 조건 확인이 필요합니다.");
+    else {
+      const limit = Number(headcountLimit[1]);
+      const allowed = headcountLimit[2] === "이하" ? company.headcount <= limit : company.headcount < limit;
+      if (!allowed) blockers.push(`상시 인원 ${company.headcount}명이 공고 기준을 초과합니다.`);
+    }
+  }
+
+  const revenueLimit = text.match(/매출\s*(\d+)\s*억\s*(미만|이하)/);
+  if (revenueLimit) {
+    checks += 1;
+    if (company.revenue === null) warnings.push("연 매출 정보가 없어 매출 조건 확인이 필요합니다.");
+    else {
+      const limit = Number(revenueLimit[1]) * 100_000_000;
+      const allowed = revenueLimit[2] === "이하" ? company.revenue <= limit : company.revenue < limit;
+      if (!allowed) blockers.push("기업 매출이 공고의 매출 상한을 초과합니다.");
+    }
+  }
+
+  if (blockers.length > 0) {
+    return { eligibility: "ineligible", warnings: blockers, checks };
+  }
+  if (warnings.length > 0) {
+    return { eligibility: "review", warnings, checks };
+  }
+  return { eligibility: "eligible", warnings: [], checks };
+}
+
+function baseConfidence(
+  completeness: number,
+  eligibility: MatchEligibility,
+  checks: number,
+): MatchConfidence {
+  if (eligibility === "review") return completeness >= 55 ? "medium" : "low";
+  if (completeness >= 80 && (checks > 0 || eligibility === "eligible")) return "high";
+  if (completeness >= 55) return "medium";
+  return "low";
+}
+
+function meaningfulProgramTerms(program: GovProgramSlim): string[] {
+  const generic = new Set(["사업", "지원", "기업", "공고", "모집", "대상", "정부", "중소기업"]);
+  const values = [
+    program.title,
+    program.support_field,
+    ...program.hashtags,
+    program.summary,
+    program.target_text,
+  ];
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => normalizeContentText(value).split(" "))
+        .filter((term) => term.length >= 2 && !generic.has(term) && !/^\d+$/.test(term)),
+    ),
+  ).slice(0, 100);
+}
+
+export function scoreProgramForProfile(
+  profile: CompanyMatchProfile,
+  program: GovProgramSlim,
+): ProgramMatch {
+  const base = scoreProgram(profile.company, program);
+  const terms = meaningfulProgramTerms(program);
+  const evidence: ProgramMatchEvidence[] = [];
+  const matchedTerms = new Set<string>();
+
+  for (const source of profile.sources) {
+    if (!source.included) continue;
+    const sourceText = normalizeContentText(
+      `${source.label} ${source.matchText ?? source.detail}`,
+    );
+    const matched = terms.filter((term) => sourceText.includes(term)).slice(0, 4);
+    if (matched.length === 0) continue;
+    matched.forEach((term) => matchedTerms.add(term));
+    evidence.push({
+      sourceKind: source.kind,
+      sourceId: source.id,
+      label: source.label,
+      detail: `${matched.join(", ")} 관련 이력`,
+      href: source.href,
+    });
+    if (evidence.length >= 6) break;
+  }
+
+  const historyBonus = Math.min(20, evidence.length * 3 + matchedTerms.size);
+  const eligibility = evaluateEligibility(profile.company, program);
+  const rawScore = Math.min(100, base.score + historyBonus);
+  const score =
+    eligibility.eligibility === "ineligible"
+      ? Math.min(30, rawScore)
+      : eligibility.eligibility === "review"
+        ? Math.min(69, rawScore)
+        : rawScore;
+  const reasons = [...base.reasons];
+  if (evidence.length > 0) {
+    reasons.push(`등록 이력 ${evidence.length}건과 연관`);
+  }
+
+  return {
+    ...base,
+    score,
+    eligibility: eligibility.eligibility,
+    confidence: baseConfidence(profile.completeness, eligibility.eligibility, eligibility.checks),
+    reasons: Array.from(new Set(reasons)).slice(0, 5),
+    warnings: eligibility.warnings,
+    scoreBreakdown: [
+      { key: "profile", label: "기업 기본정보", score: base.score, max: 100 },
+      {
+        key: "eligibility",
+        label: "자격조건",
+        score: eligibility.eligibility === "eligible" ? 20 : eligibility.eligibility === "review" ? 10 : 0,
+        max: 20,
+      },
+      { key: "history", label: "등록 이력 연관", score: historyBonus, max: 20 },
+    ],
+    evidence,
+  };
+}
+
 export function scoreProgram(
   company: CompanyProfile,
   program: GovProgramSlim,
@@ -316,9 +502,25 @@ export function scoreProgram(
     scoreRegion(company, program, reasons, penaltyReasons) +
     scoreScaleAndAge(company, text, reasons, penaltyReasons);
 
+  const eligibility = evaluateEligibility(company, program);
+
   return {
     program,
     score: Math.max(0, Math.min(100, score)),
     reasons: [...penaltyReasons, ...reasons].slice(0, 4),
+    eligibility: eligibility.eligibility,
+    confidence: "medium",
+    warnings: eligibility.warnings,
+    scoreBreakdown: [
+      { key: "profile", label: "기업 기본정보", score: Math.max(0, Math.min(100, score)), max: 100 },
+      {
+        key: "eligibility",
+        label: "자격조건",
+        score: eligibility.eligibility === "eligible" ? 20 : eligibility.eligibility === "review" ? 10 : 0,
+        max: 20,
+      },
+      { key: "history", label: "등록 이력 연관", score: 0, max: 20 },
+    ],
+    evidence: [],
   };
 }

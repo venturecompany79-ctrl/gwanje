@@ -221,6 +221,85 @@ const syncLogGrants = await q(
 );
 assert((syncLogGrants[0]?.n ?? 1) === 0, "authenticated는 gov_program_sync_log 권한 없음");
 
+// ── 3-2. 기업별 매칭 캐시·고적합 알림·원본 삭제 정리 ───────────────────
+await step(
+  "company_program_match: 고적합 샘플 저장",
+  `with c as (
+     select id as company_id, tenant_id from company order by created_at limit 1
+   ), profile_row as (
+     insert into company_match_profile (
+       tenant_id, company_id, status, completeness, source_fingerprint
+     )
+     select tenant_id, company_id, 'ready', 80, 'verify-v1' from c
+     on conflict (tenant_id, company_id) do update
+       set status = 'ready', source_fingerprint = excluded.source_fingerprint
+     returning id, tenant_id, company_id
+   ), program_row as (
+     select id, synced_at from gov_program where external_id = 'demo-1'
+   )
+   insert into company_program_match (
+     tenant_id, company_id, gov_program_id, profile_id, eligibility,
+     confidence, score, profile_version, program_synced_at
+   )
+   select p.tenant_id, p.company_id, g.id, p.id, 'eligible',
+          'high', 85, 'verify-v1', g.synced_at
+   from profile_row p cross join program_row g;`,
+);
+const matchNotifications1 = await q(
+  "고적합 공고 알림 1차",
+  `select count(*)::int as n
+   from notification n
+   join gov_program g on g.id = n.ref_id
+   where n.type = 'program_match'
+     and n.ref_table = 'gov_program'
+     and g.external_id = 'demo-1'`,
+);
+assert((matchNotifications1[0]?.n ?? 0) === 1, "80점 이상 지원 가능 공고는 매칭 알림을 1건 생성");
+await step(
+  "company_program_match: 동일 공고 재분석",
+  `update company_program_match m
+   set score = 90, matched_at = now()
+   from gov_program g
+   where g.id = m.gov_program_id and g.external_id = 'demo-1';`,
+);
+const matchNotifications2 = await q(
+  "고적합 공고 알림 재분석 후",
+  `select count(*)::int as n
+   from notification n
+   join gov_program g on g.id = n.ref_id
+   where n.type = 'program_match'
+     and n.ref_table = 'gov_program'
+     and g.external_id = 'demo-1'`,
+);
+assert((matchNotifications2[0]?.n ?? 0) === 1, "동일 기업·공고 재분석은 알림을 중복 생성하지 않음");
+
+await step(
+  "company_match_profile_source: 삭제 정리 샘플",
+  `with d as (
+     select id, tenant_id, company_id, name, created_at
+     from document where name = '버전경합테스트.pdf' limit 1
+   )
+   insert into company_match_profile_source (
+     tenant_id, company_id, source_kind, source_id, label, facts_text,
+     extraction_status, source_updated_at
+   )
+   select tenant_id, company_id, 'document', id::text, name,
+          '삭제 시 함께 지워져야 하는 본문', 'ready', created_at
+   from d;`,
+);
+await step(
+  "document: 원본 삭제 시 매칭 본문 캐시 정리",
+  `delete from document where name = '버전경합테스트.pdf';`,
+);
+const deletedDocumentFacts = await q(
+  "삭제 문서의 매칭 본문 캐시",
+  `select count(*)::int as n
+   from company_match_profile_source
+   where source_kind = 'document'
+     and label = '버전경합테스트.pdf'`,
+);
+assert((deletedDocumentFacts[0]?.n ?? 1) === 0, "원본 문서 삭제 시 추출 본문 캐시도 함께 삭제");
+
 // ── 4. deadline_item 뷰 (KST) ────────────────────────────────────────────
 const dlCount = await q("deadline_item 행 수", `select count(*)::int as n from deadline_item`);
 assert((dlCount[0]?.n ?? 0) > 0, "deadline_item이 행을 반환");

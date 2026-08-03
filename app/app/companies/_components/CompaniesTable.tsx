@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { Panel } from "@/components/ui/Panel";
 import { Toast, type ToastOptions, useToast } from "@/components/ui/Toast";
@@ -13,6 +13,7 @@ import {
   IconClock,
   IconPlus,
   IconSearch,
+  IconSparkle,
   IconUser,
 } from "@/components/ui/icons";
 import { AddTaskSlideOver } from "@/components/tasks/TaskSlideOver";
@@ -660,6 +661,9 @@ export function CompaniesTable({
                   <th>다음 우선 Task</th>
                   <th>최근 업데이트</th>
                   <th>
+                    <span className="sr-only">맞춤 정부지원사업</span>
+                  </th>
+                  <th>
                     <span className="sr-only">Task 펼치기</span>
                   </th>
                 </tr>
@@ -761,6 +765,15 @@ function CompanyPortfolioRows({
             {formatRecent(company.latestTaskUpdatedAt)}
           </span>
         </td>
+        <td className="portfolio-program-cell">
+          <LinkButton
+            variant="secondary"
+            size="sm"
+            href={`/app/companies/${company.id}/gov-programs`}
+          >
+            <IconSparkle /> 맞춤 사업
+          </LinkButton>
+        </td>
         <td className="portfolio-expand-cell">
           <button
             type="button"
@@ -775,7 +788,7 @@ function CompanyPortfolioRows({
       </tr>
       {expanded ? (
         <tr className="portfolio-drawer-row">
-          <td colSpan={7}>
+          <td colSpan={8}>
             <PortfolioTaskList
               company={company}
               categories={data.categories}

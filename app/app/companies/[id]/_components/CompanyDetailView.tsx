@@ -14,6 +14,8 @@ import {
 } from "./CompanyLifecycleControls";
 import { OverviewTab } from "./OverviewTab";
 import { Badge } from "@/components/ui/Badge";
+import { LinkButton } from "@/components/ui/Button";
+import { IconSparkle } from "@/components/ui/icons";
 
 function TabLoading({ title }: { title: string }) {
   return (
@@ -50,19 +52,13 @@ const FilesTab = dynamic(
   { loading: () => <TabLoading title="자료" /> },
 );
 
-const RecommendTab = dynamic(
-  () => import("./RecommendTab").then((mod) => mod.RecommendTab),
-  { loading: () => <TabLoading title="정부지원사업" /> },
-);
-
 type TabKey =
   | "overview"
   | "cert"
   | "ip"
   | "tasks"
   | "schedule"
-  | "files"
-  | "recommend";
+  | "files";
 
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "개요/프로파일" },
@@ -71,7 +67,6 @@ const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: "tasks", label: "Task" },
   { key: "schedule", label: "일정" },
   { key: "files", label: "자료" },
-  { key: "recommend", label: "정부지원사업" },
 ];
 
 // ?tab= 별칭 — 자연스러운 표기(docs)도 허용 (GWJ-012)
@@ -133,6 +128,13 @@ function CompanyHeader({
           ))}
         </div>
         <div className="spacer" />
+        <LinkButton
+          variant="cta"
+          size="sm"
+          href={`/app/companies/${company.id}/gov-programs`}
+        >
+          <IconSparkle /> 맞춤 지원사업
+        </LinkButton>
         <ShareSettingsButton
           companyId={company.id}
           share={share}
@@ -281,10 +283,6 @@ export function CompanyDetailView({
           showToast={showToast}
         />
       ) : null}
-      {tab === "recommend" ? (
-        <RecommendTab companyId={company.id} showToast={showToast} />
-      ) : null}
-
       <Toast message={toast} />
     </>
   );

@@ -68,9 +68,14 @@ export function deadlineHref(item: {
 /** 알림 → 참조 대상 경로. 참조 불가 시 알림 센터로 폴백 */
 export function notificationHref(alert: {
   refTable: string | null;
+  refId?: string | null;
   companyId: string | null;
 }): string {
   if (alert.refTable === "campaign") return "/app/campaigns";
+  if (alert.companyId && alert.refTable === "gov_program") {
+    const query = alert.refId ? `?program=${encodeURIComponent(alert.refId)}` : "";
+    return `/app/companies/${alert.companyId}/gov-programs${query}`;
+  }
   if (alert.companyId && alert.refTable && SOURCE_TAB[alert.refTable]) {
     return `/app/companies/${alert.companyId}?tab=${SOURCE_TAB[alert.refTable]}`;
   }
