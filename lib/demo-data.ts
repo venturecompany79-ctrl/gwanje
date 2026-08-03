@@ -750,6 +750,7 @@ function demoNotification(
     companyId: `00000000-0000-0000-0000-0000000000c${companyN}`,
     companyName,
     refTable: type === "expiry" ? "credential" : type === "deadline" ? "task" : null,
+    refId: null,
     daysLeft,
     createdAt: dateTimeAfter(-createdDaysAgo, time),
   };

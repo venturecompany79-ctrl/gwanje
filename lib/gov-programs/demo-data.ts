@@ -17,6 +17,8 @@ function program(
   daysLeft: number,
 ): GovProgramRow {
   return {
+    analysis_version: 1,
+    analyzed_at: null,
     id: `00000000-0000-0000-0000-00000000a0${String(n).padStart(2, "0")}`,
     source,
     external_id: `demo-${source}-${n}`,
@@ -30,10 +32,13 @@ function program(
     apply_start: dateAfter(-14),
     apply_end: dateAfter(daysLeft),
     detail_url: "https://www.bizinfo.go.kr/",
+    eligibility: {},
     raw: null,
     synced_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     search_vector: null,
+    summary: null,
+    support_amount: null,
   };
 }
 

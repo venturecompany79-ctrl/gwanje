@@ -531,6 +531,286 @@ export type Database = {
           },
         ]
       }
+      company_gov_program_review: {
+        Row: {
+          company_id: string
+          created_at: string
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["company_program_review_decision"]
+          gov_program_id: string
+          id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          decided_by?: string | null
+          decision: Database["public"]["Enums"]["company_program_review_decision"]
+          gov_program_id: string
+          id?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["company_program_review_decision"]
+          gov_program_id?: string
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_gov_program_review_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_gov_program_review_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_gov_program_review_gov_program_id_fkey"
+            columns: ["gov_program_id"]
+            isOneToOne: false
+            referencedRelation: "gov_program"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_gov_program_review_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_match_profile: {
+        Row: {
+          analyzed_at: string
+          company_id: string
+          completeness: number
+          created_at: string
+          id: string
+          last_error: string | null
+          missing_information: Json
+          model: string | null
+          profile_json: Json
+          source_counts: Json
+          source_fingerprint: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          analyzed_at?: string
+          company_id: string
+          completeness?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          missing_information?: Json
+          model?: string | null
+          profile_json?: Json
+          source_counts?: Json
+          source_fingerprint?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          analyzed_at?: string
+          company_id?: string
+          completeness?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          missing_information?: Json
+          model?: string | null
+          profile_json?: Json
+          source_counts?: Json
+          source_fingerprint?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_match_profile_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_match_profile_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_match_profile_source: {
+        Row: {
+          company_id: string
+          created_at: string
+          extraction_error: string | null
+          extraction_status: string
+          facts_text: string | null
+          id: string
+          included: boolean
+          label: string
+          source_id: string
+          source_kind: string
+          source_updated_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          extraction_error?: string | null
+          extraction_status?: string
+          facts_text?: string | null
+          id?: string
+          included?: boolean
+          label: string
+          source_id: string
+          source_kind: string
+          source_updated_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          extraction_error?: string | null
+          extraction_status?: string
+          facts_text?: string | null
+          id?: string
+          included?: boolean
+          label?: string
+          source_id?: string
+          source_kind?: string
+          source_updated_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_match_profile_source_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_match_profile_source_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_program_match: {
+        Row: {
+          company_id: string
+          confidence: string
+          created_at: string
+          eligibility: string
+          evidence: Json
+          gov_program_id: string
+          id: string
+          matched_at: string
+          profile_id: string | null
+          profile_version: string
+          program_synced_at: string
+          reasons: Json
+          score: number
+          score_breakdown: Json
+          tenant_id: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          company_id: string
+          confidence?: string
+          created_at?: string
+          eligibility?: string
+          evidence?: Json
+          gov_program_id: string
+          id?: string
+          matched_at?: string
+          profile_id?: string | null
+          profile_version?: string
+          program_synced_at: string
+          reasons?: Json
+          score?: number
+          score_breakdown?: Json
+          tenant_id: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          company_id?: string
+          confidence?: string
+          created_at?: string
+          eligibility?: string
+          evidence?: Json
+          gov_program_id?: string
+          id?: string
+          matched_at?: string
+          profile_id?: string | null
+          profile_version?: string
+          program_synced_at?: string
+          reasons?: Json
+          score?: number
+          score_breakdown?: Json
+          tenant_id?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_program_match_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_program_match_gov_program_id_fkey"
+            columns: ["gov_program_id"]
+            isOneToOne: false
+            referencedRelation: "gov_program"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_program_match_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "company_match_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_program_match_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_share: {
         Row: {
           company_id: string
@@ -1182,11 +1462,14 @@ export type Database = {
       }
       gov_program: {
         Row: {
+          analysis_version: number
+          analyzed_at: string | null
           apply_end: string | null
           apply_start: string | null
           content_key: string
           created_at: string
           detail_url: string | null
+          eligibility: Json
           external_id: string
           hashtags: string[]
           id: string
@@ -1195,17 +1478,22 @@ export type Database = {
           region: string | null
           search_vector: unknown
           source: string
+          summary: string | null
+          support_amount: string | null
           support_field: string | null
           synced_at: string
           target_text: string | null
           title: string
         }
         Insert: {
+          analysis_version?: number
+          analyzed_at?: string | null
           apply_end?: string | null
           apply_start?: string | null
           content_key: string
           created_at?: string
           detail_url?: string | null
+          eligibility?: Json
           external_id: string
           hashtags?: string[]
           id?: string
@@ -1214,17 +1502,22 @@ export type Database = {
           region?: string | null
           search_vector?: unknown
           source: string
+          summary?: string | null
+          support_amount?: string | null
           support_field?: string | null
           synced_at?: string
           target_text?: string | null
           title: string
         }
         Update: {
+          analysis_version?: number
+          analyzed_at?: string | null
           apply_end?: string | null
           apply_start?: string | null
           content_key?: string
           created_at?: string
           detail_url?: string | null
+          eligibility?: Json
           external_id?: string
           hashtags?: string[]
           id?: string
@@ -1233,6 +1526,8 @@ export type Database = {
           region?: string | null
           search_vector?: unknown
           source?: string
+          summary?: string | null
+          support_amount?: string | null
           support_field?: string | null
           synced_at?: string
           target_text?: string | null
@@ -1653,6 +1948,7 @@ export type Database = {
           id: string
           memo: string | null
           source_credential_id: string | null
+          source_gov_program_id: string | null
           stage: Database["public"]["Enums"]["task_stage"]
           tenant_id: string
           title: string
@@ -1668,6 +1964,7 @@ export type Database = {
           id?: string
           memo?: string | null
           source_credential_id?: string | null
+          source_gov_program_id?: string | null
           stage?: Database["public"]["Enums"]["task_stage"]
           tenant_id: string
           title: string
@@ -1683,6 +1980,7 @@ export type Database = {
           id?: string
           memo?: string | null
           source_credential_id?: string | null
+          source_gov_program_id?: string | null
           stage?: Database["public"]["Enums"]["task_stage"]
           tenant_id?: string
           title?: string
@@ -1716,6 +2014,13 @@ export type Database = {
             columns: ["source_credential_id"]
             isOneToOne: false
             referencedRelation: "credential"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_source_gov_program_id_fkey"
+            columns: ["source_gov_program_id"]
+            isOneToOne: false
+            referencedRelation: "gov_program"
             referencedColumns: ["id"]
           },
           {
@@ -2204,6 +2509,7 @@ export type Database = {
     Enums: {
       campaign_channel: "alimtalk" | "email"
       campaign_status: "draft" | "scheduled" | "sending" | "sent"
+      company_program_review_decision: "saved" | "excluded"
       document_uploader: "consultant" | "client"
       ip_deadline_type:
         | "office_action"
@@ -2369,6 +2675,7 @@ export const Constants = {
     Enums: {
       campaign_channel: ["alimtalk", "email"],
       campaign_status: ["draft", "scheduled", "sending", "sent"],
+      company_program_review_decision: ["saved", "excluded"],
       document_uploader: ["consultant", "client"],
       ip_deadline_type: [
         "office_action",

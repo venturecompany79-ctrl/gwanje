@@ -34,7 +34,7 @@ export type GovProgramInsert = Database["public"]["Tables"]["gov_program"]["Inse
 export type GovProgramSlim = Omit<GovProgramRow, "raw" | "search_vector">;
 
 export const GOV_PROGRAM_SLIM_COLUMNS =
-  "id, source, external_id, content_key, title, support_field, org_name, target_text, hashtags, region, apply_start, apply_end, detail_url, synced_at, created_at";
+  "id, source, external_id, content_key, title, summary, support_amount, eligibility, analysis_version, analyzed_at, support_field, org_name, target_text, hashtags, region, apply_start, apply_end, detail_url, synced_at, created_at";
 
 export interface NormalizedProgram {
   source: SourceCode;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { IconAlert, IconBack } from "@/components/ui/icons";
 import { getCompanyDetail } from "@/lib/data/company-detail";
 import { getCompanyShareSettings } from "@/lib/data/company-share";
@@ -16,12 +16,30 @@ export default async function CompanyDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    pq?: string;
+    field?: string;
+    region?: string;
+    due?: string;
+    score?: string;
+    sort?: string;
+  }>;
 }) {
-  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const { tab } = query;
+  if (tab === "recommend") {
+    const next = new URLSearchParams();
+    if (query.pq) next.set("q", query.pq);
+    if (query.field) next.set("field", query.field);
+    if (query.region) next.set("region", query.region);
+    if (query.due) next.set("due", query.due);
+    if (query.score) next.set("fit", query.score);
+    if (query.sort) next.set("sort", query.sort);
+    const suffix = next.toString();
+    redirect(`/app/companies/${id}/gov-programs${suffix ? `?${suffix}` : ""}`);
+  }
   const supabase = await createClient();
-  // 정부지원사업 탭은 풀 전체(최대 1,000건)를 다루므로 RSC payload에 싣지 않고
-  // RecommendTab이 클라이언트에서 직접 조회한다.
   const [data, share] = await Promise.all([
     getCompanyDetail(id),
     supabase ? getCompanyShareSettings(supabase, id) : Promise.resolve(null),
