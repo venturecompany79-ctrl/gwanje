@@ -4,6 +4,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_ERROR, getTenantContext, requirePermission } from "@/lib/actions/shared";
+import { isTenantAlimtalkLive } from "@/lib/alimtalk/settings";
+import { triggerCampaignSendAfterResponse } from "@/lib/alimtalk/trigger";
 import { segmentToJson, type Segment } from "@/lib/segments";
 import type { CampaignChannel } from "@/lib/database.types";
 
@@ -18,6 +20,8 @@ export interface CreateCampaignInput {
   companyIds: string[];
   /** null = 즉시 발송, 값 있으면 예약 발송(ISO) */
   scheduledAt: string | null;
+  /** 실발송 시 사용할 검수 완료 템플릿(alimtalk_template.id). 미연동 테넌트는 null. */
+  templateId?: string | null;
 }
 
 export interface CreateCampaignResult {
@@ -93,6 +97,30 @@ export async function createCampaign(
   const immediate = input.scheduledAt === null;
   const now = new Date().toISOString();
 
+  // 실발송 가능 테넌트인지 — 미연동이면 종전처럼 "기록만 저장"으로 동작한다.
+  const live = await isTenantAlimtalkLive(supabase, ctx.tenantId);
+
+  let templateId: string | null = null;
+  if (live) {
+    templateId = input.templateId ?? null;
+    if (!templateId) {
+      return { ok: false, error: "발송할 알림톡 템플릿을 선택해 주세요.", id: null };
+    }
+    const { data: template, error: templateError } = await supabase
+      .from("alimtalk_template")
+      .select("id")
+      .eq("id", templateId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (templateError || !template) {
+      return {
+        ok: false,
+        error: "선택한 템플릿을 찾을 수 없습니다. 설정 → 알림톡에서 확인해 주세요.",
+        id: null,
+      };
+    }
+  }
+
   const { data: campaign, error } = await supabase
     .from("campaign")
     .insert({
@@ -101,9 +129,12 @@ export async function createCampaign(
       body,
       channel: input.channel,
       segment: segmentToJson(input.segment),
-      status: immediate ? "sent" : "scheduled",
-      scheduled_at: input.scheduledAt,
-      sent_at: immediate ? now : null,
+      // 실발송은 워커가 scheduled를 선점해 처리한다. 즉시 발송도 "지금 예약"으로 넣어
+      // after()가 죽더라도 cron이 회수할 수 있게 한다.
+      status: live ? "scheduled" : immediate ? "sent" : "scheduled",
+      scheduled_at: live ? (input.scheduledAt ?? now) : input.scheduledAt,
+      sent_at: !live && immediate ? now : null,
+      template_id: templateId,
     })
     .select("id")
     .single();
@@ -116,7 +147,9 @@ export async function createCampaign(
     };
   }
 
-  // 알림톡 게이트웨이 연동 전 — 즉시 발송은 도달 처리까지 한 번에 기록
+  // 실발송 테넌트는 pending으로 적재하고 워커가 상태를 채운다.
+  // 미연동 테넌트는 종전대로 즉시 발송을 도달 처리까지 한 번에 기록한다.
+  const fakeDelivered = !live && immediate;
   const { error: recipientError } = await supabase
     .from("campaign_recipient")
     .insert(
@@ -124,8 +157,9 @@ export async function createCampaign(
         tenant_id: ctx.tenantId,
         campaign_id: campaign.id,
         company_id: companyId,
-        delivered: immediate,
-        delivered_at: immediate ? now : null,
+        delivered: fakeDelivered,
+        delivered_at: fakeDelivered ? now : null,
+        status: fakeDelivered ? ("delivered" as const) : ("pending" as const),
       })),
     );
   if (recipientError) {
@@ -144,6 +178,11 @@ export async function createCampaign(
       error: `대상 저장에 실패했습니다: ${recipientError.message}`,
       id: null,
     };
+  }
+
+  // 즉시 발송은 응답을 보낸 뒤 백그라운드로 실제 발송을 시작한다(cron이 안전망).
+  if (live && immediate) {
+    triggerCampaignSendAfterResponse(campaign.id);
   }
 
   revalidatePath("/app/campaigns");

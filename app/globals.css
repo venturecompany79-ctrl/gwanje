@@ -4585,6 +4585,37 @@ table.dlist .name {
 .st-badge--draft .sd {
   background: var(--color-stone);
 }
+/* 수신자별 발송 상태 — 도달=성공 / 실패=critical / 접수·대기·제외=중립 */
+.st-badge--rcp-delivered {
+  background: var(--app-st-valid-bg);
+  color: var(--app-st-valid-text);
+}
+.st-badge--rcp-delivered .sd {
+  background: var(--color-success);
+}
+.st-badge--rcp-sent {
+  background: var(--app-ic-deadline-bg);
+  color: var(--color-primary-deep);
+}
+.st-badge--rcp-sent .sd {
+  background: var(--color-primary);
+}
+.st-badge--rcp-failed {
+  background: var(--app-st-expired-bg);
+  color: var(--app-st-expired-text);
+}
+.st-badge--rcp-failed .sd {
+  background: var(--color-critical);
+}
+.st-badge--rcp-pending,
+.st-badge--rcp-skipped {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+}
+.st-badge--rcp-pending .sd,
+.st-badge--rcp-skipped .sd {
+  background: var(--color-stone);
+}
 .seg-chip {
   display: inline-flex;
   align-items: center;

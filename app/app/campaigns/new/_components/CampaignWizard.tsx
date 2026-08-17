@@ -29,6 +29,8 @@ import {
   IconX,
 } from "@/components/ui/icons";
 import { createCampaign } from "@/lib/actions/campaigns";
+import { normalizeKoreanMobile } from "@/lib/alimtalk/phone";
+import type { WizardTemplate } from "@/lib/data/campaigns";
 import {
   evaluateSegment,
   SEGMENT_FIELDS,
@@ -98,18 +100,21 @@ function defaultRuleFor(
   }
 }
 
-/** 본문 {기업명}/{담당자명} → 첫 대상 기업 값으로 치환한 미리보기 노드 */
+/**
+ * 본문의 변수 자리를 첫 대상 기업 값으로 치환한 미리보기 노드.
+ * 데모 템플릿은 {기업명}, 카카오 검수 템플릿은 #{기업명} 표기를 쓰므로 둘 다 받는다.
+ */
 function previewBody(
   body: string,
   sample: SegmentCompany | undefined,
 ): ReactNode {
   const company = sample?.name ?? "대상 기업";
   const manager = sample?.contactName ?? "담당자";
-  return body.split(/(\{기업명\}|\{담당자명\})/g).map((part, i) => {
-    if (part === "{기업명}" || part === "{담당자명}") {
+  return body.split(/(#?\{기업명\}|#?\{담당자명\})/g).map((part, i) => {
+    if (part.endsWith("{기업명}") || part.endsWith("{담당자명}")) {
       return (
         <span key={i} className="vv">
-          {part === "{기업명}" ? company : manager}
+          {part.endsWith("{기업명}") ? company : manager}
         </span>
       );
     }
@@ -119,8 +124,14 @@ function previewBody(
 
 export function CampaignWizard({
   companies,
+  templates,
+  live,
 }: {
   companies: SegmentCompany[];
+  /** 카카오 검수를 통과한 템플릿 — 실발송(live) 모드에서만 채워진다 */
+  templates: WizardTemplate[];
+  /** true면 실제 카카오톡으로 발송된다 */
+  live: boolean;
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -143,14 +154,22 @@ export function CampaignWizard({
     [companies],
   );
 
+  // 실발송 모드에서는 카카오 승인 템플릿만 쓸 수 있다.
+  const liveTemplates = live ? templates : [];
+  const initialTemplate = liveTemplates[0] ?? null;
+
   const [step, setStep] = useState(1);
   const [rules, setRules] = useState<SegmentRule[]>(() => [
     defaultRuleFor("credential", valueOptions),
   ]);
   const [join, setJoin] = useState<SegmentJoin>("and");
   const [title, setTitle] = useState("");
-  const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
-  const [body, setBody] = useState(TEMPLATES[0].body);
+  const [templateId, setTemplateId] = useState(
+    initialTemplate ? initialTemplate.id : TEMPLATES[0].id,
+  );
+  const [body, setBody] = useState(
+    initialTemplate ? initialTemplate.content : TEMPLATES[0].body,
+  );
   const [when, setWhen] = useState<"now" | "sched">("now");
   const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [sending, setSending] = useState<"now" | "sched" | null>(null);
@@ -160,8 +179,26 @@ export function CampaignWizard({
     () => evaluateSegment(companies, { rules, join }),
     [companies, rules, join],
   );
-  const template =
-    TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0];
+
+  // 연락처가 없거나 휴대폰 형식이 아니면 알림톡을 보낼 수 없다 — 미리 알려준다.
+  const unreachable = useMemo(
+    () =>
+      live
+        ? targets.filter((t) => normalizeKoreanMobile(t.contactPhone) === null)
+        : [],
+    [live, targets],
+  );
+  const unreachableIds = useMemo(
+    () => new Set(unreachable.map((t) => t.id)),
+    [unreachable],
+  );
+  const reachableCount = targets.length - unreachable.length;
+
+  const liveTemplate = liveTemplates.find((t) => t.id === templateId) ?? initialTemplate;
+  const demoTemplate = TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0];
+  const templateName = live
+    ? (liveTemplate?.name ?? "템플릿 없음")
+    : demoTemplate.name;
 
   const scheduledInPast =
     when === "sched" &&
@@ -202,6 +239,10 @@ export function CampaignWizard({
       showToast("예약 일시는 현재 이후로 설정해 주세요.");
       return;
     }
+    if (live && !liveTemplate) {
+      showToast("발송할 알림톡 템플릿을 선택해 주세요.");
+      return;
+    }
     setSending(mode);
     startTransition(async () => {
       const scheduled =
@@ -213,6 +254,7 @@ export function CampaignWizard({
         segment: { rules, join },
         companyIds: targets.map((t) => t.id),
         scheduledAt: scheduled,
+        templateId: live ? (liveTemplate?.id ?? null) : null,
       });
       if (!result.ok || !result.id) {
         setSending(null);
@@ -222,7 +264,7 @@ export function CampaignWizard({
       router.push(
         mode === "sched"
           ? `/app/campaigns/${result.id}?scheduled=1`
-          : `/app/campaigns/${result.id}?sent=${targets.length}`,
+          : `/app/campaigns/${result.id}?sent=${live ? reachableCount : targets.length}`,
       );
     });
   }
@@ -230,7 +272,9 @@ export function CampaignWizard({
   const canNext =
     step === 1
       ? targets.length > 0
-      : title.trim() !== "" && body.trim() !== "";
+      : title.trim() !== "" &&
+        body.trim() !== "" &&
+        (!live || liveTemplate !== null);
 
   return (
     <>
@@ -401,11 +445,23 @@ export function CampaignWizard({
                   <span className="prev-count num">{targets.length}</span>
                   <span className="prev-sub">개사 대상 · 실시간</span>
                 </div>
+                {unreachable.length > 0 ? (
+                  <p className="form-hint" style={{ padding: "0 20px 8px" }}>
+                    <IconAlert /> {unreachable.length}개사는 담당자 연락처가 없어
+                    발송에서 제외됩니다. 기업 정보에서 휴대폰 번호를 등록하면
+                    함께 발송됩니다.
+                  </p>
+                ) : null}
                 <div className="prev-list">
                   {targets.map((t) => (
                     <div key={t.id} className="prev-item">
                       <IconBuilding />
                       {t.name}
+                      {unreachableIds.has(t.id) ? (
+                        <span className="st-badge st-badge--draft" style={{ marginLeft: "auto" }}>
+                          연락처 없음
+                        </span>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -434,36 +490,46 @@ export function CampaignWizard({
                   value={templateId}
                   onChange={(e) => {
                     setTemplateId(e.target.value);
-                    const next = TEMPLATES.find(
-                      (t) => t.id === e.target.value,
-                    );
-                    if (next) setBody(next.body);
+                    const next = live
+                      ? liveTemplates.find((t) => t.id === e.target.value)
+                      : TEMPLATES.find((t) => t.id === e.target.value);
+                    if (next) {
+                      setBody("content" in next ? next.content : next.body);
+                    }
                   }}
                 >
-                  {TEMPLATES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
+                  {live
+                    ? liveTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))
+                    : TEMPLATES.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
                 </select>
               </div>
-              <div className="vchips">
-                <span className="vlab">변수 삽입</span>
-                <button
-                  type="button"
-                  className="vchip"
-                  onClick={() => insertVariable("{기업명}")}
-                >
-                  <IconPlus /> {"{기업명}"}
-                </button>
-                <button
-                  type="button"
-                  className="vchip"
-                  onClick={() => insertVariable("{담당자명}")}
-                >
-                  <IconPlus /> {"{담당자명}"}
-                </button>
-              </div>
+              {live ? null : (
+                <div className="vchips">
+                  <span className="vlab">변수 삽입</span>
+                  <button
+                    type="button"
+                    className="vchip"
+                    onClick={() => insertVariable("{기업명}")}
+                  >
+                    <IconPlus /> {"{기업명}"}
+                  </button>
+                  <button
+                    type="button"
+                    className="vchip"
+                    onClick={() => insertVariable("{담당자명}")}
+                  >
+                    <IconPlus /> {"{담당자명}"}
+                  </button>
+                </div>
+              )}
               <div className="field">
                 <label htmlFor="campaign-body">본문 *</label>
                 <textarea
@@ -473,7 +539,16 @@ export function CampaignWizard({
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="발송할 메시지를 입력해 주세요"
+                  readOnly={live}
                 />
+                {live ? (
+                  <p className="form-hint" style={{ marginTop: 8 }}>
+                    <IconInfo /> 알림톡 본문은 카카오 검수를 통과한 내용 그대로
+                    발송되어 수정할 수 없습니다. 문구를 바꾸려면 Solapi
+                    콘솔에서 새 템플릿을 등록·검수한 뒤 설정 → 알림톡에
+                    추가해 주세요.
+                  </p>
+                ) : null}
               </div>
             </div>
           </Panel>
@@ -486,9 +561,11 @@ export function CampaignWizard({
                   <span className="kk">톡</span>알림톡 미리보기
                 </div>
                 <div className="bubble">
-                  <div className="bt">{template.name}</div>
+                  <div className="bt">{templateName}</div>
                   {previewBody(body, targets[0])}
-                  <div className="bubble-cta">{template.cta}</div>
+                  {live ? null : (
+                    <div className="bubble-cta">{demoTemplate.cta}</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -503,7 +580,9 @@ export function CampaignWizard({
             <div className="sum-grid">
               <div className="sum-card">
                 <div className="sk">대상</div>
-                <div className="sv num">{targets.length}개사</div>
+                <div className="sv num">
+                  {live ? reachableCount : targets.length}개사
+                </div>
               </div>
               <div className="sum-card">
                 <div className="sk">채널</div>
@@ -511,7 +590,7 @@ export function CampaignWizard({
               </div>
               <div className="sum-card">
                 <div className="sk">템플릿</div>
-                <div className="sv sv--sm">{template.name}</div>
+                <div className="sv sv--sm">{templateName}</div>
               </div>
             </div>
 
@@ -565,11 +644,26 @@ export function CampaignWizard({
                 변경해 주세요.
               </p>
             ) : null}
-            <p className="form-hint" style={{ marginTop: 10 }}>
-              <IconInfo /> 알림톡 게이트웨이 연동 전까지는 발송 기록만
-              저장됩니다. 실제 메시지 발송과 도달/응답 집계는 발송 채널 연동
-              후 활성화됩니다.
-            </p>
+            {live ? (
+              <>
+                <p className="form-hint" style={{ marginTop: 10 }}>
+                  <IconInfo /> 대상 기업 담당자의 카카오톡으로 실제 발송되며,
+                  발송 요금은 연결된 Solapi 계정에서 차감됩니다. 도달 여부는
+                  발송 후 몇 분 내에 집계에 반영됩니다.
+                </p>
+                {unreachable.length > 0 ? (
+                  <p className="form-hint" style={{ marginTop: 8 }}>
+                    <IconAlert /> {targets.length}개사 중 {unreachable.length}
+                    개사는 담당자 연락처가 없어 발송에서 제외됩니다.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="form-hint" style={{ marginTop: 10 }}>
+                <IconInfo /> 알림톡 연동 전까지는 발송 기록만 저장됩니다. 설정
+                → 알림톡에서 Solapi 계정을 연결하면 실제 발송이 시작됩니다.
+              </p>
+            )}
 
             <div className="so-label" style={{ margin: "24px 0 10px" }}>
               대상 기업 최종 확인 · {targets.length}개사
@@ -579,6 +673,11 @@ export function CampaignWizard({
                 <div key={t.id} className="prev-item">
                   <IconBuilding />
                   {t.name}
+                  {unreachableIds.has(t.id) ? (
+                    <span className="st-badge st-badge--draft" style={{ marginLeft: "auto" }}>
+                      연락처 없음
+                    </span>
+                  ) : null}
                 </div>
               ))}
             </div>
