@@ -7,6 +7,7 @@ import { shiftDateString, todayKstDate } from "@/lib/datetime";
 import { isMemberRole } from "@/lib/permissions";
 import {
   TODO_BOARD_DAY_COUNT,
+  TODO_NOTE_FUTURE_DAYS,
   isTodoTag,
   type TodoBoardData,
   type TodoMemberOption,
@@ -133,7 +134,7 @@ export async function getTodoBoardData(
       "id, user_id, note_date, content, tag, completed, sort_order, created_at, updated_at",
     )
     .gte("note_date", cutoff)
-    .lte("note_date", today);
+    .lte("note_date", shiftDateString(today, TODO_NOTE_FUTURE_DAYS));
 
   if (effectiveSelected !== "all") {
     query = query.eq("user_id", selectedUserId);

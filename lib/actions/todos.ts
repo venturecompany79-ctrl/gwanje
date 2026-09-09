@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
 import {
-  TODO_BOARD_DAY_COUNT,
+  resolveTodoNoteDate,
   cleanTodoContent,
   isTodoTag,
   type TodoTag,
@@ -32,20 +31,6 @@ function normalizeTag(value: TodoTag | null | undefined): TodoTag | null {
   return isTodoTag(value) ? value : null;
 }
 
-/**
- * 노트 작성 가능한 날짜인지 검증한다.
- * - "YYYY-MM-DD" 형식
- * - 미래 금지(오늘 이하)
- * - 보드가 보여주는 최근 TODO_BOARD_DAY_COUNT일 범위 이내
- */
-function resolveNoteDate(value: string | undefined): string | null {
-  if (value === undefined) return todayKstDate();
-  if (!isValidDateString(value)) return null;
-  const offset = daysFromToday(value);
-  if (offset > 0 || offset < -(TODO_BOARD_DAY_COUNT - 1)) return null;
-  return value;
-}
-
 export async function createTodoNotes(
   drafts: TodoDraftInput[],
   noteDate?: string,
@@ -56,7 +41,7 @@ export async function createTodoNotes(
   const ctx = await getTenantContext(supabase);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const targetDate = resolveNoteDate(noteDate);
+  const targetDate = resolveTodoNoteDate(noteDate);
   if (!targetDate) {
     return { ok: false, error: "작성할 수 없는 날짜입니다." };
   }
@@ -131,7 +116,7 @@ export async function updateTodoNote(
   if (patch.tag !== undefined) update.tag = normalizeTag(patch.tag);
   if (patch.completed !== undefined) update.completed = patch.completed;
   if (patch.noteDate !== undefined) {
-    const noteDate = resolveNoteDate(patch.noteDate);
+    const noteDate = resolveTodoNoteDate(patch.noteDate);
     if (!noteDate) return { ok: false, error: "작성할 수 없는 날짜입니다." };
     update.note_date = noteDate;
   }

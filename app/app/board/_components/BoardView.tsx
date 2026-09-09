@@ -97,9 +97,13 @@ export function BoardView(props: BoardViewProps) {
     todoData?.notes.filter((note) => note.noteDate === todoData.today).length ??
     0;
 
+  const futureTodoCount =
+    todoData?.notes.filter((note) => note.noteDate > todoData.today).length ?? 0;
+  const recentTodoCount = (todoData?.notes.length ?? 0) - futureTodoCount;
+
   const pageSub =
     activeTab === "todos"
-      ? `${todoData?.selectedLabel ?? "업무일지"} · 오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${todoData?.notes.length ?? 0}건`
+      ? `${todoData?.selectedLabel ?? "업무일지"} · 오늘 ${todayTodoCount}건 · 최근 ${TODO_BOARD_DAY_COUNT}일 ${recentTodoCount}건 · 예정 ${futureTodoCount}건`
       : taskData?.tasks.length === 0
         ? "첫 Task를 등록해 시작하세요"
         : `진행 ${taskData?.tasks.filter((task) => task.workStatus !== "completed").length ?? 0}건 · 전체 ${taskData?.tasks.length ?? 0}건`;

@@ -83,6 +83,8 @@ function tagOptionToneClass(tag: TodoTag): string {
 function groupLabel(offset: number): string {
   if (offset === 0) return "오늘";
   if (offset === 1) return "어제";
+  if (offset === -1) return "내일";
+  if (offset < 0) return `${-offset}일 후`;
   return `${offset}일 전`;
 }
 

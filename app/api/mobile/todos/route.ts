@@ -1,8 +1,6 @@
 import type { NextRequest } from "next/server";
-import { daysFromToday, isValidDateString, todayKstDate } from "@/lib/datetime";
 import {
-  TODO_BOARD_DAY_COUNT,
-  TODO_NOTE_FUTURE_DAYS,
+  resolveTodoNoteDate,
   cleanTodoContent,
   isTodoTag,
   type TodoTag,
@@ -24,17 +22,6 @@ function normalizeTag(value: unknown): TodoTag | null {
   return typeof value === "string" && isTodoTag(value) ? value : null;
 }
 
-function resolveNoteDate(value: string | undefined): string | null {
-  if (value === undefined) return todayKstDate();
-  if (!isValidDateString(value)) return null;
-  const offset = daysFromToday(value);
-  // 과거는 오늘 포함 최근 TODO_BOARD_DAY_COUNT일, 미래는 오늘 이후 TODO_NOTE_FUTURE_DAYS일까지 허용.
-  if (offset > TODO_NOTE_FUTURE_DAYS || offset < -(TODO_BOARD_DAY_COUNT - 1)) {
-    return null;
-  }
-  return value;
-}
-
 export async function POST(request: NextRequest) {
   const ctx = await requireMobileContext(request);
   if (ctx instanceof Response) return ctx;
@@ -43,7 +30,7 @@ export async function POST(request: NextRequest) {
   const content = cleanTodoContent(body?.content ?? "");
   if (!content) return mobileError("노트 내용을 입력해 주세요.");
 
-  const noteDate = resolveNoteDate(body?.noteDate);
+  const noteDate = resolveTodoNoteDate(body?.noteDate);
   if (!noteDate) return mobileError("작성할 수 없는 날짜입니다.");
 
   const { data: lastNote, error: lastError } = await ctx.supabase
