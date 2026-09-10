@@ -464,19 +464,21 @@ h4 {
   font-weight: 700;
   letter-spacing: 0.01em;
 }
-.dday--critical {
+/* ★ 컨테이너의 포괄 span 규칙(.portfolio-popover-card span 등 0-1-1)이 변형 클래스(0-1-0)를
+   이겨 배지 글자색을 뭉갠다 → .dday 를 덧붙여 0-2-0 으로 올린다. 4개 변형 모두 같은 원인. */
+.dday.dday--critical {
   background: var(--color-critical);
   color: var(--color-on-primary);
 }
-.dday--attention {
+.dday.dday--attention {
   background: var(--color-attention);
   color: var(--color-on-primary);
 }
-.dday--neutral {
+.dday.dday--neutral {
   background: var(--color-surface-soft);
   color: var(--color-steel);
 }
-.dday--expired {
+.dday.dday--expired {
   background: var(--app-st-expired-bg);
   color: var(--app-st-expired-text);
 }
@@ -2108,6 +2110,7 @@ table.dlist .date {
 }
 .co-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px;
 }
@@ -6847,6 +6850,11 @@ body {
     min-width: 150px;
   }
 
+  /* .gov-company-switcher .select-pill(0,2,0)이 위 .select-pill(0,1,0)을 이긴다 → 동급으로 맞춤 */
+  .gov-company-switcher .select-pill {
+    min-width: 150px;
+  }
+
   .tag-tabs,
   .tabs {
     flex-wrap: nowrap;
@@ -7000,6 +7008,11 @@ body {
     gap: 14px;
     padding: 7px 0;
     border-bottom: 0;
+    text-align: right;
+  }
+
+  /* table.dlist td.c{center}(0,2,2)가 위 .dlist--cards td.c(0,2,1)를 이긴다 → 동급화 */
+  table.dlist.dlist--cards td.c {
     text-align: right;
   }
 
@@ -7263,6 +7276,7 @@ body {
   .search-pill input,
   .memo-input,
   .cond-input,
+  .stage-opt input.dt-input,
   .dt-input,
   .todo-draft-date,
   .selbox,
