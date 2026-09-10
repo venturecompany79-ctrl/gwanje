@@ -3,8 +3,8 @@
 > Claude Code가 **매 세션 자동으로 읽는** 프로젝트 헌법. 모든 화면 작업은 이 규칙을 따른다.
 > 세부 원본(`/docs`)을 **권위(source of truth)**로 삼는다:
 > - `supabase/migrations/*.sql` — **DB 스키마 (실제 권위)**. `/docs/schema.sql`은 초기 스냅숏으로 이후 테이블(billing·mobile·drive 등)이 빠져 있다 — 참고용으로만.
-> - `/docs/design.md` — **디자인 시스템(Meta DS) 토큰·컴포넌트 (디자인 최우선 권위)**
-> - `/docs/wireframes/*.html` — 화면 레이아웃 참조 (Meta DS 토큰 + 앱 확장)
+> - `/docs/design.md` — **디자인 시스템(Mission Control DS = x.ai × SpaceX) 토큰·컴포넌트 (디자인 최우선 권위)**
+> - `/docs/wireframes/*.html` — 화면 레이아웃 참조 (Mission Control DS 토큰 · `_ds/tokens.css` 공유)
 > - `/docs/화면설계_기획자료.md` — 화면별 구성요소·동작·상태
 
 ---
@@ -32,7 +32,7 @@ app/
     companies/page.tsx          기업 목록
     companies/[id]/page.tsx     기업 상세(탭)
     board/ campaigns/ notifications/ settings/
-components/ui/                  ★ 공통 프리미티브 (Meta DS 토큰 기반)
+components/ui/                  ★ 공통 프리미티브 (Mission Control DS 토큰 기반)
 app/globals.css                 ★ design.md 토큰을 CSS 변수로 포팅 (아래 5절)
 lib/supabase/                   server.ts / client.ts (typed)
 lib/labels.ts                   enum(영문) ↔ 한국어 라벨 매핑
@@ -46,57 +46,58 @@ docs/                           schema.sql / design.md / wireframes / 화면설�
 - `/auth/callback`(OAuth 코드 교환)은 middleware matcher에서 제외 — 콜백 라우트가 자체 분기
 - 그 외 공개 페이지(`/terms`·`/privacy` 포함)는 통과
 
-## 5. 디자인 시스템 — **Meta DS** (★ 핵심 / 권위: `/docs/design.md`)
-Meta의 커머스(Quest·Ray-Ban) 디자인 시스템 기반. **라이트 테마, cobalt 액센트, 풀 pill 버튼**이 시그니처.
+## 5. 디자인 시스템 — **Mission Control DS** (★ 핵심 / 권위: `/docs/design.md`)
+**x.ai(구조·색) × SpaceX(타이포·톤)** 기반. **다크 단일 테마, 흰색 1차 액션, 풀 pill 버튼**이 시그니처.
 토큰은 `{colors.x}`·`{typography.x}`·`{rounded.x}`·`{spacing.x}`·`{components.x}` 네임스페이스로 정의돼 있다.
-**셋업 시 design.md 토큰을 `app/globals.css`의 CSS 변수(또는 Tailwind `theme.extend`)로 1:1 포팅**하고, 모든 컴포넌트는 이 토큰만 참조한다. **임의 색·radius·폰트 생성 금지.**
+design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(약 100줄). 모든 컴포넌트는 이 토큰만 참조한다.
+**임의 색·radius·폰트 생성 금지. 토큰 이름 변경 금지**(1,400곳 이상이 참조 중 — 이름 유지, 값만 교체).
 
 **시그니처 규칙**
 - 버튼은 **항상 pill** (`rounded.full` = 100px). 사각 버튼 금지.
-- 카드: 사진형 32px(`rounded.xxxl`) / 일반 피처 16px(`rounded.xl`) / 입력·라디오 8px(`rounded.lg`).
-- 엘리베이션 **기본 flat**(테두리 `hairline-soft`). 그림자는 sticky 패널에만(`rgba(20,22,26,.3) 0 1px 4px`).
-- 단색 지향 — 액센트는 **cobalt(`primary` #0064e0) + oculus-purple**만. 그 외 액센트 추가 금지.
-- 헤딩은 Optimistic VF의 `ss01,ss02`를 **항상 함께** 켠다.
+- 카드 라운딩은 **작게**: 큰 카드 14px(`rounded.xxxl`) / 일반 피처 10px(`rounded.xl`) / 입력·라디오 8px(`rounded.lg`). SpaceX의 austerity.
+- 엘리베이션 **기본 flat**(테두리 `hairline-soft`). 다크 캔버스에서 회색 그림자는 보이지 않으므로 **그림자는 순검정**(`rgba(0,0,0,.6) 0 2px 12px`)으로, sticky/떠 있는 패널에만.
+- 단색 지향 — **1차 액션은 흰색**(`primary` #fff + `on-primary` #0a0a0a). 채도는 **status·마케팅 CTA·보조 액센트에만** 허용, 그 외 액센트 추가 금지.
+- **밝은 채움 위 전경은 근-검정**(`on-primary`). 다크 팔레트에서 흰 전경은 대비 미달(#ffb224 위 2.0:1).
+- eyebrow·마이크로 캡션·수치는 **대문자 트래킹 mono**(`--font-mono`) — SpaceX 시그니처.
 
 **토큰 요약 (권위는 design.md — 값 충돌 시 design.md 우선)**
 | 그룹 | 토큰 : 값 |
 |---|---|
-| 주요 | `primary` #0064e0 · `primary-deep` #0457cb · `primary-soft` #0091ff · `on-primary` #fff |
-| 마케팅 1차 | `ink-button` #000 (검정 pill) / `on-ink-button` #fff |
-| 폼 활성 | `fb-blue` #1876f2 (선택 라디오·체크·인풋 포커스) |
-| 표면 | `canvas` #ffffff · `surface-soft` #f1f4f7 |
-| 텍스트 | `ink-deep` #0a1317 · `ink` #1c1e21 · `charcoal` #444950 · `slate` #4b4c4f · `steel` #5d6c7b · `stone` #8595a4 |
-| 라인 | `hairline` #ced0d4 · `hairline-soft` #dee3e9 |
-| 시맨틱 | `success` #31a24c · `attention` #f2a918 · `warning` #f7b928 · `critical` #e41e3f · `critical-strong` #f0284a |
-| radius | xs2 · sm4 · md6 · lg8 · xl16 · xxl24 · xxxl32 · feature40 · full100 · circle |
+| 1차 액션 | `primary` #ffffff · `primary-deep` #dadbdf · `primary-soft` #a0c3ec · `on-primary` #0a0a0a |
+| 마케팅 1차 | `ink-button` #ff7a17 (sunset pill) / `on-ink-button` #0a0a0a |
+| 폼 활성 | `fb-blue` #ffffff (선택 라디오·체크·인풋 포커스 — 흰색 아웃라인) |
+| 표면 | `canvas` #191919 (패널) · `surface-soft` #0a0a0a (body·함몰) |
+| 텍스트 | `ink-deep` #ffffff · `ink` #fafaf7 · `charcoal` #dadbdf · `slate` #b9bcc2 · `steel` #9aa0a6 · `stone` #858a92 |
+| 라인 | `hairline` #2c2f34 · `hairline-soft` #212327 |
+| 시맨틱 | `success` #35d07f · `attention` #ffb224 · `warning` #ffc94d · `critical` #ff4d63 · `critical-strong` #ff6076 |
+| radius | xs2 · sm4 · md6 · lg8 · **xl10** · xxl12 · **xxxl14** · feature16 · full100 · circle |
 | spacing(4px base) | xxs4 · xs8 · sm10 · md12 · base16 · lg20 · xl24 · xxl32 · xxxl40 · section-sm48 · section64 · section-lg80 · hero120 |
 
-**문서화된 프리미티브** (design.md `components:`): `button-primary` / `button-buy-cta`(cobalt) / `button-secondary`(outline) / `button-ghost` / `button-pill-tab(+active)` / `button-icon-circular` · `text-input(+focused/error)` · `search-pill` · `radio-option(+selected)` · `color-swatch-circle` · `badge-{promo-yellow/attention/success/critical}` · `card-*` · `footer-region` 등.
+**문서화된 프리미티브** (design.md `components:`): `button-primary`(흰색 pill) / `button-marketing`(sunset pill) / `button-ghost`(흰색 아웃라인 pill) · `badge-status` · `card` · `text-input` · `pill-tab(+active)` 등.
 
-### ★ 갭 & 적응 (Meta DS는 커머스용 → SaaS 보강 필수)
-1. **카테고리 색이 design.md에 없음.** 와이어프레임의 `cat-gov/vc/lab/tax/fund`는 임의 확장 토큰 → **팀이 정식 정의해야 함**(자격·과제 분류 칩 필수). 정하기 전까지 칩은 `surface-soft` 배경 + `ink` 텍스트로 임시 처리.
-2. **SaaS 컴포넌트(DataTable·Kanban·Sidebar·SlideOver·Tabs·앱 셸)는 Meta DS에 없음.** Meta 토큰(색·타이포·radius·spacing) + `badge`·`pill-tab`·`card` 프리미티브를 기반으로 **앱 확장 컴포넌트**로 구현하고, 레이아웃은 와이어프레임을 따른다.
-3. **버튼 적응**: Meta는 "cobalt는 buy-now 전용, 마케팅 1차는 검정 pill" 규칙이지만, 본 SaaS엔 구매 플로우가 없다 → **앱 내부 1차 액션은 cobalt pill(`button-buy-cta`)로 통일**, 검정 pill(`button-primary`)은 **랜딩/마케팅 페이지의 1차 CTA에만**.
-4. **상태 매핑**: 자격 유효=`success` / 임박=`warning`(또는 `attention`) / 만료=`critical`. D-day 긴급도·과제 단계 배지도 같은 시맨틱 토큰 재사용.
-5. **폰트 라이선스 ★**: `Optimistic VF`는 **Meta 비공개 폰트라 사용 불가**. 폴백 체인으로 대체한다 — 라틴: **Inter 또는 Montserrat**, **한글: Noto Sans KR**(한국어 앱이므로 필수). `--font-body`를 이 폴백으로 확정할 것.
-6. **다크모드 토큰 없음** — 라이트 단일 테마.
-
-앱 셸(사이드바+상단바)은 **`app/app/layout.tsx` 한 곳**에서만 정의. 화면마다 재구현 금지.
+### ★ 갭 & 적응
+1. **카테고리 색은 토큰이 아니라 사용자 데이터.** `category.color`는 설정에서 사용자가 고르며 팔레트는 `lib/categoryColors.ts`. 칩 렌더는 `components/shell/CategoryColorStyle.tsx`가 다크 캔버스 위 `color-mix`로 처리한다.
+2. **SaaS 컴포넌트(DataTable·Kanban·Sidebar·SlideOver·Tabs·앱 셸)는 원본 브랜드에 없음.** x.ai/SpaceX는 마케팅 사이트라 데이터 밀도 UI가 없다 → 토큰(색·타이포·radius·spacing) + `badge`·`pill-tab`·`card` 프리미티브 기반으로 **앱 확장 컴포넌트**로 구현하고, 레이아웃은 와이어프레임을 따른다.
+3. **버튼 2단**: 앱 내부 1차 액션은 **흰색 pill**(`button-primary`), **sunset pill**(`ink-button`)은 **랜딩/마케팅 페이지의 1차 CTA에만**.
+4. **상태 매핑(불변)**: 자격 유효=`success` / 임박=`warning`(또는 `attention`) / 만료=`critical`. D-day 긴급도·과제 단계 배지도 같은 시맨틱 토큰 재사용.
+5. **폰트 ★**: SpaceX의 `D-DIN`, x.ai의 `Universal Sans`·`Geist Mono` 모두 비공개 → 폴백 고정. 라틴 **Inter**, **한글 Noto Sans KR**(한국어 앱이므로 필수), mono는 시스템 스택(`--font-mono`, 다운로드 없음).
+6. **라이트 테마 토큰 없음 — 다크 단일 테마.** `:root`에 `color-scheme: dark`가 선언돼 네이티브 폼 컨트롤·스크롤바·autofill이 다크로 따라간다. 새 CSS에 라이트 전제(`#fff` 배경, 어두운 알파 그림자) 하드코딩 금지.
+7. **와이어프레임(`/docs/wireframes/*.html`)도 새 토큰으로 재작성됨.** 8종 모두 `_ds/tokens.css`(= `app/globals.css`의 `:root` 사본) 한 파일을 공유하므로 하드코딩 색이 없다. 토큰 값을 바꾸면 앱과 와이어프레임을 **함께** 갱신할 것.
 
 ## 6. 와이어프레임 → 화면 매핑 (`/docs/wireframes/`)
 | 와이어프레임 파일 | 화면 | 라우트 |
 |---|---|---|
-| `dashboard__Meta_DS_.html` | 통합 대시보드 | `/app` |
-| `company_detail__Meta_DS_.html` | 기업 상세(탭) | `/app/companies/[id]` |
-| `mgt_point__Meta_DS_.html` | 관리포인트 보드 | `/app/board` |
-| `guide__Meta_DS_.html` | **일괄안내(캠페인)** ※파일명과 다름 | `/app/campaigns` |
-| `notification__Meta_DS_.html` | 알림 센터 | `/app/notifications` |
-| `settings__Meta_DS_.html` | 설정 | `/app/settings` |
-| `landing_page__Meta_DS_.html` | 랜딩 | `/` |
-| `login__Meta_DS_.html` | 로그인/회원가입 | `/login`, `/signup` |
+| `dashboard__MC_DS_.html` | 통합 대시보드 | `/app` |
+| `company_detail__MC_DS_.html` | 기업 상세(탭) | `/app/companies/[id]` |
+| `mgt_point__MC_DS_.html` | 관리포인트 보드 | `/app/board` |
+| `guide__MC_DS_.html` | **일괄안내(캠페인)** ※파일명과 다름 | `/app/campaigns` |
+| `notification__MC_DS_.html` | 알림 센터 | `/app/notifications` |
+| `settings__MC_DS_.html` | 설정 | `/app/settings` |
+| `landing_page__MC_DS_.html` | 랜딩 | `/` |
+| `login__MC_DS_.html` | 로그인/회원가입 | `/login`, `/signup` |
 | (없음 — 스펙 2-3로 구현) | **기업 목록** | `/app/companies` |
 
-> 와이어프레임은 React+Babel 데모다. **그대로 붙여넣지 말고** 레이아웃·시각 기준으로만 쓰고, Meta DS 토큰으로 프로덕션 Server Component를 재구현한다.
+> 와이어프레임은 React+Babel 데모다. **그대로 붙여넣지 말고** 레이아웃·시각 기준으로만 쓰고, Mission Control DS 토큰으로 프로덕션 Server Component를 재구현한다.
 
 ## 7. 데이터 레이어
 - 데이터 페치는 **Server Component + Supabase 서버 클라이언트**. 클라이언트 컴포넌트는 상호작용에만.

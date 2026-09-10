@@ -25,7 +25,7 @@ export function ImportResultStep({
               ? `${created.length}개 기업을 모두 등록했습니다 🎉`
               : `${created.length}개 등록 완료 · ${failed.length}개 실패`}
           </h2>
-          <p style={{ margin: 0, color: "var(--steel, #5d6c7b)", fontSize: 14 }}>
+          <p style={{ margin: 0, color: "var(--color-steel)", fontSize: 14 }}>
             등록된 기업의 자격 만료·마감은 대시보드 D-day에 자동으로 반영됩니다.
             {warned.length > 0
               ? ` 일부 기업(${warned.length}개)은 자격 생성에 문제가 있어 확인이 필요합니다.`

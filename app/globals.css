@@ -5,44 +5,47 @@
    ============================================================= */
 
 :root {
-  /* ---- colors (design.md colors:) ---- */
-  --color-primary: #0064e0;
-  --color-primary-deep: #0457cb;
-  --color-primary-soft: #0091ff;
-  --color-on-primary: #ffffff;
-  --color-ink-button: #000000;
-  --color-on-ink-button: #ffffff;
-  --color-fb-blue: #1876f2;
-  --color-meta-link: #385898;
-  --color-oculus-purple: #a121ce;
-  --color-success: #31a24c;
-  --color-success-bg: #24e400;
-  --color-attention: #f2a918;
-  --color-warning: #f7b928;
-  --color-warning-bg: #ffe200;
-  --color-critical: #e41e3f;
-  --color-critical-strong: #f0284a;
-  --color-canvas: #ffffff;
-  --color-surface-soft: #f1f4f7;
-  --color-ink-deep: #0a1317;
-  --color-ink: #1c1e21;
-  --color-charcoal: #444950;
-  --color-slate: #4b4c4f;
-  --color-steel: #5d6c7b;
-  --color-stone: #8595a4;
-  --color-hairline: #ced0d4;
-  --color-hairline-soft: #dee3e9;
-  --color-disabled-text: #bcc0c4;
+  color-scheme: dark;
 
-  /* ---- rounded (design.md rounded:) ---- */
+  /* ---- colors (design.md colors:) ----
+     x.ai = 구조·색 / spacex = 톤. 근-검정 캔버스, 흰색이 1차 액션. */
+  --color-primary: #ffffff;
+  --color-primary-deep: #dadbdf;
+  --color-primary-soft: #a0c3ec;
+  --color-on-primary: #0a0a0a;
+  --color-ink-button: #ff7a17; /* 랜딩/마케팅 1차 CTA — x.ai accent-sunset */
+  --color-on-ink-button: #0a0a0a;
+  --color-fb-blue: #ffffff; /* 폼 활성(라디오·체크·포커스) — x.ai는 흰색 아웃라인 */
+  --color-meta-link: #a0c3ec;
+  --color-oculus-purple: #7c3aed; /* x.ai accent-dusk */
+  --color-success: #35d07f;
+  --color-success-bg: #35d07f;
+  --color-attention: #ffb224;
+  --color-warning: #ffc94d;
+  --color-warning-bg: #ffc94d;
+  --color-critical: #ff4d63;
+  --color-critical-strong: #ff6076;
+  --color-canvas: #191919; /* 패널·카드 표면 — x.ai canvas-card */
+  --color-surface-soft: #0a0a0a; /* body·함몰 영역 — x.ai canvas */
+  --color-ink-deep: #ffffff;
+  --color-ink: #fafaf7;
+  --color-charcoal: #dadbdf;
+  --color-slate: #b9bcc2;
+  --color-steel: #9aa0a6;
+  --color-stone: #858a92;
+  --color-hairline: #2c2f34;
+  --color-hairline-soft: #212327;
+  --color-disabled-text: #5f636a;
+
+  /* ---- rounded (design.md rounded:) ---- pill은 유지, 카드는 spacex 수준으로 축소 */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 16px;
-  --radius-xxl: 24px;
-  --radius-xxxl: 32px;
-  --radius-feature: 40px;
+  --radius-xl: 10px;
+  --radius-xxl: 12px;
+  --radius-xxxl: 14px;
+  --radius-feature: 16px;
   --radius-full: 100px;
   --radius-circle: 9999px;
 
@@ -61,36 +64,41 @@
   --space-section-lg: 80px;
   --space-hero: 120px;
 
-  /* ---- elevation (design.md: 기본 flat, sticky 패널만) ---- */
-  --shadow-sticky: rgba(20, 22, 26, 0.3) 0px 1px 4px 0px;
+  /* ---- elevation (design.md: 기본 flat, sticky 패널만) ----
+     다크 캔버스에서 회색 그림자는 안 보인다 → 순검정 + hairline 분리 */
+  --shadow-sticky: rgba(0, 0, 0, 0.6) 0px 2px 12px 0px;
 
-  /* ---- font (★ Optimistic VF는 Meta 비공개 → 폴백 확정: Inter + Noto Sans KR) ---- */
+  /* ---- font ----
+     spacex D-DIN / x.ai Universal Sans·Geist Mono 모두 비공개 → 폴백 유지.
+     한국어 앱이므로 Noto Sans KR 필수. mono는 x.ai caption-mono 역할(마이크로 캡션·수치). */
   --font-body: var(--font-inter), var(--font-noto-kr), "Apple SD Gothic Neo",
     "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco,
+    "Roboto Mono", var(--font-noto-kr), monospace;
 
   /* =============================================================
-     SaaS 확장 토큰 (--app-*) — Meta DS 갭 보강.
-     권위: /docs/화면설계_기획자료.md 0절. 정식 카테고리 색은 팀 정의 전.
+     SaaS 확장 토큰 (--app-*) — x.ai/spacex는 상태색이 없어 직접 파생.
+     다크 캔버스 위 틴트는 color-mix로 팔레트에 자동 추종시킨다.
      ============================================================= */
-  --app-st-valid-bg: #e2f0e6;
-  --app-st-valid-text: #147a49;
-  --app-st-soon-bg: #fdeed6;
-  --app-st-soon-text: #b9760a;
-  --app-st-expired-bg: #fbe1e5;
-  --app-st-expired-text: #c01f37;
-  --app-ic-expiry-bg: #fdeed6;
-  --app-ic-expiry-icon: #c77e00;
-  --app-ic-deadline-bg: #e2eefc;
-  --app-ic-deadline-icon: var(--color-primary);
-  --app-ic-match-bg: #efe8fa;
-  --app-ic-match-icon: #6f3fc0;
-  --app-ic-urgent-bg: #fbe1e5;
+  --app-st-valid-bg: color-mix(in srgb, var(--color-success) 16%, var(--color-canvas));
+  --app-st-valid-text: #5fdc9b;
+  --app-st-soon-bg: color-mix(in srgb, var(--color-attention) 16%, var(--color-canvas));
+  --app-st-soon-text: #ffc154;
+  --app-st-expired-bg: color-mix(in srgb, var(--color-critical) 16%, var(--color-canvas));
+  --app-st-expired-text: #ff7d8e;
+  --app-ic-expiry-bg: color-mix(in srgb, var(--color-attention) 18%, var(--color-canvas));
+  --app-ic-expiry-icon: #ffb224;
+  --app-ic-deadline-bg: color-mix(in srgb, var(--color-primary-soft) 18%, var(--color-canvas));
+  --app-ic-deadline-icon: var(--color-primary-soft);
+  --app-ic-match-bg: color-mix(in srgb, var(--color-oculus-purple) 28%, var(--color-canvas));
+  --app-ic-match-icon: #b18aff;
+  --app-ic-urgent-bg: color-mix(in srgb, var(--color-critical) 18%, var(--color-canvas));
   --app-ic-urgent-icon: var(--color-critical);
-  --app-row-soon-bg: #fffaf2;
-  --app-kpi-urgent-border: #f6d9b0;
-  --app-dropzone-bg: #e6f0fd;
-  --app-lp-hero-tint: #eef4fc; /* 랜딩 Hero 라디얼 틴트 */
-  --app-banner-critical-border: #f3c4cb; /* critical 배너 테두리 */
+  --app-row-soon-bg: color-mix(in srgb, var(--color-attention) 9%, var(--color-canvas));
+  --app-kpi-urgent-border: color-mix(in srgb, var(--color-attention) 42%, var(--color-canvas));
+  --app-dropzone-bg: color-mix(in srgb, var(--color-primary-soft) 14%, var(--color-canvas));
+  --app-lp-hero-tint: #1a1c20; /* 랜딩 Hero 라디얼 틴트 — x.ai canvas-soft */
+  --app-banner-critical-border: color-mix(in srgb, var(--color-critical) 40%, var(--color-canvas));
 }
 
 /* ---- base ---- */
@@ -216,7 +224,7 @@ h4 {
 .btn--ghost {
   background: transparent;
   color: var(--color-ink-deep);
-  border: 2px solid rgba(10, 19, 23, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.18);
   padding: 10px 22px;
 }
 .btn--ghost:hover {
@@ -420,7 +428,7 @@ h4 {
 }
 .badge--warning {
   background: var(--color-warning);
-  color: var(--color-ink-deep);
+  color: var(--color-on-primary);
 }
 .badge--critical {
   background: var(--color-critical);
@@ -458,11 +466,11 @@ h4 {
 }
 .dday--critical {
   background: var(--color-critical);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .dday--attention {
   background: var(--color-attention);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .dday--neutral {
   background: var(--color-surface-soft);
@@ -593,7 +601,7 @@ h4 {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-lg);
-  box-shadow: 0 6px 20px rgba(10, 19, 23, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
 }
 .cat-dd-opt {
   flex: 1;
@@ -833,7 +841,7 @@ h4 {
 .nav-badge {
   margin-left: auto;
   background: var(--color-critical);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 11px;
   font-weight: 700;
   min-width: 19px;
@@ -955,7 +963,7 @@ h4 {
   top: -3px;
   right: -3px;
   background: var(--color-critical);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 10.5px;
   font-weight: 700;
   min-width: 18px;
@@ -1111,7 +1119,7 @@ a.kpi--link {
 }
 a.kpi--link:hover {
   border-color: var(--color-stone);
-  box-shadow: rgba(20, 22, 26, 0.08) 0 1px 4px;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 1px 4px;
 }
 a.kpi--link:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -1937,7 +1945,7 @@ table.dlist .date {
 .slideover-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 19, 23, 0.42);
+  background: rgba(0, 0, 0, 0.66);
   z-index: 40;
   animation: slideover-fade 180ms ease-out;
 }
@@ -2068,7 +2076,7 @@ table.dlist .date {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--app-st-expired-bg, #fbe1e5);
+  background: var(--app-st-expired-bg);
   border: 1px solid var(--color-critical);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
@@ -2182,7 +2190,7 @@ table.dlist .date {
 .tab-badge {
   margin-left: 7px;
   background: var(--color-warning);
-  color: var(--color-ink-deep);
+  color: var(--color-on-primary);
   font-size: 10px;
   font-weight: 700;
   padding: 1px 7px;
@@ -2273,7 +2281,7 @@ table.dlist tr.row-soon {
   background: var(--app-row-soon-bg);
 }
 table.dlist tr.row-soon:hover {
-  background: #fff4e3;
+  background: var(--app-row-soon-bg);
 }
 table.dlist tr.row-soon td:first-child {
   box-shadow: inset 3px 0 0 var(--color-attention);
@@ -2398,7 +2406,7 @@ table.dlist .name {
 .stepper .dot.is-current {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 100, 224, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
 }
 .stepper .bar {
   width: 26px;
@@ -3663,7 +3671,7 @@ table.dlist .name {
 }
 .kcard:hover {
   border-color: var(--color-stone);
-  box-shadow: 0 2px 8px rgba(10, 19, 23, 0.07);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 .kcard:active {
   cursor: grabbing;
@@ -3907,7 +3915,7 @@ table.dlist .name {
 }
 .todo-tag--consult {
   background: var(--app-ic-deadline-bg);
-  border-color: rgba(0, 100, 224, 0.24);
+  border-color: rgba(255, 255, 255, 0.24);
   color: var(--color-primary-deep);
 }
 .todo-tag--meeting {
@@ -4147,7 +4155,7 @@ table.dlist .name {
 .todo-draft-date:focus {
   outline: none;
   border-color: var(--color-fb-blue);
-  box-shadow: 0 0 0 2px rgba(24, 118, 242, 0.18);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
 }
 .todo-draft-date:disabled {
   cursor: default;
@@ -4351,7 +4359,7 @@ table.dlist .name {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-xl);
-  box-shadow: 0 4px 20px rgba(10, 19, 23, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   padding: 32px;
   display: flex;
   flex-direction: column;
@@ -4420,7 +4428,7 @@ table.dlist .name {
 .chk .box svg {
   width: 13px;
   height: 13px;
-  stroke: #fff;
+  stroke: var(--color-on-primary);
   opacity: 0;
 }
 .chk.is-on .box {
@@ -4455,8 +4463,8 @@ table.dlist .name {
   width: 18px;
   height: 18px;
   border-radius: var(--radius-circle);
-  border: 2.5px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border: 2.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
   animation: auth-sp 0.7s linear infinite;
 }
 @keyframes auth-sp {
@@ -4479,7 +4487,7 @@ table.dlist .name {
   color: var(--color-stone);
 }
 .auth-notice {
-  background: #fff8e1;
+  background: var(--app-st-soon-bg);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
@@ -4506,7 +4514,7 @@ table.dlist .name {
 
 /* 아웃라인 버튼 안 스피너 — 흰색 대신 잉크 톤 */
 .btn--secondary .spin {
-  border-color: rgba(20, 22, 26, 0.15);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
   border-top-color: var(--color-charcoal);
 }
 
@@ -4649,13 +4657,13 @@ table.dlist td.c {
 .step-circ svg {
   width: 15px;
   height: 15px;
-  stroke: #fff;
+  stroke: var(--color-on-primary);
 }
 .step.is-active .step-circ,
 .step.is-done .step-circ {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .step-label {
   font-size: 14px;
@@ -4762,7 +4770,7 @@ input.cond-input {
 }
 .andor button.is-on {
   background: var(--color-ink-deep);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 /* 세그먼트 실시간 미리보기 */
@@ -4914,7 +4922,7 @@ input.cond-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-ink-deep);
+  color: var(--color-on-primary);
   font-size: 11px;
   font-weight: 800;
 }
@@ -5100,8 +5108,8 @@ input.cond-input {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
   animation: toast-spin 0.7s linear infinite;
   margin-right: 10px;
   vertical-align: -3px;
@@ -5125,7 +5133,7 @@ input.cond-input {
   padding: 0 11px;
   border-radius: var(--radius-full);
   background: var(--color-critical);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: -0.14px;
@@ -5237,7 +5245,7 @@ input.cond-input {
   font-size: 11px;
   font-weight: 700;
   background: var(--color-critical);
-  color: #fff;
+  color: var(--color-on-primary);
   letter-spacing: -0.14px;
 }
 .ddi {
@@ -5641,14 +5649,14 @@ input.cond-input {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-xl);
-  box-shadow: rgba(20, 22, 26, 0.3) 0 1px 4px;
+  box-shadow: rgba(0, 0, 0, 0.6) 0 1px 4px;
 }
 .cat-sw-opt {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-full);
   padding: 0;
-  border: 1px solid rgba(20, 22, 26, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6002,7 +6010,7 @@ input.cond-input {
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-hairline-soft);
   background: var(--color-surface-soft);
-  box-shadow: 0 16px 40px rgba(10, 19, 23, 0.16);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   object-fit: cover;
   object-position: left top;
 }
@@ -6555,7 +6563,7 @@ input.cond-input {
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-lg);
-  box-shadow: rgba(20, 22, 26, 0.3) 0 1px 4px;
+  box-shadow: rgba(0, 0, 0, 0.6) 0 1px 4px;
   padding: 6px;
   z-index: 20;
 }
@@ -6703,7 +6711,7 @@ body {
       max(8px, env(safe-area-inset-right));
     border-top: 1px solid var(--color-hairline-soft);
     border-right: 0;
-    box-shadow: 0 -1px 6px rgba(10, 19, 23, 0.08);
+    box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.5);
     flex-direction: row;
     align-items: stretch;
     overflow-x: auto;
@@ -7352,8 +7360,8 @@ body {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-critical);
-  background: #fdecef;
-  border-bottom: 1px solid var(--app-banner-critical-border, #f3c4cb);
+  background: var(--app-st-expired-bg);
+  border-bottom: 1px solid var(--app-banner-critical-border);
   padding: 11px 24px;
   letter-spacing: -0.14px;
   text-decoration: none;
@@ -7534,7 +7542,7 @@ body {
   height: 28px;
 }
 .bill-result-card.is-done .bill-result-icon {
-  background: #e7f6ec;
+  background: var(--app-st-valid-bg);
 }
 .bill-result-card.is-done .bill-result-icon svg {
   color: var(--color-success);
@@ -8400,7 +8408,7 @@ a.monitor-alert-strip {
   transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
 }
 a.monitor-alert-strip:hover {
-  box-shadow: rgba(20, 22, 26, 0.08) 0 1px 4px;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 1px 4px;
 }
 a.monitor-alert-strip:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -9750,7 +9758,7 @@ a.monitor-alert-strip:focus-visible {
     height: 100%;
     padding: 0;
     border: 0;
-    background: rgba(10, 19, 23, 0.42);
+    background: rgba(0, 0, 0, 0.66);
     cursor: default;
   }
 }

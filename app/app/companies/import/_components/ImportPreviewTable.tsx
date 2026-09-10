@@ -295,8 +295,8 @@ export function ImportPreviewTable({
                       />
                     </td>
                     <td className="co">
-                      {row.name || <span style={{ color: "var(--critical, #e41e3f)" }}>기업명 없음</span>}
-                      <div style={{ fontSize: 12, color: "var(--stone, #8595a4)" }}>{row.sourceRef}</div>
+                      {row.name || <span style={{ color: "var(--color-critical)" }}>기업명 없음</span>}
+                      <div style={{ fontSize: 12, color: "var(--color-stone)" }}>{row.sourceRef}</div>
                     </td>
                     <td className="item">{row.bizNo ?? "—"}</td>
                     <td className="item">{row.industry ?? "—"}</td>
@@ -324,7 +324,7 @@ export function ImportPreviewTable({
                           </div>
                         ))}
                         {row.warnings.map((msg) => (
-                          <div key={msg} style={{ fontSize: 12, color: "var(--attention, #f2a918)" }}>
+                          <div key={msg} style={{ fontSize: 12, color: "var(--color-attention)" }}>
                             {msg}
                           </div>
                         ))}
@@ -335,7 +335,7 @@ export function ImportPreviewTable({
                               gap: 6,
                               alignItems: "center",
                               fontSize: 12,
-                              color: "var(--charcoal, #444950)",
+                              color: "var(--color-charcoal)",
                             }}
                           >
                             <input

@@ -150,7 +150,7 @@ export function ImportUploadStep({
 
       {mode === "template" ? (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: "0 0 10px", color: "var(--steel, #5d6c7b)", fontSize: 14 }}>
+          <p style={{ margin: "0 0 10px", color: "var(--color-steel)", fontSize: 14 }}>
             ① 템플릿을 내려받아 기업과 자격·인증을 채우고 ② 파일을 올리면 한 번에 등록됩니다.
             예시 행(예시)한빛테크)은 지우지 않아도 자동으로 제외됩니다.
           </p>
@@ -164,7 +164,7 @@ export function ImportUploadStep({
           </div>
         </div>
       ) : (
-        <p style={{ margin: "0 0 16px", color: "var(--steel, #5d6c7b)", fontSize: 14 }}>
+        <p style={{ margin: "0 0 16px", color: "var(--color-steel)", fontSize: 14 }}>
           지금 쓰고 계신 엑셀·CSV 파일을 형식 그대로 올리면 AI가 기업과 자격·인증(만료일 포함)을
           추출합니다. 등록 전에 미리보기에서 직접 확인하고 수정할 수 있습니다.
         </p>
@@ -181,7 +181,7 @@ export function ImportUploadStep({
         style={{
           opacity: demo || busy ? 0.6 : 1,
           cursor: demo || busy ? "not-allowed" : "pointer",
-          outline: dragOver ? "2px solid var(--primary, #0064e0)" : undefined,
+          outline: dragOver ? "2px solid var(--color-primary)" : undefined,
         }}
       >
         <IconFile />
