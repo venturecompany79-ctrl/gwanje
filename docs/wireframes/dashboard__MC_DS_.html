@@ -3,20 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>통합 대시보드 (홈) · Meta DS</title>
+<title>통합 대시보드 (홈) · Mission Control DS</title>
 
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<link rel="stylesheet" href="_ds/tokens.css">
+<link rel="stylesheet" href="_ds/components.css">
 
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
     font-family:var(--font-body);
-    background:#e7ebef;
+    background:#000000;
     color:var(--color-ink-deep);
     -webkit-font-smoothing:antialiased;
   }
@@ -40,7 +38,7 @@
     width:1280px;margin:0 auto 44px;background:var(--color-canvas);
     border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xxl);overflow:hidden;
     display:grid;grid-template-columns:240px 1fr;min-height:880px;
-    box-shadow:0 18px 50px rgba(10,19,23,.10);
+    box-shadow:0 18px 50px rgba(0,0,0,.55);
   }
   .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
   .demo-pills button,.vtoggle button{white-space:nowrap;}
@@ -49,8 +47,8 @@
   .nav{border-right:1px solid var(--color-hairline-soft);padding:22px 16px;display:flex;flex-direction:column;background:var(--color-canvas);}
   .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;}
   .brand .mark{width:34px;height:34px;border-radius:var(--radius-full);flex:none;
-    background:radial-gradient(circle at 30% 30%,#0091ff,#0064e0 55%,#0457cb);
-    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+    background:var(--color-primary);
+    display:flex;align-items:center;justify-content:center;color:var(--color-on-primary);font-weight:700;font-size:15px;}
   .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--color-ink-deep);line-height:1.1;}
   .brand small{display:block;font-size:11px;font-weight:500;color:var(--color-stone);letter-spacing:.01em;}
   .nav-sec{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--color-stone);text-transform:uppercase;padding:12px 12px 8px;}
@@ -60,7 +58,7 @@
   .nav-item svg{width:19px;height:19px;flex:none;stroke:currentColor;}
   .nav-item:hover{background:var(--color-surface-soft);}
   .nav-item.active{background:var(--color-ink-deep);color:var(--color-canvas);border-color:var(--color-ink-deep);}
-  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:#fff;font-size:11px;font-weight:700;
+  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:var(--color-on-primary);font-size:11px;font-weight:700;
     min-width:19px;height:19px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0 5px;}
   .nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-hairline-soft);display:flex;align-items:center;gap:11px;}
   .nav-foot .ava{width:34px;height:34px;border-radius:var(--radius-full);background:var(--color-surface-soft);
@@ -80,7 +78,7 @@
   .search input::placeholder{color:var(--color-stone);}
   .topbar .spacer{flex:1;}
   .topbar .ib-wrap{position:relative;}
-  .topbar .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:#fff;font-size:10.5px;font-weight:700;
+  .topbar .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:var(--color-on-primary);font-size:10.5px;font-weight:700;
     min-width:18px;height:18px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-canvas);padding:0 3px;}
   .prof{display:flex;align-items:center;gap:10px;cursor:pointer;padding-left:4px;}
   .prof .ava{width:36px;height:36px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
@@ -108,10 +106,10 @@
   .kpi .kval{font-size:42px;font-weight:700;line-height:1;letter-spacing:-.02em;margin-top:14px;color:var(--color-ink-deep);}
   .kpi .kval em{font-size:15px;font-weight:600;font-style:normal;color:var(--color-stone);margin-left:4px;}
   .kpi .ksub{font-size:12px;color:var(--color-stone);margin-top:9px;letter-spacing:-.14px;}
-  .kpi.urgent{border-color:#f6d9b0;}
-  .kpi.urgent .kico{background:#fdeed6;}
+  .kpi.urgent{border-color:var(--app-kpi-urgent-border);}
+  .kpi.urgent .kico{background:var(--app-st-soon-bg);}
   .kpi.urgent .kico svg{stroke:var(--color-attention);}
-  .kpi.urgent .kval{color:#b9760a;}
+  .kpi.urgent .kval{color:var(--app-st-soon-text);}
 
   /* ---- dash grid ---- */
   .dash-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;}
@@ -123,7 +121,7 @@
   .vtoggle{display:flex;gap:8px;}
   .vtoggle svg{width:15px;height:15px;}
 
-  /* category chip — neutral, monochrome (Meta color discipline) */
+  /* category chip — neutral, monochrome (단색 규율) */
   .cat{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--radius-full);
     border:1px solid var(--color-hairline);background:var(--color-canvas);font-size:12px;font-weight:600;
     letter-spacing:-.14px;color:var(--color-charcoal);white-space:nowrap;}
@@ -148,7 +146,7 @@
 
   /* ---- grouped (variant B) ---- */
   .grouped{padding:20px 22px 22px;}
-  .hero{display:flex;align-items:center;gap:20px;border:1px solid #f3c4cb;background:linear-gradient(180deg,#fdf1f3,var(--color-canvas));
+  .hero{display:flex;align-items:center;gap:20px;border:1px solid var(--app-banner-critical-border);background:linear-gradient(180deg,var(--app-st-expired-bg),var(--color-canvas));
     border-radius:var(--radius-xl);padding:20px 22px;margin-bottom:22px;}
   .hero .lead{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;}
   .hero .co{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);}
@@ -207,9 +205,9 @@
   .ai:hover{background:var(--color-surface-soft);}
   .ai .aico{width:32px;height:32px;border-radius:var(--radius-full);flex:none;display:flex;align-items:center;justify-content:center;}
   .ai .aico svg{width:16px;height:16px;}
-  .ai-red{background:#fbe1e5;}.ai-red svg{stroke:var(--color-critical);}
-  .ai-amber{background:#fdeed6;}.ai-amber svg{stroke:#c77e00;}
-  .ai-blue{background:#e2eefc;}.ai-blue svg{stroke:var(--color-primary);}
+  .ai-red{background:var(--app-st-expired-bg);}.ai-red svg{stroke:var(--color-critical);}
+  .ai-amber{background:var(--app-st-soon-bg);}.ai-amber svg{stroke:var(--app-ic-expiry-icon);}
+  .ai-blue{background:var(--app-ic-deadline-bg);}.ai-blue svg{stroke:var(--color-primary);}
   .ai .ab{flex:1;min-width:0;}
   .ai .at{font-size:14px;font-weight:700;line-height:1.35;letter-spacing:-.14px;color:var(--color-ink-deep);}
   .ai .at b{color:var(--color-critical);}
@@ -240,28 +238,28 @@
 <body>
 <div id="root"></div>
 
-<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+<template id="__bundler_thumbnail" data-bg-color="var(--color-primary)">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#ffffff"/>
-    <rect x="120" y="200" width="170" height="400" rx="20" fill="#f1f4f7"/>
-    <rect x="150" y="250" width="110" height="40" rx="20" fill="#0a1317"/>
-    <rect x="340" y="200" width="740" height="100" rx="16" fill="#f1f4f7"/>
-    <rect x="340" y="330" width="740" height="270" rx="16" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <rect x="380" y="390" width="200" height="16" rx="8" fill="#8595a4"/>
-    <rect x="900" y="382" width="90" height="34" rx="17" fill="#e41e3f"/>
-    <rect x="380" y="460" width="200" height="16" rx="8" fill="#8595a4"/>
-    <rect x="910" y="452" width="80" height="34" rx="17" fill="#f2a918"/>
+    <rect width="1200" height="800" fill="var(--color-canvas)"/>
+    <rect x="120" y="200" width="170" height="400" rx="20" fill="var(--color-surface-soft)"/>
+    <rect x="150" y="250" width="110" height="40" rx="20" fill="var(--color-ink-deep)"/>
+    <rect x="340" y="200" width="740" height="100" rx="16" fill="var(--color-surface-soft)"/>
+    <rect x="340" y="330" width="740" height="270" rx="16" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <rect x="380" y="390" width="200" height="16" rx="8" fill="var(--color-stone)"/>
+    <rect x="900" y="382" width="90" height="34" rx="17" fill="var(--color-critical)"/>
+    <rect x="380" y="460" width="200" height="16" rx="8" fill="var(--color-stone)"/>
+    <rect x="910" y="452" width="80" height="34" rx="17" fill="var(--color-attention)"/>
   </svg>
 </template>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+<script src="_ds/components.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
-const { Button, Badge, PillTab, IconButton } = window.MetaDesignSystem_d06bcc;
+const { Button, Badge, PillTab, IconButton } = window.MissionControlDS;
 
 /* ---- Lucide-style inline icons (thin stroke) ---- */
 const I = {
@@ -416,7 +414,7 @@ function GroupView() {
         </div>
         <div className="spacer"></div>
         <div className="bigd"><div className="n num">D-2</div><div className="l">남음</div></div>
-        <Button variant="primary" style={{ padding:'12px 22px' }}>처리 {I.arrow}</Button>
+        <Button variant="buy" style={{ padding:'12px 22px' }}>처리 {I.arrow}</Button>
       </div>
 
       <div className="ggroup">
@@ -588,7 +586,7 @@ function DemoBar({ variant, setVariant, state, setState }) {
           <PillTab active={state==='empty'} onClick={() => setState('empty')}>빈 상태</PillTab>
         </div>
       </div>
-      <span className="hint">Meta Design System · 데스크톱 1280px</span>
+      <span className="hint">Mission Control DS · 데스크톱 1280px</span>
     </div>
   );
 }
@@ -613,7 +611,7 @@ function App() {
               <div className="spacer"></div>
               <div className="head-actions">
                 <Button variant="ghost">{I.download} 내보내기</Button>
-                <Button variant="primary">{I.plus} 기업 추가</Button>
+                <Button variant="buy">{I.plus} 기업 추가</Button>
               </div>
             </div>
             {state==='normal'

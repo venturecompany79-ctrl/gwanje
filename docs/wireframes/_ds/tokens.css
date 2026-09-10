@@ -1,0 +1,100 @@
+/* Mission Control DS 토큰 (x.ai × SpaceX)
+   ★ app/globals.css 의 :root 를 그대로 옮긴 사본이다. 권위는 /docs/design.md.
+   와이어프레임 8종이 이 한 파일을 공유한다. 값 수정은 globals.css 와 함께. */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- colors (design.md colors:) ----
+     x.ai = 구조·색 / spacex = 톤. 근-검정 캔버스, 흰색이 1차 액션. */
+  --color-primary: #ffffff;
+  --color-primary-deep: #dadbdf;
+  --color-primary-soft: #a0c3ec;
+  --color-on-primary: #0a0a0a;
+  --color-ink-button: #ff7a17; /* 랜딩/마케팅 1차 CTA — x.ai accent-sunset */
+  --color-on-ink-button: #0a0a0a;
+  --color-fb-blue: #ffffff; /* 폼 활성(라디오·체크·포커스) — x.ai는 흰색 아웃라인 */
+  --color-meta-link: #a0c3ec;
+  --color-oculus-purple: #7c3aed; /* x.ai accent-dusk */
+  --color-success: #35d07f;
+  --color-success-bg: #35d07f;
+  --color-attention: #ffb224;
+  --color-warning: #ffc94d;
+  --color-warning-bg: #ffc94d;
+  --color-critical: #ff4d63;
+  --color-critical-strong: #ff6076;
+  --color-canvas: #191919; /* 패널·카드 표면 — x.ai canvas-card */
+  --color-surface-soft: #0a0a0a; /* body·함몰 영역 — x.ai canvas */
+  --color-ink-deep: #ffffff;
+  --color-ink: #fafaf7;
+  --color-charcoal: #dadbdf;
+  --color-slate: #b9bcc2;
+  --color-steel: #9aa0a6;
+  --color-stone: #858a92;
+  --color-hairline: #2c2f34;
+  --color-hairline-soft: #212327;
+  --color-disabled-text: #5f636a;
+
+  /* ---- rounded (design.md rounded:) ---- pill은 유지, 카드는 spacex 수준으로 축소 */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-xxl: 12px;
+  --radius-xxxl: 14px;
+  --radius-feature: 16px;
+  --radius-full: 100px;
+  --radius-circle: 9999px;
+
+  /* ---- spacing (design.md spacing:) ---- */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 10px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-xxxl: 40px;
+  --space-section-sm: 48px;
+  --space-section: 64px;
+  --space-section-lg: 80px;
+  --space-hero: 120px;
+
+  /* ---- elevation (design.md: 기본 flat, sticky 패널만) ----
+     다크 캔버스에서 회색 그림자는 안 보인다 → 순검정 + hairline 분리 */
+  --shadow-sticky: rgba(0, 0, 0, 0.6) 0px 2px 12px 0px;
+
+  /* ---- font ----
+     spacex D-DIN / x.ai Universal Sans·Geist Mono 모두 비공개 → 폴백 유지.
+     한국어 앱이므로 Noto Sans KR 필수. mono는 x.ai caption-mono 역할(마이크로 캡션·수치). */
+  --font-body: var(--font-inter), var(--font-noto-kr), "Apple SD Gothic Neo",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco,
+    "Roboto Mono", var(--font-noto-kr), monospace;
+
+  /* =============================================================
+     SaaS 확장 토큰 (--app-*) — x.ai/spacex는 상태색이 없어 직접 파생.
+     다크 캔버스 위 틴트는 color-mix로 팔레트에 자동 추종시킨다.
+     ============================================================= */
+  --app-st-valid-bg: color-mix(in srgb, var(--color-success) 16%, var(--color-canvas));
+  --app-st-valid-text: #5fdc9b;
+  --app-st-soon-bg: color-mix(in srgb, var(--color-attention) 16%, var(--color-canvas));
+  --app-st-soon-text: #ffc154;
+  --app-st-expired-bg: color-mix(in srgb, var(--color-critical) 16%, var(--color-canvas));
+  --app-st-expired-text: #ff7d8e;
+  --app-ic-expiry-bg: color-mix(in srgb, var(--color-attention) 18%, var(--color-canvas));
+  --app-ic-expiry-icon: #ffb224;
+  --app-ic-deadline-bg: color-mix(in srgb, var(--color-primary-soft) 18%, var(--color-canvas));
+  --app-ic-deadline-icon: var(--color-primary-soft);
+  --app-ic-match-bg: color-mix(in srgb, var(--color-oculus-purple) 28%, var(--color-canvas));
+  --app-ic-match-icon: #b18aff;
+  --app-ic-urgent-bg: color-mix(in srgb, var(--color-critical) 18%, var(--color-canvas));
+  --app-ic-urgent-icon: var(--color-critical);
+  --app-row-soon-bg: color-mix(in srgb, var(--color-attention) 9%, var(--color-canvas));
+  --app-kpi-urgent-border: color-mix(in srgb, var(--color-attention) 42%, var(--color-canvas));
+  --app-dropzone-bg: color-mix(in srgb, var(--color-primary-soft) 14%, var(--color-canvas));
+  --app-lp-hero-tint: #1a1c20; /* 랜딩 Hero 라디얼 틴트 — x.ai canvas-soft */
+  --app-banner-critical-border: color-mix(in srgb, var(--color-critical) 40%, var(--color-canvas));
+}

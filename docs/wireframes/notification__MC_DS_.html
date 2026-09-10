@@ -3,18 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>알림 센터 · Meta DS</title>
+<title>알림 센터 · Mission Control DS</title>
 
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<link rel="stylesheet" href="_ds/tokens.css">
+<link rel="stylesheet" href="_ds/components.css">
 
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
+  body{font-family:var(--font-body);background:#000000;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
   button{font-family:var(--font-body);}
 
@@ -29,13 +27,13 @@
 
   .app{width:1280px;margin:0 auto 44px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
     border-radius:var(--radius-xxl);overflow:hidden;display:grid;grid-template-columns:240px 1fr;min-height:900px;
-    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;}
+    box-shadow:0 18px 50px rgba(0,0,0,.55);position:relative;}
   .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
 
   .nav{border-right:1px solid var(--color-hairline-soft);padding:22px 16px;display:flex;flex-direction:column;background:var(--color-canvas);}
   .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;}
   .brand .mark{width:34px;height:34px;border-radius:var(--radius-full);flex:none;
-    background:radial-gradient(circle at 30% 30%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+    background:var(--color-primary);display:flex;align-items:center;justify-content:center;color:var(--color-on-primary);font-weight:700;font-size:15px;}
   .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--color-ink-deep);line-height:1.1;}
   .brand small{display:block;font-size:11px;font-weight:500;color:var(--color-stone);}
   .nav-sec{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--color-stone);text-transform:uppercase;padding:12px 12px 8px;}
@@ -45,7 +43,7 @@
   .nav-item svg{width:19px;height:19px;}
   .nav-item:hover{background:var(--color-surface-soft);}
   .nav-item.active{background:var(--color-ink-deep);color:var(--color-canvas);border-color:var(--color-ink-deep);}
-  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:#fff;font-size:11px;font-weight:700;
+  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:var(--color-on-primary);font-size:11px;font-weight:700;
     min-width:19px;height:19px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0 5px;}
   .nav-item.active .nbadge{background:var(--color-canvas);color:var(--color-ink-deep);}
   .nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-hairline-soft);display:flex;align-items:center;gap:11px;}
@@ -65,7 +63,7 @@
   .search input::placeholder{color:var(--color-stone);}
   .topbar .spacer{flex:1;}
   .ib-wrap{position:relative;}
-  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:#fff;font-size:10.5px;font-weight:700;
+  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:var(--color-on-primary);font-size:10.5px;font-weight:700;
     min-width:18px;height:18px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-canvas);padding:0 3px;}
   .prof{display:flex;align-items:center;gap:10px;cursor:pointer;padding-left:4px;}
   .prof .ava{width:36px;height:36px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
@@ -79,7 +77,7 @@
   .ctrl-top{display:flex;align-items:center;gap:13px;margin-bottom:18px;}
   .ctrl-top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
   .ctrl-top .ucount{display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:var(--radius-full);
-    background:var(--color-critical);color:#fff;font-size:13px;font-weight:700;letter-spacing:-.14px;}
+    background:var(--color-critical);color:var(--color-on-primary);font-size:13px;font-weight:700;letter-spacing:-.14px;}
   .ctrl-top .spacer{flex:1;}
   .ctrl-filters{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
   .tabs{display:flex;gap:8px;}
@@ -106,10 +104,10 @@
 
   .n-icon{width:40px;height:40px;border-radius:var(--radius-full);flex:none;display:flex;align-items:center;justify-content:center;}
   .n-icon svg{width:19px;height:19px;}
-  .ic-expiry{background:#fdeed6;}.ic-expiry svg{stroke:#c77e00;}
-  .ic-deadline{background:#e2eefc;}.ic-deadline svg{stroke:var(--color-primary);}
-  .ic-match{background:#efe8fa;}.ic-match svg{stroke:#6f3fc0;}
-  .ic-urgent{background:#fbe1e5;}.ic-urgent svg{stroke:var(--color-critical);}
+  .ic-expiry{background:var(--app-st-soon-bg);}.ic-expiry svg{stroke:var(--app-ic-expiry-icon);}
+  .ic-deadline{background:var(--app-ic-deadline-bg);}.ic-deadline svg{stroke:var(--color-primary);}
+  .ic-match{background:var(--app-ic-match-bg);}.ic-match svg{stroke:var(--app-ic-match-icon);}
+  .ic-urgent{background:var(--app-st-expired-bg);}.ic-urgent svg{stroke:var(--color-critical);}
 
   .n-body{flex:1;min-width:0;}
   .n-titlerow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
@@ -118,9 +116,9 @@
   .tpill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:700;letter-spacing:-.14px;
     border:1px solid var(--color-hairline);color:var(--color-charcoal);background:var(--color-canvas);}
   .urg-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:700;
-    background:var(--color-critical);color:#fff;letter-spacing:-.14px;}
+    background:var(--color-critical);color:var(--color-on-primary);letter-spacing:-.14px;}
   .ddi{font-weight:800;}
-  .ddi.red{color:var(--color-critical);}.ddi.amber{color:#b9760a;}.ddi.gray{color:var(--color-steel);}
+  .ddi.red{color:var(--color-critical);}.ddi.amber{color:var(--app-st-soon-text);}.ddi.gray{color:var(--color-steel);}
   .n-sub{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--color-steel);margin-top:5px;letter-spacing:-.14px;}
   .n-sub svg{width:14px;height:14px;stroke:var(--color-stone);}
 
@@ -150,31 +148,31 @@
 <body>
 <div id="root"></div>
 
-<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+<template id="__bundler_thumbnail" data-bg-color="var(--color-primary)">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#ffffff"/>
-    <rect x="120" y="160" width="170" height="480" rx="20" fill="#f1f4f7"/>
-    <rect x="340" y="200" width="740" height="90" rx="14" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <circle cx="392" cy="245" r="22" fill="#fbe1e5"/>
-    <rect x="430" y="232" width="260" height="16" rx="8" fill="#0a1317"/>
-    <circle cx="1050" cy="245" r="7" fill="#0064e0"/>
-    <rect x="340" y="310" width="740" height="90" rx="14" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <circle cx="392" cy="355" r="22" fill="#e2eefc"/>
-    <rect x="430" y="342" width="220" height="16" rx="8" fill="#0a1317"/>
-    <rect x="340" y="420" width="740" height="90" rx="14" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <circle cx="392" cy="465" r="22" fill="#efe8fa"/>
-    <rect x="430" y="452" width="240" height="16" rx="8" fill="#8595a4"/>
+    <rect width="1200" height="800" fill="var(--color-canvas)"/>
+    <rect x="120" y="160" width="170" height="480" rx="20" fill="var(--color-surface-soft)"/>
+    <rect x="340" y="200" width="740" height="90" rx="14" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <circle cx="392" cy="245" r="22" fill="var(--app-st-expired-bg)"/>
+    <rect x="430" y="232" width="260" height="16" rx="8" fill="var(--color-ink-deep)"/>
+    <circle cx="1050" cy="245" r="7" fill="var(--color-primary)"/>
+    <rect x="340" y="310" width="740" height="90" rx="14" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <circle cx="392" cy="355" r="22" fill="var(--app-ic-deadline-bg)"/>
+    <rect x="430" y="342" width="220" height="16" rx="8" fill="var(--color-ink-deep)"/>
+    <rect x="340" y="420" width="740" height="90" rx="14" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <circle cx="392" cy="465" r="22" fill="var(--app-ic-match-bg)"/>
+    <rect x="430" y="452" width="240" height="16" rx="8" fill="var(--color-stone)"/>
   </svg>
 </template>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+<script src="_ds/components.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
-const { Button, PillTab, IconButton } = window.MetaDesignSystem_d06bcc;
+const { Button, PillTab, IconButton } = window.MissionControlDS;
 
 const I = {
   grid:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
@@ -287,7 +285,7 @@ function DemoBar({ state, setState }) {
           <PillTab active={state==='empty'} onClick={() => setState('empty')}>빈 상태</PillTab>
         </div>
       </div>
-      <span className="hint">유형 탭으로 필터 · 항목 클릭 시 읽음 처리 · Meta Design System</span>
+      <span className="hint">유형 탭으로 필터 · 항목 클릭 시 읽음 처리 · Mission Control DS</span>
     </div>
   );
 }

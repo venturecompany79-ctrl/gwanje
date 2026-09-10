@@ -5,16 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>관제 · 서비스 랜딩페이지</title>
 
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<link rel="stylesheet" href="_ds/tokens.css">
+<link rel="stylesheet" href="_ds/components.css">
 
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
+  body{font-family:var(--font-body);background:#000000;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
   button{font-family:var(--font-body);}
   svg{stroke:currentColor;}
 
@@ -29,18 +27,18 @@
 
   .viewport{margin:0 auto 48px;transition:width 240ms ease-out;}
   .site{width:100%;container-type:inline-size;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
-    border-radius:var(--radius-xxl);overflow:hidden;box-shadow:0 18px 50px rgba(10,19,23,.10);}
+    border-radius:var(--radius-xxl);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.55);}
   .site svg{width:20px;height:20px;flex:none;}
 
   .wrap{max-width:1080px;margin:0 auto;padding:0 40px;}
 
   /* nav */
-  .lnav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+  .lnav{position:sticky;top:0;z-index:20;background:rgba(10,10,10,.82);backdrop-filter:blur(10px);
     border-bottom:1px solid var(--color-hairline-soft);}
   .lnav-in{max-width:1080px;margin:0 auto;padding:0 40px;height:68px;display:flex;align-items:center;gap:18px;}
   .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);}
-  .logo .mk{width:32px;height:32px;border-radius:var(--radius-md);background:radial-gradient(circle at 30% 28%,#0091ff,#0064e0 55%,#0457cb);
-    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+  .logo .mk{width:32px;height:32px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-on-primary);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;}
   .nav-menu{display:flex;align-items:center;gap:26px;margin-left:18px;}
   .nav-menu a{font-size:14px;font-weight:600;color:var(--color-charcoal);text-decoration:none;letter-spacing:-.14px;cursor:pointer;}
   .nav-menu a:hover{color:var(--color-ink-deep);}
@@ -53,7 +51,7 @@
   .mobile-menu .mcta{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
 
   /* hero */
-  .hero{padding:72px 0 64px;background:radial-gradient(900px 420px at 78% 0%, #eef4fc 0%, rgba(238,244,252,0) 70%);}
+  .hero{padding:72px 0 64px;background:radial-gradient(900px 420px at 78% 0%, var(--app-lp-hero-tint) 0%, rgba(238,244,252,0) 70%);}
   .hero-in{max-width:1080px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;}
   .eyebrow{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 14px;border-radius:var(--radius-full);
     background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);font-size:12.5px;font-weight:700;color:var(--color-primary-deep);letter-spacing:-.14px;margin-bottom:20px;}
@@ -62,7 +60,7 @@
   .hero .sub{margin:22px 0 30px;font-size:17px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;max-width:520px;}
   .hero-cta{display:flex;gap:12px;flex-wrap:wrap;}
   .hero-trust{margin-top:22px;font-size:13px;color:var(--color-stone);letter-spacing:-.14px;}
-  .mock{width:100%;border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 16px 40px rgba(10,19,23,.16);border:1px solid var(--color-hairline-soft);background:var(--color-surface-soft);}
+  .mock{width:100%;border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.55);border:1px solid var(--color-hairline-soft);background:var(--color-surface-soft);}
   .mock.hero-mock{aspect-ratio:4/3;}
 
   /* section base */
@@ -76,14 +74,14 @@
   /* problem cards */
   .prob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
   .prob{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:24px;}
-  .prob .pic{width:42px;height:42px;border-radius:var(--radius-md);background:#fbe1e5;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .prob .pic{width:42px;height:42px;border-radius:var(--radius-md);background:var(--app-st-expired-bg);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
   .prob .pic svg{stroke:var(--color-critical);width:21px;height:21px;}
   .prob p{margin:0;font-size:14.5px;line-height:1.55;color:var(--color-charcoal);font-weight:600;letter-spacing:-.16px;}
 
   /* feature blocks */
   .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   .feat{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:28px;display:flex;flex-direction:column;}
-  .feat .ic{width:48px;height:48px;border-radius:var(--radius-lg);background:#e2eefc;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+  .feat .ic{width:48px;height:48px;border-radius:var(--radius-lg);background:var(--app-ic-deadline-bg);display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
   .feat .ic svg{stroke:var(--color-primary);width:24px;height:24px;}
   .feat h3{margin:0 0 9px;font-size:20px;font-weight:700;letter-spacing:-.18px;color:var(--color-ink-deep);}
   .feat p{margin:0 0 20px;font-size:15px;line-height:1.6;color:var(--color-steel);letter-spacing:-.16px;}
@@ -92,7 +90,7 @@
   /* steps */
   .steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s;}
   .stp{position:relative;padding:28px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);}
-  .stp .n{width:38px;height:38px;border-radius:var(--radius-full);background:var(--color-ink-deep);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-bottom:16px;}
+  .stp .n{width:38px;height:38px;border-radius:var(--radius-full);background:var(--color-ink-deep);color:var(--color-on-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-bottom:16px;}
   .stp h3{margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.16px;}
   .stp p{margin:0;font-size:14.5px;line-height:1.55;color:var(--color-steel);letter-spacing:-.16px;}
 
@@ -109,7 +107,7 @@
   .quote .who b{font-size:13.5px;font-weight:700;display:block;}
   .quote .who span{font-size:12.5px;color:var(--color-stone);}
   .review-flag{display:inline-flex;align-items:center;gap:7px;margin:0 auto 24px;padding:6px 14px;border-radius:var(--radius-full);
-    background:#fdf3da;border:1px solid #f2d89b;color:#8a6a00;font-size:12.5px;font-weight:700;letter-spacing:-.14px;}
+    background:var(--app-st-soon-bg);border:1px solid var(--app-kpi-urgent-border);color:var(--app-st-soon-text);font-size:12.5px;font-weight:700;letter-spacing:-.14px;}
 
   /* pricing */
   .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
@@ -121,8 +119,8 @@
   .price-note{text-align:center;margin-top:24px;font-size:14px;color:var(--color-steel);letter-spacing:-.16px;}
 
   /* CTA band */
-  .cta-band{background:var(--color-ink-deep);border-radius:var(--radius-xxxl);padding:64px 40px;text-align:center;margin:0 40px;}
-  .cta-band h2{margin:0 0 14px;font-size:34px;font-weight:700;letter-spacing:-.02em;color:#fff;font-feature-settings:"ss01" 1,"ss02" 1;}
+  .cta-band{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xxxl);padding:64px 40px;text-align:center;margin:0 40px;}
+  .cta-band h2{margin:0 0 14px;font-size:34px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);font-feature-settings:"ss01" 1,"ss02" 1;}
   .cta-band p{margin:0 0 28px;font-size:16px;color:rgba(255,255,255,.72);letter-spacing:-.16px;}
   .cta-band .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
 
@@ -170,17 +168,17 @@
 <body>
 <div id="root"></div>
 
-<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+<template id="__bundler_thumbnail" data-bg-color="var(--color-primary)">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#ffffff"/>
-    <rect x="0" y="0" width="1200" height="90" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <rect x="60" y="34" width="120" height="22" rx="6" fill="#0a1317"/>
-    <rect x="980" y="28" width="160" height="34" rx="17" fill="#0a1317"/>
-    <rect x="80" y="200" width="520" height="44" rx="8" fill="#0a1317"/>
-    <rect x="80" y="264" width="520" height="44" rx="8" fill="#0a1317"/>
-    <rect x="80" y="360" width="180" height="52" rx="26" fill="#0a1317"/>
-    <rect x="280" y="360" width="140" height="52" rx="26" fill="#f1f4f7"/>
-    <rect x="680" y="200" width="440" height="320" rx="20" fill="#eef4fc" stroke="#0064e0" stroke-width="2"/>
+    <rect width="1200" height="800" fill="var(--color-canvas)"/>
+    <rect x="0" y="0" width="1200" height="90" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <rect x="60" y="34" width="120" height="22" rx="6" fill="var(--color-ink-deep)"/>
+    <rect x="980" y="28" width="160" height="34" rx="17" fill="var(--color-ink-deep)"/>
+    <rect x="80" y="200" width="520" height="44" rx="8" fill="var(--color-ink-deep)"/>
+    <rect x="80" y="264" width="520" height="44" rx="8" fill="var(--color-ink-deep)"/>
+    <rect x="80" y="360" width="180" height="52" rx="26" fill="var(--color-ink-deep)"/>
+    <rect x="280" y="360" width="140" height="52" rx="26" fill="var(--color-surface-soft)"/>
+    <rect x="680" y="200" width="440" height="320" rx="20" fill="var(--app-lp-hero-tint)" stroke="var(--color-primary)" stroke-width="2"/>
   </svg>
 </template>
 
@@ -188,11 +186,11 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+<script src="_ds/components.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
-const { Button } = window.MetaDesignSystem_d06bcc;
+const { Button } = window.MissionControlDS;
 
 const I = {
   bell:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>,
@@ -387,7 +385,7 @@ function CtaBand() {
         <p>설정은 1분이면 충분합니다. 첫 기업을 등록하면 마감이 자동으로 모입니다.</p>
         <div className="row">
           <Button variant="buy" style={{ padding:'14px 28px', fontSize:15 }}>서비스 이용하기</Button>
-          <Button variant="primary" style={{ padding:'14px 26px', fontSize:15, background:'rgba(255,255,255,.12)', color:'#fff' }}>로그인</Button>
+          <Button variant="ghost" style={{ padding:'14px 26px', fontSize:15 }}>로그인</Button>
         </div>
       </div>
     </section>
@@ -430,7 +428,7 @@ function App() {
             <button style={pillStyle(device==='mobile')} onClick={() => { setDevice('mobile'); }}>모바일</button>
           </div>
         </div>
-        <span className="hint">비로그인 공개 페이지 · 반응형 (컨테이너 쿼리) · Meta Design System</span>
+        <span className="hint">비로그인 공개 페이지 · 반응형 (컨테이너 쿼리) · Mission Control DS</span>
       </div>
       <div className="viewport" style={{ width, maxWidth:'calc(100vw - 24px)' }}>
         <div className="site">
@@ -450,7 +448,7 @@ function App() {
 }
 function pillStyle(on) {
   return { border:'1px solid ' + (on ? 'var(--color-ink-deep)' : 'var(--color-hairline)'), background: on ? 'var(--color-ink-deep)' : 'var(--color-canvas)',
-    color: on ? '#fff' : 'var(--color-ink)', fontSize:12.5, fontWeight:700, padding:'7px 14px', borderRadius:'var(--radius-full)', cursor:'pointer', whiteSpace:'nowrap' };
+    color: on ? 'var(--color-on-primary)' : 'var(--color-ink)', fontSize:12.5, fontWeight:700, padding:'7px 14px', borderRadius:'var(--radius-full)', cursor:'pointer', whiteSpace:'nowrap' };
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);

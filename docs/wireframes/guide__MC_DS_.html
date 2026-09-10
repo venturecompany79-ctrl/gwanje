@@ -3,18 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>일괄안내 (캠페인) · Meta DS</title>
+<title>일괄안내 (캠페인) · Mission Control DS</title>
 
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<link rel="stylesheet" href="_ds/tokens.css">
+<link rel="stylesheet" href="_ds/components.css">
 
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
+  body{font-family:var(--font-body);background:#000000;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;}
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
   button{font-family:var(--font-body);}
 
@@ -29,13 +27,13 @@
 
   .app{width:1280px;margin:0 auto 44px;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
     border-radius:var(--radius-xxl);overflow:hidden;display:grid;grid-template-columns:240px 1fr;min-height:900px;
-    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;}
+    box-shadow:0 18px 50px rgba(0,0,0,.55);position:relative;}
   .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
 
   .nav{border-right:1px solid var(--color-hairline-soft);padding:22px 16px;display:flex;flex-direction:column;background:var(--color-canvas);}
   .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;}
   .brand .mark{width:34px;height:34px;border-radius:var(--radius-full);flex:none;
-    background:radial-gradient(circle at 30% 30%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;}
+    background:var(--color-primary);display:flex;align-items:center;justify-content:center;color:var(--color-on-primary);font-weight:700;font-size:15px;}
   .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--color-ink-deep);line-height:1.1;}
   .brand small{display:block;font-size:11px;font-weight:500;color:var(--color-stone);}
   .nav-sec{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--color-stone);text-transform:uppercase;padding:12px 12px 8px;}
@@ -45,7 +43,7 @@
   .nav-item svg{width:19px;height:19px;}
   .nav-item:hover{background:var(--color-surface-soft);}
   .nav-item.active{background:var(--color-ink-deep);color:var(--color-canvas);border-color:var(--color-ink-deep);}
-  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:#fff;font-size:11px;font-weight:700;
+  .nav-item .nbadge{margin-left:auto;background:var(--color-critical);color:var(--color-on-primary);font-size:11px;font-weight:700;
     min-width:19px;height:19px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;padding:0 5px;}
   .nav-foot{margin-top:auto;padding-top:16px;border-top:1px solid var(--color-hairline-soft);display:flex;align-items:center;gap:11px;}
   .nav-foot .ava{width:34px;height:34px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
@@ -64,7 +62,7 @@
   .search input::placeholder{color:var(--color-stone);}
   .topbar .spacer{flex:1;}
   .ib-wrap{position:relative;}
-  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:#fff;font-size:10.5px;font-weight:700;
+  .ib-wrap .dot{position:absolute;top:-3px;right:-3px;background:var(--color-critical);color:var(--color-on-primary);font-size:10.5px;font-weight:700;
     min-width:18px;height:18px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;border:2px solid var(--color-canvas);padding:0 3px;}
   .prof{display:flex;align-items:center;gap:10px;cursor:pointer;padding-left:4px;}
   .prof .ava{width:36px;height:36px;border-radius:var(--radius-full);background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);
@@ -89,8 +87,8 @@
   /* status badge */
   .stbadge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:var(--radius-full);font-size:12px;font-weight:700;letter-spacing:-.14px;}
   .stbadge .sd{width:7px;height:7px;border-radius:50%;}
-  .st-sent{background:#e2f0e6;color:#147a49;}.st-sent .sd{background:var(--color-success);}
-  .st-sched{background:#e2eefc;color:var(--color-primary-deep);}.st-sched .sd{background:var(--color-primary);}
+  .st-sent{background:var(--app-st-valid-bg);color:var(--app-st-valid-text);}.st-sent .sd{background:var(--color-success);}
+  .st-sched{background:var(--app-ic-deadline-bg);color:var(--color-primary-deep);}.st-sched .sd{background:var(--color-primary);}
   .st-draft{background:var(--color-surface-soft);color:var(--color-steel);}.st-draft .sd{background:var(--color-stone);}
   .seg-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-full);border:1px solid var(--color-hairline);
     background:var(--color-canvas);font-size:12px;font-weight:600;color:var(--color-charcoal);letter-spacing:-.14px;white-space:nowrap;}
@@ -122,9 +120,9 @@
   .step{display:flex;align-items:center;gap:11px;cursor:pointer;}
   .step .circ{width:30px;height:30px;border-radius:50%;border:2px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;
     font-size:13px;font-weight:700;color:var(--color-stone);flex:none;background:var(--color-canvas);transition:all 150ms;}
-  .step .circ svg{width:15px;height:15px;stroke:#fff;}
-  .step.active .circ{background:var(--color-ink-deep);border-color:var(--color-ink-deep);color:#fff;}
-  .step.done .circ{background:var(--color-primary);border-color:var(--color-primary);color:#fff;}
+  .step .circ svg{width:15px;height:15px;stroke:var(--color-on-primary);}
+  .step.active .circ{background:var(--color-ink-deep);border-color:var(--color-ink-deep);color:var(--color-on-primary);}
+  .step.done .circ{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary);}
   .step .slab{font-size:14px;font-weight:700;color:var(--color-stone);letter-spacing:-.14px;}
   .step.active .slab,.step.done .slab{color:var(--color-ink-deep);}
   .step-conn{width:64px;height:2px;background:var(--color-hairline);margin:0 16px;}
@@ -136,7 +134,7 @@
   .andor{display:inline-flex;background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-full);padding:3px;margin:4px 0 4px 8px;}
   .andor button{border:0;background:transparent;font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--color-steel);
     padding:5px 12px;border-radius:var(--radius-full);cursor:pointer;}
-  .andor button.on{background:var(--color-ink-deep);color:#fff;}
+  .andor button.on{background:var(--color-ink-deep);color:var(--color-on-primary);}
   .cond-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
   .cinput{height:42px;border:1px solid var(--color-hairline);border-radius:var(--radius-lg);background:var(--color-canvas);
     font-family:var(--font-body);font-size:14px;color:var(--color-ink-deep);padding:0 12px;letter-spacing:-.14px;}
@@ -145,7 +143,7 @@
   .cond-row .op{min-width:88px;}
   .cond-row .x{width:38px;height:38px;border-radius:var(--radius-full);border:1px solid var(--color-hairline-soft);background:var(--color-canvas);
     cursor:pointer;color:var(--color-stone);display:flex;align-items:center;justify-content:center;flex:none;}
-  .cond-row .x:hover{background:#fbe1e5;color:var(--color-critical);border-color:#f3c4cb;}
+  .cond-row .x:hover{background:var(--app-st-expired-bg);color:var(--color-critical);border-color:var(--app-banner-critical-border);}
   .cond-row .x svg{width:15px;height:15px;}
 
   /* preview list */
@@ -157,7 +155,7 @@
   .prev-item:hover{background:var(--color-surface-soft);}
   .prev-item svg{width:16px;height:16px;stroke:var(--color-stone);}
   .seg-zero{padding:48px 24px;text-align:center;}
-  .seg-zero .zico{width:60px;height:60px;border-radius:var(--radius-xl);background:#fdeed6;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+  .seg-zero .zico{width:60px;height:60px;border-radius:var(--radius-xl);background:var(--app-st-soon-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
   .seg-zero .zico svg{width:28px;height:28px;stroke:var(--color-attention);}
   .seg-zero h3{margin:0 0 7px;font-size:16px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.16px;}
   .seg-zero p{margin:0;font-size:13px;color:var(--color-steel);letter-spacing:-.14px;}
@@ -177,7 +175,7 @@
   /* talk preview */
   .phone{background:var(--color-surface-soft);border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xl);padding:18px;height:100%;}
   .phone-top{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--color-steel);margin-bottom:14px;letter-spacing:-.14px;}
-  .phone-top .kk{width:22px;height:22px;border-radius:7px;background:var(--color-warning);display:flex;align-items:center;justify-content:center;color:var(--color-ink-deep);font-size:11px;font-weight:800;}
+  .phone-top .kk{width:22px;height:22px;border-radius:7px;background:var(--color-warning);display:flex;align-items:center;justify-content:center;color:var(--color-on-primary);font-size:11px;font-weight:800;}
   .bubble{background:var(--color-canvas);border:1px solid var(--color-hairline-soft);border-radius:4px 16px 16px 16px;padding:16px;font-size:13.5px;line-height:1.62;color:var(--color-ink-deep);letter-spacing:-.14px;}
   .bubble .bt{font-weight:700;margin-bottom:8px;}
   .bubble .vv{color:var(--color-primary-deep);font-weight:700;}
@@ -190,10 +188,10 @@
   .sum-card .sv{font-size:20px;font-weight:700;color:var(--color-ink-deep);margin-top:6px;letter-spacing:-.16px;}
   .radio-row{display:flex;gap:12px;margin-top:6px;}
   .ropt{flex:1;display:flex;align-items:center;gap:11px;padding:14px 16px;border:1px solid var(--color-hairline-soft);border-radius:var(--radius-lg);cursor:pointer;transition:all 150ms;}
-  .ropt.on{border:2px solid var(--color-radio-selected);padding:13px 15px;}
+  .ropt.on{border:2px solid var(--color-fb-blue);padding:13px 15px;}
   .ropt .ring{width:18px;height:18px;border-radius:50%;border:2px solid var(--color-hairline);flex:none;display:flex;align-items:center;justify-content:center;}
-  .ropt.on .ring{border-color:var(--color-radio-selected);}
-  .ropt.on .ring::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--color-radio-selected);}
+  .ropt.on .ring{border-color:var(--color-fb-blue);}
+  .ropt.on .ring::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--color-fb-blue);}
   .ropt .rt{font-size:14px;font-weight:700;color:var(--color-ink-deep);letter-spacing:-.14px;}
   .ropt .rs{font-size:12px;color:var(--color-stone);margin-top:2px;}
   .wz-foot{display:flex;align-items:center;gap:10px;padding:18px 22px;border-top:1px solid var(--color-hairline-soft);}
@@ -208,46 +206,46 @@
   .ans{font-size:13.5px;color:var(--color-ink-deep);letter-spacing:-.14px;}
   .ans.no{color:var(--color-stone);}
   .yn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:-.14px;}
-  .yn.ok{color:#147a49;}.yn.no{color:var(--color-stone);}
+  .yn.ok{color:var(--app-st-valid-text);}.yn.no{color:var(--color-stone);}
   .yn .d{width:7px;height:7px;border-radius:50%;}.yn.ok .d{background:var(--color-success);}.yn.no .d{background:var(--color-stone);}
 
   /* toast */
   .toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);opacity:0;z-index:40;
-    display:flex;align-items:center;gap:10px;background:var(--color-ink-deep);color:#fff;padding:13px 20px;border-radius:var(--radius-full);
-    font-size:14px;font-weight:700;letter-spacing:-.14px;box-shadow:0 8px 24px rgba(10,19,23,.28);transition:transform 260ms ease-out,opacity 260ms ease-out;pointer-events:none;}
+    display:flex;align-items:center;gap:10px;background:var(--color-ink-deep);color:var(--color-on-primary);padding:13px 20px;border-radius:var(--radius-full);
+    font-size:14px;font-weight:700;letter-spacing:-.14px;box-shadow:0 8px 24px rgba(0,0,0,.55);transition:transform 260ms ease-out,opacity 260ms ease-out;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
   .toast .tcheck{width:22px;height:22px;border-radius:50%;background:var(--color-success);display:flex;align-items:center;justify-content:center;}
-  .toast .tcheck svg{width:13px;height:13px;stroke:#fff;}
-  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;animation:sp .7s linear infinite;}
+  .toast .tcheck svg{width:13px;height:13px;stroke:var(--color-on-primary);}
+  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid color-mix(in srgb,currentColor 30%,transparent);border-top-color:currentColor;animation:sp .7s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 
-<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+<template id="__bundler_thumbnail" data-bg-color="var(--color-primary)">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#ffffff"/>
-    <rect x="120" y="160" width="170" height="480" rx="20" fill="#f1f4f7"/>
-    <circle cx="470" cy="250" r="22" fill="#0a1317"/><text x="470" y="258" font-size="20" fill="#fff" text-anchor="middle" font-family="Arial">1</text>
-    <rect x="510" y="248" width="60" height="4" fill="#0064e0"/>
-    <circle cx="610" cy="250" r="22" fill="#0064e0"/>
-    <rect x="650" y="248" width="60" height="4" fill="#ced0d4"/>
-    <circle cx="750" cy="250" r="22" fill="#fff" stroke="#ced0d4" stroke-width="2"/>
-    <rect x="340" y="320" width="430" height="300" rx="16" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <rect x="800" y="320" width="280" height="300" rx="16" fill="#f1f4f7"/>
-    <rect x="824" y="350" width="110" height="20" rx="10" fill="#0a1317"/>
+    <rect width="1200" height="800" fill="var(--color-canvas)"/>
+    <rect x="120" y="160" width="170" height="480" rx="20" fill="var(--color-surface-soft)"/>
+    <circle cx="470" cy="250" r="22" fill="var(--color-ink-deep)"/><text x="470" y="258" font-size="20" fill="var(--color-on-primary)" text-anchor="middle" font-family="Arial">1</text>
+    <rect x="510" y="248" width="60" height="4" fill="var(--color-primary)"/>
+    <circle cx="610" cy="250" r="22" fill="var(--color-primary)"/>
+    <rect x="650" y="248" width="60" height="4" fill="var(--color-hairline)"/>
+    <circle cx="750" cy="250" r="22" fill="#fff" stroke="var(--color-hairline)" stroke-width="2"/>
+    <rect x="340" y="320" width="430" height="300" rx="16" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <rect x="800" y="320" width="280" height="300" rx="16" fill="var(--color-surface-soft)"/>
+    <rect x="824" y="350" width="110" height="20" rx="10" fill="var(--color-ink-deep)"/>
   </svg>
 </template>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+<script src="_ds/components.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
-const { Button, PillTab, IconButton } = window.MetaDesignSystem_d06bcc;
+const { Button, PillTab, IconButton } = window.MissionControlDS;
 
 const I = {
   grid:    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>,
@@ -319,7 +317,7 @@ function ListCut({ empty, onNew, onOpen }) {
   if (empty) {
     return (
       <>
-        <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="primary" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
+        <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="buy" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
         <div className="panel"><div className="empty">
           <div className="eico">{I.megaphone}</div>
           <h2>첫 캠페인을 만들어보세요</h2>
@@ -331,7 +329,7 @@ function ListCut({ empty, onNew, onOpen }) {
   }
   return (
     <>
-      <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="primary" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
+      <div className="page-head"><h1>일괄안내</h1><div className="spacer"></div><Button variant="buy" onClick={onNew}>{I.plus} 새 캠페인</Button></div>
       <div className="panel">
         <div className="sec-head"><h2>캠페인</h2><span className="cnt">{CAMPAIGNS.length}건</span></div>
         <table className="dlist">
@@ -510,7 +508,7 @@ function Wizard({ step, setStep, zero, onCancel, onSend }) {
           {step>1 ? <Button variant="secondary" onClick={() => setStep(step-1)} style={{ padding:'12px 22px' }}>{I.back} 이전</Button> : <span></span>}
           <div className="spacer"></div>
           {step<3
-            ? <Button variant="primary" disabled={step===1 && zero} onClick={() => setStep(step+1)}>{step===1 ? '다음: 메시지' : '다음: 발송 확인'} {I.arrow}</Button>
+            ? <Button variant="buy" disabled={step===1 && zero} onClick={() => setStep(step+1)}>{step===1 ? '다음: 메시지' : '다음: 발송 확인'} {I.arrow}</Button>
             : <><Button variant="secondary" style={{ padding:'12px 22px' }}>예약 발송</Button><Button variant="buy" onClick={onSend}>{I.send} 발송</Button></>}
         </div>
       </div>
@@ -597,7 +595,7 @@ function App() {
             </div>
           </div>
         )}
-        <span className="hint">목록 → 3스텝 작성 → 응답 집계 · Meta Design System</span>
+        <span className="hint">목록 → 3스텝 작성 → 응답 집계 · Mission Control DS</span>
       </div>
       <div className="app">
         <Nav />

@@ -1,0 +1,284 @@
+/* Mission Control DS — 프리미티브 컴포넌트 CSS
+   ★ app/globals.css 에서 .btn / .badge / .pill-tab / .icon-btn / .input 규칙만 추출한 사본.
+   와이어프레임이 앱과 같은 프리미티브를 쓰도록 한다. 권위는 /docs/design.md. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.43;
+  letter-spacing: -0.14px;
+  white-space: nowrap;
+  transition: background-color 150ms ease-out, color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  stroke: currentColor;
+}
+.btn:disabled {
+  cursor: not-allowed;
+}
+.btn--primary {
+  background: var(--color-ink-button);
+  color: var(--color-on-ink-button);
+  padding: 14px 30px;
+}
+.btn--primary:active {
+  background: var(--color-charcoal);
+}
+.btn--primary:disabled {
+  background: var(--color-disabled-text);
+  color: var(--color-canvas);
+}
+.btn--cta {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 14px 30px;
+}
+.btn--cta:active {
+  background: var(--color-primary-deep);
+}
+.btn--cta:disabled {
+  background: var(--color-disabled-text);
+  color: var(--color-canvas);
+}
+.btn--secondary {
+  background: transparent;
+  color: var(--color-ink-deep);
+  border: 2px solid var(--color-ink-deep);
+  padding: 12px 28px;
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--color-ink-deep);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  padding: 10px 22px;
+}
+.btn--ghost:hover {
+  background: var(--color-surface-soft);
+}
+.btn--danger {
+  background: var(--color-critical);
+  color: var(--color-on-primary);
+  padding: 14px 30px;
+}
+.btn--danger:active {
+  background: var(--color-critical-strong);
+}
+.btn--danger:disabled {
+  background: var(--color-disabled-text);
+  color: var(--color-canvas);
+}
+.btn--ghost-danger {
+  background: transparent;
+  color: var(--color-critical);
+  border: 2px solid rgba(228, 30, 63, 0.24);
+  padding: 10px 22px;
+}
+.btn--ghost-danger:hover {
+  background: rgba(228, 30, 63, 0.06);
+}
+.btn--sm.btn--primary,
+.btn--sm.btn--cta {
+  padding: 10px 20px;
+}
+.btn--sm.btn--secondary {
+  padding: 8px 18px;
+}
+.btn--sm.btn--ghost {
+  padding: 8px 16px;
+}
+.btn--full {
+  width: 100%;
+}
+.pill-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.14px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.pill-tab svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+.pill-tab.is-active {
+  background: var(--color-ink-deep);
+  color: var(--color-canvas);
+  border-color: var(--color-ink-deep);
+}
+.pill-tab:disabled {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+.pill-tab--soon:disabled {
+  opacity: 0.65;
+  background: var(--color-surface-soft);
+}
+.pill-tab-soon {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-hairline-soft);
+  color: var(--color-steel);
+}
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-circle);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+.icon-btn:hover {
+  background: var(--color-surface-soft);
+}
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.33;
+  white-space: nowrap;
+}
+.badge--success {
+  background: var(--color-success);
+  color: var(--color-canvas);
+}
+.badge--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.badge--attention {
+  background: var(--color-attention);
+  color: var(--color-canvas);
+}
+.badge--warning {
+  background: var(--color-warning);
+  color: var(--color-on-primary);
+}
+.badge--critical {
+  background: var(--color-critical);
+  color: var(--color-canvas);
+}
+.badge--neutral {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+}
+.badge--soft-valid {
+  background: var(--app-st-valid-bg);
+  color: var(--app-st-valid-text);
+}
+.badge--soft-soon {
+  background: var(--app-st-soon-bg);
+  color: var(--app-st-soon-text);
+}
+.badge--soft-expired {
+  background: var(--app-st-expired-bg);
+  color: var(--app-st-expired-text);
+}
+.input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 16px;
+  letter-spacing: -0.16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  outline: none;
+}
+.input:focus {
+  border: 2px solid var(--color-fb-blue);
+  padding: calc(var(--space-md) - 1px);
+}
+.input:disabled {
+  background: var(--color-surface-soft);
+  color: var(--color-steel);
+  cursor: default;
+}
+.input--error {
+  border: 2px solid var(--color-critical-strong);
+}
+.input--error:focus {
+  border: 2px solid var(--color-critical-strong);
+}
+.input--date {
+  min-width: 0;
+}
+.btn--secondary .spin {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: var(--color-charcoal);
+}
+.btn,
+.pill-tab {
+  min-height: 40px;
+}
+.btn--primary,
+.btn--cta,
+.btn--secondary,
+.btn--ghost {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+/* 와이어프레임 전용 — Input 의 label 래퍼 (앱에서는 화면별로 다르게 조립한다) */
+.field { display: block; }
+.field-label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+
+/* 이미지 드롭 자리표시자 (<image-slot>) */
+image-slot { display: flex; align-items: center; justify-content: center; }
+.image-slot-ph {
+  padding: var(--space-base);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-stone);
+  border: 1px dashed var(--color-hairline);
+  border-radius: var(--radius-lg);
+  margin: var(--space-base);
+}

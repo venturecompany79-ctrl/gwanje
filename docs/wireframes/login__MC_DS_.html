@@ -3,18 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로그인 / 회원가입 · Meta DS</title>
+<title>로그인 / 회원가입 · Mission Control DS</title>
 
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/fonts.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/colors.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/typography.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/tokens/layout.css">
-<link rel="stylesheet" href="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/styles.css">
+
+<link rel="stylesheet" href="_ds/tokens.css">
+<link rel="stylesheet" href="_ds/components.css">
 
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{font-family:var(--font-body);background:#e7ebef;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
+  body{font-family:var(--font-body);background:#000000;color:var(--color-ink-deep);-webkit-font-smoothing:antialiased;word-break:keep-all;}
   button{font-family:var(--font-body);}
 
   .demo-bar{width:1280px;margin:24px auto 14px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;
@@ -29,20 +27,20 @@
   /* stage (no app chrome) */
   .stage{width:1280px;margin:0 auto 44px;min-height:860px;background:var(--color-canvas);
     border:1px solid var(--color-hairline-soft);border-radius:var(--radius-xxl);overflow:hidden;
-    box-shadow:0 18px 50px rgba(10,19,23,.10);position:relative;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);position:relative;
     display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px;
-    background-image:radial-gradient(1100px 380px at 50% -8%, #eef4fc 0%, rgba(238,244,252,0) 70%);}
+    background-image:radial-gradient(1100px 380px at 50% -8%, var(--app-lp-hero-tint) 0%, rgba(238,244,252,0) 70%);}
   .app svg{width:18px;height:18px;flex:none;stroke:currentColor;}
 
   .brand{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px;}
   .brand .mark{width:56px;height:56px;border-radius:var(--radius-xl);flex:none;
-    background:radial-gradient(circle at 30% 28%,#0091ff,#0064e0 55%,#0457cb);display:flex;align-items:center;justify-content:center;
-    color:#fff;font-weight:700;font-size:24px;box-shadow:0 6px 18px rgba(0,100,224,.28);}
+    background:var(--color-primary);color:var(--color-on-primary);display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:24px;box-shadow:0 6px 18px rgba(255,255,255,.22);}
   .brand .bn{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--color-ink-deep);text-align:center;}
   .brand .bn small{display:block;font-size:13px;font-weight:500;color:var(--color-stone);letter-spacing:0;margin-top:3px;}
 
   .card{width:420px;max-width:100%;background:var(--color-canvas);border:1px solid var(--color-hairline-soft);
-    border-radius:var(--radius-xl);box-shadow:0 4px 20px rgba(10,19,23,.06);padding:32px;}
+    border-radius:var(--radius-xl);box-shadow:0 4px 20px rgba(0,0,0,.55);padding:32px;}
   .card-h{margin-bottom:22px;}
   .card-h h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"ss01" 1,"ss02" 1;color:var(--color-ink-deep);}
   .card-h p{margin:7px 0 0;font-size:13.5px;color:var(--color-steel);letter-spacing:-.14px;line-height:1.5;}
@@ -61,7 +59,7 @@
   .chk{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--color-charcoal);font-weight:600;letter-spacing:-.14px;}
   .chk .box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--color-hairline);background:var(--color-canvas);
     display:flex;align-items:center;justify-content:center;flex:none;transition:all 150ms;}
-  .chk .box svg{width:13px;height:13px;stroke:#fff;opacity:0;}
+  .chk .box svg{width:13px;height:13px;stroke:var(--color-on-primary);opacity:0;}
   .chk.on .box{background:var(--color-primary);border-color:var(--color-primary);}
   .chk.on .box svg{opacity:1;}
   .chk.agree{align-items:flex-start;margin-bottom:20px;line-height:1.5;white-space:normal;}
@@ -72,14 +70,14 @@
   .link{color:var(--color-primary-deep);font-weight:700;cursor:pointer;text-decoration:none;letter-spacing:-.14px;}
   .link:hover{text-decoration:underline;}
 
-  .banner{display:flex;gap:10px;align-items:flex-start;background:#fbe1e5;border:1px solid #f3c4cb;border-radius:var(--radius-lg);
-    padding:12px 14px;margin-bottom:20px;font-size:13px;color:#c01f37;font-weight:600;letter-spacing:-.14px;line-height:1.45;}
+  .banner{display:flex;gap:10px;align-items:flex-start;background:var(--app-st-expired-bg);border:1px solid var(--app-banner-critical-border);border-radius:var(--radius-lg);
+    padding:12px 14px;margin-bottom:20px;font-size:13px;color:var(--app-st-expired-text);font-weight:600;letter-spacing:-.14px;line-height:1.45;}
   .banner svg{width:17px;height:17px;stroke:var(--color-critical);flex:none;margin-top:1px;}
 
   .alt-row{text-align:center;margin-top:22px;padding-top:20px;border-top:1px solid var(--color-hairline-soft);font-size:13.5px;color:var(--color-steel);letter-spacing:-.14px;}
   .back-row{text-align:center;margin-top:20px;font-size:13.5px;}
   .note{margin-top:18px;font-size:12px;color:var(--color-stone);line-height:1.5;letter-spacing:-.14px;background:var(--color-surface-soft);border-radius:var(--radius-lg);padding:11px 14px;}
-  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:sp .7s linear infinite;}
+  .spin{width:18px;height:18px;border-radius:50%;border:2.5px solid color-mix(in srgb,currentColor 30%,transparent);border-top-color:currentColor;animation:sp .7s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
   .foot-legal{margin-top:24px;font-size:11.5px;color:var(--color-stone);text-align:center;letter-spacing:-.14px;}
 </style>
@@ -87,25 +85,25 @@
 <body>
 <div id="root"></div>
 
-<template id="__bundler_thumbnail" data-bg-color="#0064e0">
+<template id="__bundler_thumbnail" data-bg-color="var(--color-primary)">
   <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1200" height="800" fill="#ffffff"/>
-    <rect x="500" y="170" width="80" height="80" rx="20" fill="#0064e0"/>
-    <rect x="430" y="300" width="340" height="360" rx="20" fill="#ffffff" stroke="#dee3e9" stroke-width="2"/>
-    <rect x="470" y="350" width="260" height="44" rx="8" fill="#f1f4f7"/>
-    <rect x="470" y="414" width="260" height="44" rx="8" fill="#f1f4f7"/>
-    <rect x="470" y="486" width="260" height="48" rx="24" fill="#0064e0"/>
+    <rect width="1200" height="800" fill="var(--color-canvas)"/>
+    <rect x="500" y="170" width="80" height="80" rx="20" fill="var(--color-primary)"/>
+    <rect x="430" y="300" width="340" height="360" rx="20" fill="var(--color-canvas)" stroke="var(--color-hairline-soft)" stroke-width="2"/>
+    <rect x="470" y="350" width="260" height="44" rx="8" fill="var(--color-surface-soft)"/>
+    <rect x="470" y="414" width="260" height="44" rx="8" fill="var(--color-surface-soft)"/>
+    <rect x="470" y="486" width="260" height="48" rx="24" fill="var(--color-primary)"/>
   </svg>
 </template>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="_ds/meta-design-system-d06bccfc-faa7-4ee6-9fec-89516d6f6b24/_ds_bundle.js"></script>
+<script src="_ds/components.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
-const { Button, PillTab } = window.MetaDesignSystem_d06bcc;
+const { Button, PillTab } = window.MissionControlDS;
 
 const I = {
   warn:  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>,
@@ -238,7 +236,7 @@ function App() {
             </div>
           </div>
         )}
-        <span className="hint">로그인 ⇄ 회원가입 ⇄ 비밀번호 찾기 · Meta Design System</span>
+        <span className="hint">로그인 ⇄ 회원가입 ⇄ 비밀번호 찾기 · Mission Control DS</span>
       </div>
 
       <div className="stage app">
