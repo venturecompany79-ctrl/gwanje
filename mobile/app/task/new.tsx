@@ -536,9 +536,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.chip,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   catActive: {
-    backgroundColor: colors.brandTintStrong,
+    backgroundColor: colors.canvas,
+    borderColor: colors.brand,
   },
   catOff: {
     backgroundColor: colors.fill,

@@ -396,6 +396,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radius.chip,
+    borderWidth: 1,
+    borderColor: "transparent", // 선택 시에만 색을 준다 — 레이아웃 밀림 방지
   },
   chipTintPad: {
     paddingHorizontal: 11,
@@ -409,7 +411,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.label,
   },
   chipTintActive: {
-    backgroundColor: colors.brandTintStrong,
+    backgroundColor: colors.canvas,
+    borderColor: colors.brand,
   },
   chipText: {
     fontSize: 13.5,

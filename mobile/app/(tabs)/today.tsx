@@ -406,9 +406,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   tagActive: {
-    backgroundColor: colors.brandTintStrong,
+    backgroundColor: colors.canvas,
+    borderColor: colors.brand,
   },
   tagOff: {
     backgroundColor: colors.fill,
