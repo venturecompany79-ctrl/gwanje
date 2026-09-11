@@ -47,13 +47,16 @@ export const colors = {
   searchFill: "rgba(10,10,15,0.05)",
   segmentTrack: "rgba(10,10,15,0.05)",
 
-  // status — 제품 핵심 시맨틱. 흰 지면 기준으로 이미 튜닝돼 있어 값을 유지한다.
-  critical: "#E4243B",
-  criticalTint: "rgba(228,36,59,0.10)",
-  attention: "#9A5F00",
-  attentionTint: "rgba(154,95,0,0.11)",
-  success: "#147A49",
-  successTint: "rgba(20,122,73,0.10)",
+  // status — 제품 핵심 시맨틱.
+  // 배지는 "같은 색 틴트 배경 + 같은 색 글자" 구조라 대비가 구조적으로 눌린다.
+  // grouped(#F0F0FA) 위 최악 케이스에서 AA(4.5:1)를 넘도록 딥하게 잡았다.
+  // 틴트는 base 에서 파생되므로 둘을 함께 바꿀 것.
+  critical: "#BE0F2A",
+  criticalTint: "rgba(190,15,42,0.10)",
+  attention: "#8A5400",
+  attentionTint: "rgba(138,84,0,0.11)",
+  success: "#116B40",
+  successTint: "rgba(17,107,64,0.10)",
 
   // tab bar
   tabInactive: "#747480",
