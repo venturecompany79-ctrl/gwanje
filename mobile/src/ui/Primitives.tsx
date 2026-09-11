@@ -18,7 +18,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { ChevronRight } from "lucide-react-native";
-import { colors, radius, spacing, typography } from "@/design/tokens";
+import { colors, radius, spacing, typography, tabularNums } from "@/design/tokens";
 import { ddayLabel } from "@/lib/dates";
 
 type Tone = "critical" | "attention" | "success" | "neutral";
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   cellPressed: {
-    backgroundColor: "rgba(60,60,67,0.06)",
+    backgroundColor: "rgba(10,10,15,0.06)",
   },
   sep: {
     position: "absolute",
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   ddayBg_attention: { backgroundColor: colors.attentionTint },
   ddayBg_success: { backgroundColor: colors.successTint },
   ddayBg_neutral: { backgroundColor: colors.fill },
-  ddayText: { ...typography.badge },
+  ddayText: { ...typography.badge, ...tabularNums },
   ddayText_critical: { color: colors.critical },
   ddayText_attention: { color: colors.attention },
   ddayText_success: { color: colors.success },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   button: {
     width: "100%",
     minHeight: 52,
-    borderRadius: radius.card,
+    borderRadius: radius.full,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",

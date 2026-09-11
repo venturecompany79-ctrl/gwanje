@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
   },
   actionPressed: {
-    backgroundColor: "rgba(60,60,67,0.04)",
+    backgroundColor: "rgba(10,10,15,0.04)",
   },
   actionDisabled: {
     opacity: 0.45,

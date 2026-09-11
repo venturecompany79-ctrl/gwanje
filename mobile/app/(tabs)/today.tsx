@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     color: colors.label,
   },
   noteTextDone: {
-    color: "#A9A9AE",
+    color: colors.tertiaryLabel,
     textDecorationLine: "line-through",
   },
   noteMeta: {

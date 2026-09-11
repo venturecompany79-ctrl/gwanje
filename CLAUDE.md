@@ -81,8 +81,31 @@ design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(
 3. **버튼 2단**: 앱 내부 1차 액션은 **흰색 pill**(`button-primary`), **sunset pill**(`ink-button`)은 **랜딩/마케팅 페이지의 1차 CTA에만**.
 4. **상태 매핑(불변)**: 자격 유효=`success` / 임박=`warning`(또는 `attention`) / 만료=`critical`. D-day 긴급도·과제 단계 배지도 같은 시맨틱 토큰 재사용.
 5. **폰트 ★**: SpaceX의 `D-DIN`, x.ai의 `Universal Sans`·`Geist Mono` 모두 비공개 → 폴백 고정. 라틴 **Inter**, **한글 Noto Sans KR**(한국어 앱이므로 필수), mono는 시스템 스택(`--font-mono`, 다운로드 없음).
-6. **라이트 테마 토큰 없음 — 다크 단일 테마.** `:root`에 `color-scheme: dark`가 선언돼 네이티브 폼 컨트롤·스크롤바·autofill이 다크로 따라간다. 새 CSS에 라이트 전제(`#fff` 배경, 어두운 알파 그림자) 하드코딩 금지.
+6. **웹은 다크 단일 테마.** `:root`에 `color-scheme: dark`가 선언돼 네이티브 폼 컨트롤·스크롤바·autofill이 다크로 따라간다. 새 CSS에 라이트 전제(`#fff` 배경, 어두운 알파 그림자) 하드코딩 금지. **모바일은 같은 시스템의 밝은 반전판이다 — 아래 5-1절.**
 7. **와이어프레임(`/docs/wireframes/*.html`)도 새 토큰으로 재작성됨.** 8종 모두 `_ds/tokens.css`(= `app/globals.css`의 `:root` 사본) 한 파일을 공유하므로 하드코딩 색이 없다. 토큰 값을 바꾸면 앱과 와이어프레임을 **함께** 갱신할 것.
+
+## 5-1. 모바일 — **Mission Control DS · Light** (권위: `mobile/src/design/tokens.ts`)
+모바일(`mobile/`, React Native + Expo)은 CSS를 쓰지 않는다. 토큰은 `mobile/src/design/tokens.ts` **한 곳**에만 있고, 화면은 `colors.*`/`typography.*`/`radius.*`/`spacing.*`만 참조한다. **임의 색 금지.**
+
+웹과 **같은 톤앤무드(SpaceX × x.ai), 반대 지면**이다. 모바일은 이동 중 짧게 보는 화면이라 밝은 지면 위 **순검정 본문**으로 간다.
+
+| | 웹 (다크) | 모바일 (라이트) |
+|---|---|---|
+| 지면 | `canvas` #191919 / body #0a0a0a | `card` #FFFFFF / `grouped` #F0F0FA (spacex canvas-cool) |
+| 본문 | `ink-deep` #ffffff | `label` #000000 (순검정 · 21:1) |
+| 1차 액션 | 흰색 pill + 근검정 글자 | **검정 pill + 흰 글자** (`brand` #000000) |
+| 라인 | `hairline-soft` #212327 | `hairline` #E0E0E8 (spacex hairline-on-light) |
+
+**시그니처 규칙 (웹과 공통)**
+- 버튼은 **항상 pill**(`radius.full`). 사각 버튼 금지.
+- 카드 라운딩은 작게: `card` 10 / `md` 8 / `chip` 6 / `sm`·`xs` 4.
+- 액센트 추가 금지. 채도는 **status(critical/attention/success)에만**. 선택·활성 상태는 검정 채움 또는 무채색 wash(`brandTint`).
+- ★ SpaceX의 **대문자 트래킹 마이크로캡션은 한글에 uppercase가 없어 그대로 못 옮긴다** → `sectionLabel`·`eyebrow`는 **양수 letterSpacing(+0.5~0.6) + 두꺼운 굵기**로 치환했다. `textTransform: 'uppercase'` 쓰지 말 것(한글에 무효).
+- D-day·KPI 수치는 `tabularNums`를 함께 적용해 자릿수를 고정한다.
+
+**대비 (흰 카드 기준, 실측)**: `label` 21.0 · `secondaryLabel` 6.9 · `tertiaryLabel` 4.6 · `critical` 4.6 · `attention` 5.2 · `success` 5.4 · 1차버튼 21.0. `quaternary`(3.0)는 chevron·비활성 화살표 등 **비텍스트 전용**.
+
+> 모바일은 자체 StyleSheet를 쓰므로 `app/globals.css` 변경이 전파되지 않는다. 토큰을 바꾸면 **양쪽을 함께** 갱신할 것.
 
 ## 6. 와이어프레임 → 화면 매핑 (`/docs/wireframes/`)
 | 와이어프레임 파일 | 화면 | 라우트 |

@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "rgba(60,60,67,0.24)",
+    backgroundColor: "rgba(10,10,15,0.24)",
   },
   header: {
     alignItems: "center",
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "400",
     letterSpacing: -0.3,
-    color: "#3A3A3C",
+    color: colors.chipText,
   },
   stageLabelActive: {
     fontWeight: "600",
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingTop: 10,
     paddingHorizontal: 16,
-    backgroundColor: "rgba(242,242,247,0.94)",
+    backgroundColor: "rgba(240,240,250,0.94)",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.separator,
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveDisabled: {
-    backgroundColor: "rgba(0,100,224,0.55)",
+    backgroundColor: "rgba(10,10,15,0.5)",
   },
   saveText: {
     fontSize: 16.5,

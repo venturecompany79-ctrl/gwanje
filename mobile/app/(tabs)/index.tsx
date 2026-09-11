@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Building2, CalendarDays, ClipboardList } from "lucide-react-native";
 import { useAuth } from "@/context/AuthContext";
-import { colors, radius, spacing, typography } from "@/design/tokens";
+import { colors, radius, spacing, typography, tabularNums } from "@/design/tokens";
 import { longKstDate, monthDayKo } from "@/lib/dates";
 import { loadHomeData, type DeadlineItem } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
   },
   stripValue: {
     ...typography.kpi,
+    ...tabularNums,
     color: colors.label,
   },
   stripValueCritical: {
