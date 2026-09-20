@@ -221,6 +221,94 @@ export type Database = {
           },
         ]
       }
+      alimtalk_settings: {
+        Row: {
+          api_key_enc: string
+          api_secret_enc: string
+          created_at: string
+          is_active: boolean
+          pf_id: string
+          sender_phone: string
+          sms_fallback: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_enc: string
+          api_secret_enc: string
+          created_at?: string
+          is_active?: boolean
+          pf_id: string
+          sender_phone: string
+          sms_fallback?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_enc?: string
+          api_secret_enc?: string
+          created_at?: string
+          is_active?: boolean
+          pf_id?: string
+          sender_phone?: string
+          sms_fallback?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alimtalk_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alimtalk_template: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          solapi_template_id: string
+          tenant_id: string
+          updated_at: string
+          variables: string[]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          solapi_template_id: string
+          tenant_id: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          solapi_template_id?: string
+          tenant_id?: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alimtalk_template_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_customer: {
         Row: {
           billing_email: string | null
@@ -303,8 +391,10 @@ export type Database = {
           id: string
           scheduled_at: string | null
           segment: Json
+          send_started_at: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["campaign_status"]
+          template_id: string | null
           tenant_id: string
           title: string
         }
@@ -315,8 +405,10 @@ export type Database = {
           id?: string
           scheduled_at?: string | null
           segment?: Json
+          send_started_at?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          template_id?: string | null
           tenant_id: string
           title: string
         }
@@ -327,12 +419,21 @@ export type Database = {
           id?: string
           scheduled_at?: string | null
           segment?: Json
+          send_started_at?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          template_id?: string | null
           tenant_id?: string
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "alimtalk_template"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -344,39 +445,63 @@ export type Database = {
       }
       campaign_recipient: {
         Row: {
+          attempts: number
           campaign_id: string
           company_id: string
           created_at: string
           delivered: boolean
           delivered_at: string | null
+          error_code: string | null
+          error_message: string | null
           id: string
+          phone: string | null
+          provider_group_id: string | null
+          provider_message_id: string | null
           responded: boolean
           responded_at: string | null
           response_note: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["recipient_status"]
           tenant_id: string
         }
         Insert: {
+          attempts?: number
           campaign_id: string
           company_id: string
           created_at?: string
           delivered?: boolean
           delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
           id?: string
+          phone?: string | null
+          provider_group_id?: string | null
+          provider_message_id?: string | null
           responded?: boolean
           responded_at?: string | null
           response_note?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["recipient_status"]
           tenant_id: string
         }
         Update: {
+          attempts?: number
           campaign_id?: string
           company_id?: string
           created_at?: string
           delivered?: boolean
           delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
           id?: string
+          phone?: string | null
+          provider_group_id?: string | null
+          provider_message_id?: string | null
           responded?: boolean
           responded_at?: string | null
           response_note?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["recipient_status"]
           tenant_id?: string
         }
         Relationships: [
@@ -2419,6 +2544,9 @@ export type Database = {
           campaign_id: string
           recipient_count: number
           responded_count: number
+          delivered_count: number
+          failed_count: number
+          skipped_count: number
         }[]
       }
       get_company_import_duplicate_candidates: {
@@ -2532,6 +2660,12 @@ export type Database = {
       notification_type: "expiry" | "deadline" | "program_match"
       payment_kind: "initial" | "recurring" | "refund"
       payment_status: "pending" | "succeeded" | "failed" | "canceled"
+      recipient_status:
+        | "pending"
+        | "sent"
+        | "delivered"
+        | "failed"
+        | "skipped"
       schedule_type: "expiry" | "deadline" | "meeting" | "renewal" | "etc"
       subscription_status:
         | "trialing"
@@ -2700,6 +2834,7 @@ export const Constants = {
       notification_type: ["expiry", "deadline", "program_match"],
       payment_kind: ["initial", "recurring", "refund"],
       payment_status: ["pending", "succeeded", "failed", "canceled"],
+      recipient_status: ["pending", "sent", "delivered", "failed", "skipped"],
       schedule_type: ["expiry", "deadline", "meeting", "renewal", "etc"],
       subscription_status: [
         "trialing",
@@ -2726,6 +2861,7 @@ export type ScheduleType = Enums<"schedule_type">
 export type DocumentUploader = Enums<"document_uploader">
 export type CampaignStatus = Enums<"campaign_status">
 export type CampaignChannel = Enums<"campaign_channel">
+export type RecipientStatus = Enums<"recipient_status">
 export type NotificationType = Enums<"notification_type">
 export type IpRightKind = Enums<"ip_right_kind">
 export type IpRightStatus = Enums<"ip_right_status">

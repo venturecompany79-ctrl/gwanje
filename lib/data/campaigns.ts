@@ -10,10 +10,13 @@ import {
   type SegmentCompany,
 } from "@/lib/segments";
 import { todayKstDate } from "@/lib/datetime";
+import { getMemberContext } from "@/lib/actions/shared";
+import { isTenantAlimtalkLive } from "@/lib/alimtalk/settings";
 import type {
   CampaignChannel,
   CampaignStatus,
   Database,
+  RecipientStatus,
 } from "@/lib/database.types";
 
 export interface CampaignListRow {
@@ -28,6 +31,8 @@ export interface CampaignListRow {
   scheduledAt: string | null;
   /** 응답률 % (응답/발송) — 발송 전이면 null */
   responseRate: number | null;
+  /** 발송 실패한 수신자 수 — 0이면 표시하지 않는다 */
+  failedCount: number;
 }
 
 export interface CampaignsData {
@@ -43,6 +48,9 @@ export interface RecipientRow {
   companyId: string;
   companyName: string;
   delivered: boolean;
+  status: RecipientStatus;
+  /** 실패·제외 사유 — 성공 건은 null */
+  errorMessage: string | null;
   responded: boolean;
   responseNote: string | null;
   respondedAt: string | null;
@@ -72,19 +80,42 @@ export interface SegmentCompaniesData {
   companies: SegmentCompany[];
 }
 
+export interface WizardTemplate {
+  id: string;
+  name: string;
+  /** 검수받은 본문 사본 — 미리보기 전용 */
+  content: string;
+  variables: string[];
+}
+
+export interface AlimtalkWizardData {
+  /** true면 이 워크스페이스는 실제 카카오톡 발송이 가능하다 */
+  live: boolean;
+  templates: WizardTemplate[];
+}
+
 export const CAMPAIGN_LIST_LIMIT = 200;
 
 type CampaignListStatsRpcRow =
   Database["public"]["Functions"]["get_campaign_list_stats"]["Returns"][number];
 
-/** 응답 먼저(응답 시각순) → 도달 → 미도달 순으로 정렬 */
+/** 상태 정렬 우선순위 — 조치가 필요한 실패를 도달·대기보다 위로 올린다 */
+const STATUS_ORDER: Record<RecipientStatus, number> = {
+  failed: 0,
+  delivered: 1,
+  sent: 2,
+  pending: 3,
+  skipped: 4,
+};
+
+/** 응답 먼저(응답 시각순) → 실패 → 도달 → 발송됨 → 대기 → 제외 순으로 정렬 */
 function sortRecipients(recipients: RecipientRow[]): RecipientRow[] {
   return [...recipients].sort((a, b) => {
     if (a.responded !== b.responded) return a.responded ? -1 : 1;
     if (a.responded && b.responded) {
       return (a.respondedAt ?? "").localeCompare(b.respondedAt ?? "");
     }
-    if (a.delivered !== b.delivered) return a.delivered ? -1 : 1;
+    if (a.status !== b.status) return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
     return a.companyName.localeCompare(b.companyName, "ko");
   });
 }
@@ -144,6 +175,7 @@ export async function getCampaignsData(): Promise<CampaignsData> {
           c.status === "sent" && count
             ? Math.round(((stats?.responded_count ?? 0) / count) * 100)
             : null,
+        failedCount: stats?.failed_count ?? 0,
       };
     }),
   };
@@ -164,7 +196,7 @@ export async function getCampaignDetail(
     supabase
       .from("campaign_recipient")
       .select(
-        "id, company_id, delivered, responded, response_note, responded_at",
+        "id, company_id, delivered, status, error_message, responded, response_note, responded_at",
       )
       .eq("campaign_id", campaignId),
   ]);
@@ -208,6 +240,8 @@ export async function getCampaignDetail(
         companyId: r.company_id,
         companyName: companyName.get(r.company_id) ?? "—",
         delivered: r.delivered,
+        status: r.status,
+        errorMessage: r.error_message,
         responded: r.responded,
         responseNote: r.response_note,
         respondedAt: r.responded_at,
@@ -225,7 +259,9 @@ export async function getSegmentCompanies(): Promise<SegmentCompaniesData> {
   const [companies, credentials, deadlines] = await Promise.all([
     supabase
       .from("company")
-      .select("id, name, industry, revenue, condition_tags, contact_name")
+      .select(
+        "id, name, industry, revenue, condition_tags, contact_name, contact_phone",
+      )
       .eq("status", "active")
       .order("name"),
     supabase.from("credential").select("company_id, type"),
@@ -269,6 +305,42 @@ export async function getSegmentCompanies(): Promise<SegmentCompaniesData> {
       credentialTypes: credsByCompany.get(co.id) ?? [],
       nearestDaysLeft: nearest.get(co.id) ?? null,
       contactName: co.contact_name,
+      contactPhone: co.contact_phone,
+    })),
+  };
+}
+
+/**
+ * 마법사 2스텝용 — 이 워크스페이스가 실발송 가능한지와 검수 완료 템플릿 목록.
+ * 미연동이면 live=false로 기존 데모 템플릿 흐름을 유지한다.
+ */
+export async function getAlimtalkWizardData(): Promise<AlimtalkWizardData> {
+  const supabase = await createClient();
+  if (!supabase) return { live: false, templates: [] };
+
+  const member = await getMemberContext(supabase);
+  if ("error" in member) return { live: false, templates: [] };
+
+  const live = await isTenantAlimtalkLive(supabase, member.tenantId);
+  if (!live) return { live: false, templates: [] };
+
+  const { data, error } = await supabase
+    .from("alimtalk_template")
+    .select("id, name, content, variables")
+    .eq("is_active", true)
+    .order("name");
+
+  if (error) {
+    throw new Error(`알림톡 템플릿을 불러오지 못했습니다: ${error.message}`);
+  }
+
+  return {
+    live: true,
+    templates: (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      content: row.content,
+      variables: row.variables,
     })),
   };
 }

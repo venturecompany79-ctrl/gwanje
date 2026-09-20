@@ -8,6 +8,7 @@ import type {
   IpRightKind,
   IpRightStatus,
   NotificationType,
+  RecipientStatus,
   ScheduleType,
   TaskStage,
   TaskWorkStatus,
@@ -67,6 +68,14 @@ export const CAMPAIGN_STATUS_LABEL: Record<CampaignStatus, string> = {
 export const CAMPAIGN_CHANNEL_LABEL: Record<CampaignChannel, string> = {
   alimtalk: "알림톡",
   email: "이메일",
+};
+
+export const RECIPIENT_STATUS_LABEL: Record<RecipientStatus, string> = {
+  pending: "대기중",
+  sent: "발송됨",
+  delivered: "도달",
+  failed: "실패",
+  skipped: "제외",
 };
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {

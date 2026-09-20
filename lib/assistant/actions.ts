@@ -273,8 +273,9 @@ async function executeCampaignDraft(
   if (campaign.error || !campaign.data) {
     throw new Error(`일괄안내 초안을 만들지 못했습니다: ${campaign.error?.message ?? "알 수 없는 오류"}`);
   }
+  // 같은 기업이 두 번 들어오면 unique(campaign_id, company_id)에 걸린다.
   const recipients = await supabase.from("campaign_recipient").insert(
-    payload.companyIds.map((companyId) => ({
+    Array.from(new Set(payload.companyIds)).map((companyId) => ({
       tenant_id: member.tenantId,
       campaign_id: campaign.data.id,
       company_id: companyId,

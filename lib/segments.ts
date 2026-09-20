@@ -43,6 +43,8 @@ export interface SegmentCompany {
   nearestDaysLeft: number | null;
   /** 폰 미리보기 {담당자명} 치환용 */
   contactName: string | null;
+  /** 알림톡 수신 번호 — 없거나 휴대폰 형식이 아니면 발송에서 제외된다 */
+  contactPhone: string | null;
 }
 
 export const SEGMENT_FIELDS: SegmentField[] = [

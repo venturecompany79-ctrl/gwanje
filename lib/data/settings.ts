@@ -4,6 +4,10 @@ import {
   readCurrentMemberProfile,
 } from "@/lib/data/current-member";
 import { DEMO_SETTINGS } from "@/lib/demo-data";
+import { isAlimtalkConfigured, isAlimtalkEnabled } from "@/lib/alimtalk/config";
+import { decryptCred } from "@/lib/alimtalk/crypto";
+import { maskApiKey } from "@/lib/alimtalk/settings";
+import { getBalance } from "@/lib/alimtalk/solapi";
 import { isGoogleDriveConfigured } from "@/lib/google-drive/config";
 import {
   isMemberRole,
@@ -78,12 +82,39 @@ export interface SettingsTeamMember {
   isCurrentUser: boolean;
 }
 
+export interface SettingsAlimtalkTemplate {
+  id: string;
+  name: string;
+  solapiTemplateId: string;
+  content: string;
+  variables: string[];
+  isActive: boolean;
+}
+
+export interface SettingsAlimtalk {
+  /** 서버에 암호화 키·기능 플래그가 준비됐는지 */
+  configured: boolean;
+  /** 이 워크스페이스가 Solapi 계정을 연결했는지 */
+  connected: boolean;
+  /** 연결된 계정 정보 — API 시크릿은 절대 내려보내지 않는다 */
+  connection: {
+    maskedApiKey: string;
+    pfId: string;
+    senderPhone: string;
+    smsFallback: boolean;
+    /** 조회 실패 시 null(키 오류·네트워크) */
+    balance: number | null;
+  } | null;
+  templates: SettingsAlimtalkTemplate[];
+}
+
 export interface SettingsData {
   /** true면 Supabase 미연결 — 데모 데이터 표시 중 */
   demo: boolean;
   profile: SettingsProfile;
   categories: SettingsCategory[];
   drive: SettingsDrive;
+  alimtalk: SettingsAlimtalk;
   currentMember: SettingsCurrentMember;
   teamMembers: SettingsTeamMember[];
 }
@@ -134,6 +165,8 @@ export async function getSettingsData(): Promise<SettingsData> {
   );
   const canManageTeam = profile.role === "owner" && profile.status === "active";
 
+  const alimtalk = await readAlimtalkSettings(supabase);
+
   const teamRes = canManageTeam
     ? await supabase
         .from("profile")
@@ -181,6 +214,7 @@ export async function getSettingsData(): Promise<SettingsData> {
         : null,
       failedCount: driveFailedRes.count ?? 0,
     },
+    alimtalk,
     currentMember: {
       id: identity.userId,
       role: profile.role,
@@ -211,5 +245,80 @@ export async function getSettingsData(): Promise<SettingsData> {
         },
       ];
     }),
+  };
+}
+
+type SettingsClient = NonNullable<Awaited<ReturnType<typeof createClient>>>;
+
+/**
+ * 알림톡 연동 상태와 템플릿 목록.
+ * 잔액 조회는 실패해도 화면을 막지 않는다(키 만료·네트워크 오류 시 null).
+ */
+async function readAlimtalkSettings(
+  supabase: SettingsClient,
+): Promise<SettingsAlimtalk> {
+  const configured = isAlimtalkEnabled() && isAlimtalkConfigured();
+
+  // RLS가 campaigns.write 권한이 없는 사용자에게는 빈 결과를 준다.
+  const [settingsRes, templatesRes] = await Promise.all([
+    supabase
+      .from("alimtalk_settings")
+      .select("api_key_enc, api_secret_enc, pf_id, sender_phone, sms_fallback, is_active")
+      .maybeSingle(),
+    supabase
+      .from("alimtalk_template")
+      .select("id, name, solapi_template_id, content, variables, is_active")
+      .order("name"),
+  ]);
+
+  const templates = (templatesRes.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    solapiTemplateId: row.solapi_template_id,
+    content: row.content,
+    variables: row.variables,
+    isActive: row.is_active,
+  }));
+
+  const row = settingsRes.data;
+  if (!configured || !row || !row.is_active) {
+    return { configured, connected: false, connection: null, templates };
+  }
+
+  let apiKey: string;
+  let apiSecret: string;
+  try {
+    apiKey = decryptCred(row.api_key_enc);
+    apiSecret = decryptCred(row.api_secret_enc);
+  } catch (err) {
+    // 암호화 키가 바뀌었거나 손상 — 다시 연동해야 한다.
+    console.error("[settings:alimtalk-decrypt]", err);
+    return { configured, connected: false, connection: null, templates };
+  }
+
+  let balance: number | null = null;
+  try {
+    balance = await getBalance({
+      apiKey,
+      apiSecret,
+      pfId: row.pf_id,
+      senderPhone: row.sender_phone,
+      smsFallback: row.sms_fallback,
+    });
+  } catch (err) {
+    console.error("[settings:alimtalk-balance]", err);
+  }
+
+  return {
+    configured,
+    connected: true,
+    connection: {
+      maskedApiKey: maskApiKey(apiKey),
+      pfId: row.pf_id,
+      senderPhone: row.sender_phone,
+      smsFallback: row.sms_fallback,
+      balance,
+    },
+    templates,
   };
 }

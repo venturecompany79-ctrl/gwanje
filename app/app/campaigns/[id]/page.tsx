@@ -8,6 +8,7 @@ import { getCampaignDetail } from "@/lib/data/campaigns";
 import { formatShortDateTime } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
 import { CampaignStatusBadge } from "../_components/CampaignStatusBadge";
+import { RecipientStatusBadge } from "./_components/RecipientStatusBadge";
 import { SentToast } from "./_components/SentToast";
 
 export const metadata: Metadata = { title: "일괄안내 집계" };
@@ -25,12 +26,13 @@ export default async function CampaignDetailPage({
   if (!data) notFound();
 
   const { campaign, recipients } = data;
-  const delivered = recipients.filter((r) => r.delivered).length;
+  // 연락처가 없어 제외된 기업은 발송 모수에서 뺀다 — 응답률이 왜곡되지 않게.
+  const targeted = recipients.filter((r) => r.status !== "skipped");
+  const delivered = recipients.filter((r) => r.status === "delivered").length;
+  const failed = recipients.filter((r) => r.status === "failed").length;
   const responded = recipients.filter((r) => r.responded).length;
   const rate =
-    recipients.length > 0
-      ? Math.round((responded / recipients.length) * 100)
-      : 0;
+    targeted.length > 0 ? Math.round((responded / targeted.length) * 100) : 0;
 
   const headMeta =
     campaign.status === "sent" && campaign.sentAt
@@ -69,11 +71,15 @@ export default async function CampaignDetailPage({
       <div className="kpi-row">
         <div className="kpi">
           <div className="kpi-label">발송</div>
-          <div className="kpi-value num">{recipients.length}</div>
+          <div className="kpi-value num">{targeted.length}</div>
         </div>
         <div className="kpi">
           <div className="kpi-label">도달</div>
           <div className="kpi-value num">{delivered}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">실패</div>
+          <div className="kpi-value num">{failed}</div>
         </div>
         <div className="kpi">
           <div className="kpi-label">응답</div>
@@ -102,9 +108,9 @@ export default async function CampaignDetailPage({
             <thead>
               <tr>
                 <th>기업명</th>
-                <th className="c">도달</th>
+                <th className="c">발송 상태</th>
                 <th className="c">응답</th>
-                <th>응답 내용</th>
+                <th>응답 내용 / 실패 사유</th>
                 <th>응답 시각</th>
               </tr>
             </thead>
@@ -114,11 +120,8 @@ export default async function CampaignDetailPage({
                   <td className="co" data-label="기업명">
                     {r.companyName}
                   </td>
-                  <td className="c" data-label="도달">
-                    <span className={`yn ${r.delivered ? "yn--ok" : "yn--no"}`}>
-                      <span className="d" />
-                      {r.delivered ? "도달" : "미도달"}
-                    </span>
+                  <td className="c" data-label="발송 상태">
+                    <RecipientStatusBadge status={r.status} />
                   </td>
                   <td className="c" data-label="응답">
                     <span className={`yn ${r.responded ? "yn--ok" : "yn--no"}`}>
@@ -126,9 +129,11 @@ export default async function CampaignDetailPage({
                       {r.responded ? "응답" : "미응답"}
                     </span>
                   </td>
-                  <td data-label="응답 내용">
+                  <td data-label="응답 내용 / 실패 사유">
                     {r.responseNote ? (
                       <span className="ans">“{r.responseNote}”</span>
+                    ) : r.errorMessage ? (
+                      <span className="cell-muted">{r.errorMessage}</span>
                     ) : (
                       <span className="cell-muted">–</span>
                     )}
