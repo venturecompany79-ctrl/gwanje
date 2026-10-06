@@ -13,6 +13,7 @@ import {
   type DashboardFile,
 } from "@/lib/data/dashboard";
 import type { NotificationType } from "@/lib/database.types";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 function alertIcon(type: NotificationType, urgent: boolean) {
   if (urgent) {
@@ -115,7 +116,9 @@ export function DashboardWidgets({
                   <span className="monitor-file-type">{file.fileType.slice(0, 3)}</span>
                   <span className="monitor-activity-copy">
                     <strong>{file.name}</strong>
-                    <small>{file.companyName}</small>
+                    <small>
+                      <CompanyName id={file.companyId} name={file.companyName} />
+                    </small>
                   </span>
                   <time className="num">{file.when}</time>
                 </Link>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/icons";
 import type { DashboardFile, DashboardScope } from "@/lib/data/dashboard";
 import { AssistantMessageContent } from "./AssistantMessageContent";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 interface AssistantSource {
   id: string;
@@ -1007,7 +1008,9 @@ export function AssistantPanel({
                     />
                     <span>
                       <strong>{document.name}</strong>
-                      <small>{document.companyName}</small>
+                      <small>
+                        <CompanyName id={document.companyId} name={document.companyName} />
+                      </small>
                     </span>
                   </label>
                 ))}

@@ -5,6 +5,7 @@ import { IconAlert, IconBack } from "@/components/ui/icons";
 import { DEMO_COMPANIES } from "@/lib/demo-data";
 import { createClient } from "@/lib/supabase/server";
 import { GovProgramsWorkspace } from "./_components/GovProgramsWorkspace";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 export const metadata: Metadata = { title: "맞춤 정부지원사업" };
 export const dynamic = "force-dynamic";
@@ -72,7 +73,9 @@ export default async function CompanyGovProgramsPage({
           <IconBack /> 기업 목록
         </Link>
         <span className="sep">/</span>
-        <Link href={`/app/companies/${id}`}>{current.name}</Link>
+        <Link href={`/app/companies/${id}`}>
+          <CompanyName id={id} name={current.name} />
+        </Link>
         <span className="sep">/</span>
         <span className="cur">맞춤 정부지원사업</span>
       </nav>

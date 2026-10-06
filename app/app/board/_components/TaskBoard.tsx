@@ -15,7 +15,6 @@ import type { ToastOptions } from "@/components/ui/Toast";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
-  IconBuilding,
   IconKanban,
   IconPlus,
   IconSearch,
@@ -36,6 +35,7 @@ import {
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
 } from "@/lib/labels";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 type DueFilter = "all" | "7" | "30" | "overdue";
 
@@ -81,7 +81,7 @@ function BoardCard({
         aria-label={`${task.title} 상세 열기`}
       >
         <span className="kc-co">
-          <IconBuilding /> {task.companyName}
+          <CompanyName id={task.companyId} name={task.companyName} withMark />
         </span>
         <span className="kc-task">{task.title}</span>
         <span className="kc-foot">

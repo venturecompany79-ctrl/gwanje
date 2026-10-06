@@ -39,6 +39,7 @@ import {
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
 } from "@/lib/labels";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 type SortKey = "risk" | "name" | "recent";
 type ScopeKey = "mine" | "team";
@@ -293,7 +294,9 @@ function PortfolioTaskList({
     <div className="portfolio-task-drawer">
       <div className="portfolio-task-drawer-head">
         <div>
-          <strong>{company.name} Task</strong>
+          <strong>
+            <CompanyName id={company.id} name={company.name} /> Task
+          </strong>
           <span>지연·보류·마감 임박순</span>
         </div>
         {editable ? (
@@ -731,7 +734,9 @@ function CompanyPortfolioRows({
       <tr className={expanded ? "is-expanded" : undefined}>
         <td>
           <div className="portfolio-company">
-            <Link href={`/app/companies/${company.id}`}>{company.name}</Link>
+            <Link href={`/app/companies/${company.id}`}>
+              <CompanyName id={company.id} name={company.name} withMark />
+            </Link>
             <span>
               {company.industry ?? "업종 미입력"} ·{" "}
               {company.primaryConsultantName ?? "주담당 미배정"}

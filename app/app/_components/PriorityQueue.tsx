@@ -16,6 +16,7 @@ import type {
   DashboardQueueItem,
   DashboardScope,
 } from "@/lib/data/dashboard";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 type SourceFilter = "all" | DashboardQueueItem["source"];
 
@@ -210,12 +211,24 @@ export function PriorityQueue({
                   <td data-label="기업 / 업무" className="monitor-queue-work">
                     {item.href ? (
                       <Link href={item.href} className="monitor-queue-work-link">
-                        <strong>{item.companyName ?? "기업 미지정"}</strong>
+                        <strong>
+                          <CompanyName
+                            id={item.companyId}
+                            name={item.companyName ?? "기업 미지정"}
+                            withMark
+                          />
+                        </strong>
                         <span>{item.title}</span>
                       </Link>
                     ) : (
                       <>
-                        <strong>{item.companyName ?? "기업 미지정"}</strong>
+                        <strong>
+                          <CompanyName
+                            id={item.companyId}
+                            name={item.companyName ?? "기업 미지정"}
+                            withMark
+                          />
+                        </strong>
                         <span>{item.title}</span>
                       </>
                     )}

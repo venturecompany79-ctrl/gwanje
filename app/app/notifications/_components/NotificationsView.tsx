@@ -9,7 +9,6 @@ import {
   IconArrow,
   IconBell,
   IconBellOff,
-  IconBuilding,
   IconCalendar,
   IconCheck,
   IconChecks,
@@ -28,6 +27,7 @@ import type {
   NotificationItem,
   NotificationsData,
 } from "@/lib/data/notifications";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 type TypeFilter = "all" | NotificationType;
 
@@ -110,8 +110,7 @@ function NotifRow({
         </div>
         {n.companyName ? (
           <div className="n-sub">
-            <IconBuilding />
-            {n.companyName}
+            <CompanyName id={n.companyId} name={n.companyName} withMark />
           </div>
         ) : null}
       </div>

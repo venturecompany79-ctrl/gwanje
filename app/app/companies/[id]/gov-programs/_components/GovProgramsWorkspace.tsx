@@ -66,6 +66,7 @@ import {
   setProfileSourceIncluded,
   setProgramDecision,
 } from "../actions";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 interface WorkspaceData extends CompanyProgramMatchesData {
   canManageProfile: boolean;
@@ -533,7 +534,13 @@ export function GovProgramsWorkspace({
           <div className="gov-profile-main">
             <div className="gov-profile-title-row">
               <div>
-                <h2>{data.profile.company.name} 매칭 프로필</h2>
+                <h2>
+                  <CompanyName
+                    id={data.profile.company.id}
+                    name={data.profile.company.name}
+                  />{" "}
+                  매칭 프로필
+                </h2>
                 <p>
                   {data.profile.company.industry ?? "업종 미입력"} · {data.profile.company.region ?? "지역 미입력"} · {formatRevenue(data.profile.company.revenue)} · {data.profile.company.headcount !== null ? `${data.profile.company.headcount}명` : "인원 미입력"}
                 </p>

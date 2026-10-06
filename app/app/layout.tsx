@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Topbar } from "@/components/shell/Topbar";
 import { CategoryColorStyle } from "@/components/shell/CategoryColorStyle";
+import { CompanyBrandStyle } from "@/components/shell/CompanyBrandStyle";
 import { getShellData } from "@/lib/data/shell";
 import { getSubscriptionGate } from "@/lib/billing/data";
 import { IconAlert } from "@/components/ui/icons";
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <CategoryColorStyle />
+      <CompanyBrandStyle />
       <Sidebar
         consultantName={shell.consultantName}
         orgName={shell.orgName}

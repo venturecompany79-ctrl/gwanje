@@ -6,6 +6,11 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { DEMO_CATEGORY_COLORS } from "@/lib/data/categoryColors";
 import { DEMO_COMPANY_DETAIL } from "@/lib/demo-data";
+import {
+  COMPANY_BRAND_COLORS,
+  companyLogoUrl,
+  type CompanyBrandEntry,
+} from "@/lib/companyBrand";
 import { daysFromToday } from "@/lib/datetime";
 import { TASK_STAGE_ORDER, type CompanyStatus } from "@/lib/labels";
 import type { Supabase } from "@/lib/actions/shared";
@@ -38,6 +43,8 @@ export interface SharedTaskRow {
 export interface SharedDashboardData {
   demo: boolean;
   companyName: string;
+  /** 기업 로고·기업명 컬러 (앱과 같은 CompanyBrandStyle 규칙으로 주입) */
+  brand: CompanyBrandEntry;
   industry: string | null;
   ceoName: string | null;
   status: CompanyStatus;
@@ -126,6 +133,7 @@ function buildDashboard(
   demo: boolean,
   company: {
     name: string;
+    brand: CompanyBrandEntry;
     industry: string | null;
     ceoName: string | null;
     status: CompanyStatus;
@@ -137,6 +145,7 @@ function buildDashboard(
   return {
     demo,
     companyName: company.name,
+    brand: company.brand,
     industry: company.industry,
     ceoName: company.ceoName,
     status: company.status,
@@ -162,7 +171,7 @@ export async function getSharedDashboard(
   const [company, tasks, categories] = await Promise.all([
     service
       .from("company")
-      .select("name, industry, ceo_name, status")
+      .select("name, industry, ceo_name, status, brand_color, logo_path")
       .eq("tenant_id", share.tenantId)
       .eq("id", share.companyId)
       .maybeSingle(),
@@ -212,6 +221,13 @@ export async function getSharedDashboard(
     false,
     {
       name: company.data.name,
+      brand: {
+        id: share.companyId,
+        color: company.data.brand_color,
+        logoUrl: company.data.logo_path
+          ? companyLogoUrl(company.data.logo_path)
+          : null,
+      },
       industry: company.data.industry,
       ceoName: company.data.ceo_name,
       status: (company.data.status as CompanyStatus) ?? "active",
@@ -239,6 +255,11 @@ export function getDemoSharedDashboard(): SharedDashboardData {
     true,
     {
       name: detail?.company.name ?? "(주)테크노바",
+      brand: {
+        id: "00000000-0000-0000-0000-0000000000c1",
+        color: COMPANY_BRAND_COLORS[0].value,
+        logoUrl: null,
+      },
       industry: detail?.company.industry ?? "정보통신업",
       ceoName: detail?.company.ceoName ?? null,
       status: detail?.company.status ?? "active",

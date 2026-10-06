@@ -1,4 +1,6 @@
 import { buildCategoryColorCss } from "@/components/shell/CategoryColorStyle";
+import { CompanyMark, CompanyName } from "@/components/ui/CompanyName";
+import { buildCompanyBrandCss } from "@/lib/companyBrand";
 import { Badge } from "@/components/ui/Badge";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DdayBadge } from "@/components/ui/DdayBadge";
@@ -47,7 +49,8 @@ export function ShareDashboard({ data }: { data: SharedDashboardData }) {
   );
   const doneTasks = data.tasks.filter((t) => t.workStatus === "completed");
   const barStages = TASK_STAGE_ORDER.filter((s) => kpi.byStage[s] > 0);
-  const categoryCss = buildCategoryColorCss(data.categoryColors);
+  const categoryCss =
+    buildCategoryColorCss(data.categoryColors) + buildCompanyBrandCss([data.brand]);
   const kpiTiles = [
     { label: "전체 관리포인트", value: kpi.total, unit: "건", className: "" },
     { label: "진행 중", value: kpi.inProgress, unit: "건", className: "" },
@@ -76,7 +79,10 @@ export function ShareDashboard({ data }: { data: SharedDashboardData }) {
 
       <div className="share-co-head">
         <div className="share-co-id">
-          <h1>{data.companyName}</h1>
+          <CompanyMark id={data.brand.id} name={data.companyName} size="lg" />
+          <h1>
+            <CompanyName id={data.brand.id} name={data.companyName} />
+          </h1>
           <Badge tone={data.status === "ended" ? "neutral" : "success"}>
             {COMPANY_STATUS_LABEL[data.status]}
           </Badge>

@@ -36,6 +36,13 @@ import {
 } from "@/lib/google-drive/connections";
 import { triggerDriveSyncAfterResponse } from "@/lib/google-drive/trigger";
 import { normalizeConditionTags } from "@/lib/company-tags";
+import {
+  COMPANY_LOGOS_BUCKET,
+  COMPANY_LOGO_MAX_BYTES,
+  COMPANY_LOGO_MIME_BY_EXTENSION,
+  isCompanyBrandColor,
+  isCompanyLogoPath,
+} from "@/lib/companyBrand";
 import { validatePrimaryConsultant } from "@/lib/data/consultants";
 
 type Supabase = NonNullable<Awaited<ReturnType<typeof createClient>>>;
@@ -1092,10 +1099,35 @@ export async function updateCompany(
     };
   }
 
+  // 브랜드(로고·컬러) — 폼에 필드가 있을 때만 갱신. 컬러는 팔레트, 로고는 이 기업 경로만 허용
+  const brandUpdate: { brand_color?: string | null; logo_path?: string | null } = {};
+  let previousLogoPath: string | null = null;
+  if (formData.has("brand_color")) {
+    const color = optionalText(formData, "brand_color");
+    if (color !== null && !isCompanyBrandColor(color)) {
+      return { ok: false, error: "선택할 수 없는 컬러입니다." };
+    }
+    brandUpdate.brand_color = color;
+  }
+  if (formData.has("logo_path")) {
+    const logoPath = optionalText(formData, "logo_path");
+    if (logoPath !== null && !isCompanyLogoPath(logoPath, companyId)) {
+      return { ok: false, error: "로고 파일 경로가 올바르지 않습니다. 다시 업로드해 주세요." };
+    }
+    const { data: current } = await supabase
+      .from("company")
+      .select("logo_path")
+      .eq("id", companyId)
+      .maybeSingle();
+    previousLogoPath = current?.logo_path ?? null;
+    brandUpdate.logo_path = logoPath;
+  }
+
   const { error } = await supabase
     .from("company")
     .update({
       name,
+      ...brandUpdate,
       biz_no: optionalText(formData, "biz_no"),
       industry: optionalText(formData, "industry"),
       business_condition: optionalText(formData, "business_condition"),
@@ -1119,8 +1151,57 @@ export async function updateCompany(
     return { ok: false, error: `저장에 실패했습니다: ${error.message}` };
   }
 
+  // 로고를 바꾸거나 지웠으면 이전 파일 정리(실패해도 저장은 유지 — 고아 파일만 남는다)
+  if (previousLogoPath && previousLogoPath !== brandUpdate.logo_path) {
+    const { error: removeError } = await supabase.storage
+      .from(COMPANY_LOGOS_BUCKET)
+      .remove([previousLogoPath]);
+    if (removeError) console.error("[updateCompany:logo-remove]", removeError.message);
+  }
+
   revalidateCompany(companyId);
+  // 로고·컬러는 앱 셸이 전 화면에 주입하므로 셸을 쓰는 모든 경로를 갱신
+  revalidatePath("/app", "layout");
   return { ok: true, error: null };
+}
+
+/** 로고 업로드 준비 — 경로는 서버가 정한다({tenant}/{company}/{uuid}.{ext}). */
+export async function prepareCompanyLogoUpload(
+  companyId: string,
+  file: { name: string; size: number; type?: string },
+): Promise<ActionResult & { bucket?: string; path?: string; contentType?: string }> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+
+  const allowed = await requirePermission(supabase, "companies.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  const ctx = await getTenantContext(supabase);
+  if ("error" in ctx) return { ok: false, error: ctx.error };
+
+  const access = await assertCompanyAccess(supabase, companyId, ctx.tenantId);
+  if (!access.ok) return access;
+
+  const size = Number(file.size);
+  if (!Number.isFinite(size) || size <= 0) {
+    return { ok: false, error: "업로드할 로고 파일을 선택해 주세요." };
+  }
+  if (size > COMPANY_LOGO_MAX_BYTES) {
+    return { ok: false, error: "로고는 1MB 이하 이미지만 올릴 수 있습니다." };
+  }
+  const extension = getFileExtension(file.name);
+  const contentType = extension ? COMPANY_LOGO_MIME_BY_EXTENSION[extension] : undefined;
+  if (!extension || !contentType) {
+    return { ok: false, error: "로고는 PNG, JPG, WebP 이미지만 올릴 수 있습니다." };
+  }
+
+  return {
+    ok: true,
+    error: null,
+    bucket: COMPANY_LOGOS_BUCKET,
+    path: `${ctx.tenantId}/${companyId}/${randomUUID()}.${extension}`,
+    contentType,
+  };
 }
 
 /**

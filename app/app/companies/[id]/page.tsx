@@ -7,6 +7,7 @@ import { getCompanyShareSettings } from "@/lib/data/company-share";
 import { isCompanyShareConfigured } from "@/lib/share/config";
 import { createClient } from "@/lib/supabase/server";
 import { CompanyDetailView } from "./_components/CompanyDetailView";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 export const metadata: Metadata = { title: "기업 상세" };
 export const dynamic = "force-dynamic";
@@ -61,7 +62,9 @@ export default async function CompanyDetailPage({
           <IconBack /> 기업 목록
         </Link>
         <span className="sep">/</span>
-        <span className="cur">{data.company.name}</span>
+        <span className="cur">
+          <CompanyName id={data.company.id} name={data.company.name} />
+        </span>
       </nav>
 
       <CompanyDetailView

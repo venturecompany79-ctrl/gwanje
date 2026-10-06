@@ -21,6 +21,7 @@ import {
 } from "./_components/DashboardSections";
 import { DashboardToolbar } from "./_components/DashboardToolbar";
 import { KpiRow } from "./_components/KpiRow";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 export const metadata: Metadata = { title: "통합 관제 대시보드" };
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ function AlertStrip({
   let href: string | null = null;
   let icon: ReactNode = <IconCheck />;
   let eyebrow = "관제 상태 안정";
-  let title = "현재 즉시 조치가 필요한 예외가 없습니다.";
+  let title: ReactNode = "현재 즉시 조치가 필요한 예외가 없습니다.";
   let detail = "정기 갱신으로 새 위험 항목을 계속 확인합니다.";
 
   if (overdue) {
@@ -66,14 +67,24 @@ function AlertStrip({
     href = deadlineHref(overdue);
     icon = <IconAlert />;
     eyebrow = "즉시 조치";
-    title = `${overdue.company_name ?? "기업 미지정"} · ${overdue.title}`;
+    title = (
+      <>
+        <CompanyName id={overdue.company_id} name={overdue.company_name ?? "기업 미지정"} />
+        {` · ${overdue.title}`}
+      </>
+    );
     detail = "기한이 지난 업무입니다. 담당자와 현재 진행 상태를 확인해 주세요.";
   } else if (urgent && urgent.days_left <= 7) {
     tone = "warning";
     href = deadlineHref(urgent);
     icon = <IconAlert />;
     eyebrow = "이번 주 우선 처리";
-    title = `${urgent.company_name ?? "기업 미지정"} · ${urgent.title}`;
+    title = (
+      <>
+        <CompanyName id={urgent.company_id} name={urgent.company_name ?? "기업 미지정"} />
+        {` · ${urgent.title}`}
+      </>
+    );
     detail = "7일 안에 마감되는 업무입니다. 필요한 자료와 후속 조치를 점검해 주세요.";
   } else if (unassigned > 0) {
     tone = "attention";

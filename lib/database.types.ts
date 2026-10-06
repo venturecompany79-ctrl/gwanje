@@ -441,6 +441,7 @@ export type Database = {
       company: {
         Row: {
           biz_no: string | null
+          brand_color: string | null
           business_condition: string | null
           ceo_name: string | null
           condition_tags: string[]
@@ -456,6 +457,7 @@ export type Database = {
           headcount: number | null
           id: string
           industry: string | null
+          logo_path: string | null
           memo: string | null
           name: string
           primary_consultant_id: string | null
@@ -466,6 +468,7 @@ export type Database = {
         }
         Insert: {
           biz_no?: string | null
+          brand_color?: string | null
           business_condition?: string | null
           ceo_name?: string | null
           condition_tags?: string[]
@@ -481,6 +484,7 @@ export type Database = {
           headcount?: number | null
           id?: string
           industry?: string | null
+          logo_path?: string | null
           memo?: string | null
           name: string
           primary_consultant_id?: string | null
@@ -491,6 +495,7 @@ export type Database = {
         }
         Update: {
           biz_no?: string | null
+          brand_color?: string | null
           business_condition?: string | null
           ceo_name?: string | null
           condition_tags?: string[]
@@ -506,6 +511,7 @@ export type Database = {
           headcount?: number | null
           id?: string
           industry?: string | null
+          logo_path?: string | null
           memo?: string | null
           name?: string
           primary_consultant_id?: string | null

@@ -16,6 +16,7 @@ import { OverviewTab } from "./OverviewTab";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
 import { IconSparkle } from "@/components/ui/icons";
+import { CompanyMark, CompanyName } from "@/components/ui/CompanyName";
 
 function TabLoading({ title }: { title: string }) {
   return (
@@ -108,7 +109,10 @@ function CompanyHeader({
     <div className="co-header">
       <div className="co-top">
         <div className="co-id">
-          <h1>{company.name}</h1>
+          <CompanyMark id={company.id} name={company.name} size="lg" />
+          <h1>
+            <CompanyName id={company.id} name={company.name} />
+          </h1>
           {isEnded ? <Badge tone="neutral">종료</Badge> : null}
           {!isEnded && contractDays !== null ? (
             <Badge tone={contractDays < 0 ? "critical" : contractDays <= 30 ? "attention" : "neutral"}>

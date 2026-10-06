@@ -16,7 +16,6 @@ import { InputField } from "@/components/ui/Input";
 import { SlideOver } from "@/components/ui/SlideOver";
 import {
   IconAlert,
-  IconBuilding,
   IconFile,
   IconInfo,
   IconPlus,
@@ -35,6 +34,7 @@ import {
   TaskStateControls,
   type TaskStateSnapshot,
 } from "./TaskStateControls";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 function formatFileSize(size: number): string {
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`;
@@ -147,7 +147,7 @@ export function TaskSlideOver({
             <div className="so-submeta">
               {companyName ? (
                 <span className="so-eyebrow">
-                  <IconBuilding /> {companyName}
+                  <CompanyName id={companyId} name={companyName} withMark />
                 </span>
               ) : null}
               <CategoryChip name={task.categoryName} />

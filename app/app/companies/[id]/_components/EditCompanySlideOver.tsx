@@ -9,6 +9,7 @@ import { IconAlert, IconEdit, IconX } from "@/components/ui/icons";
 import type { CompanyProfile } from "@/lib/data/company-detail";
 import type { ConsultantOption } from "@/lib/data/consultants";
 import { updateCompany } from "../actions";
+import { CompanyBrandFields } from "./CompanyBrandFields";
 
 export function EditCompanyButton({
   company,
@@ -79,6 +80,13 @@ export function EditCompanyButton({
                   required
                   defaultValue={company.name}
                   autoFocus
+                />
+                <CompanyBrandFields
+                  companyId={company.id}
+                  name={company.name}
+                  initialColor={company.brandColor ?? null}
+                  initialLogoPath={company.logoPath ?? null}
+                  demo={demo}
                 />
                 <div className="field">
                   <label htmlFor="company-primary-consultant">주담당 컨설턴트</label>

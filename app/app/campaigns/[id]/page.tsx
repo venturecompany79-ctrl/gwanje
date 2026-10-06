@@ -9,6 +9,7 @@ import { formatShortDateTime } from "@/lib/format";
 import { formatKstDate } from "@/lib/datetime";
 import { CampaignStatusBadge } from "../_components/CampaignStatusBadge";
 import { SentToast } from "./_components/SentToast";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 export const metadata: Metadata = { title: "일괄안내 집계" };
 export const dynamic = "force-dynamic";
@@ -112,7 +113,7 @@ export default async function CampaignDetailPage({
               {recipients.map((r) => (
                 <tr key={r.id}>
                   <td className="co" data-label="기업명">
-                    {r.companyName}
+                    <CompanyName id={r.companyId} name={r.companyName} withMark />
                   </td>
                   <td className="c" data-label="도달">
                     <span className={`yn ${r.delivered ? "yn--ok" : "yn--no"}`}>

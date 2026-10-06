@@ -49,6 +49,9 @@ export interface CompanyProfile {
   contractDaysLeft: number | null;
   endedAt: string | null;
   endedReason: string | null;
+  /** 브랜드 — 기업명 컬러(팔레트 값)·로고 스토리지 경로. 편집 폼 초기값용 */
+  brandColor?: string | null;
+  logoPath?: string | null;
 }
 
 /** 자격에 명시 연결(credential_id)된 첨부 자료 — 기업 '자료' 탭의 document와 동일 행 */
@@ -254,7 +257,7 @@ export async function getCompanyDetail(
       supabase
         .from("company")
         .select(
-          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, primary_consultant_id, status, contract_start_date, contract_end_date, ended_at, ended_reason",
+          "id, name, biz_no, industry, business_condition, region, founded_date, revenue, headcount, ceo_name, contact_name, contact_phone, contact_email, condition_tags, memo, primary_consultant_id, status, contract_start_date, contract_end_date, ended_at, ended_reason, brand_color, logo_path",
         )
         .eq("id", companyId)
         .maybeSingle(),
@@ -578,6 +581,8 @@ export async function getCompanyDetail(
     company: {
       id: company.data.id,
       name: company.data.name,
+      brandColor: company.data.brand_color,
+      logoPath: company.data.logo_path,
       bizNo: company.data.biz_no,
       industry: company.data.industry,
       businessCondition: company.data.business_condition,

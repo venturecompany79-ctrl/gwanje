@@ -40,6 +40,7 @@ import {
   type SegmentOp,
   type SegmentRule,
 } from "@/lib/segments";
+import { CompanyName } from "@/components/ui/CompanyName";
 
 const STEP_LABELS = ["세그먼트", "메시지", "발송 확인"];
 
@@ -404,8 +405,7 @@ export function CampaignWizard({
                 <div className="prev-list">
                   {targets.map((t) => (
                     <div key={t.id} className="prev-item">
-                      <IconBuilding />
-                      {t.name}
+                      <CompanyName id={t.id} name={t.name} withMark />
                     </div>
                   ))}
                 </div>
@@ -577,8 +577,7 @@ export function CampaignWizard({
             <div className="target-list">
               {targets.map((t) => (
                 <div key={t.id} className="prev-item">
-                  <IconBuilding />
-                  {t.name}
+                  <CompanyName id={t.id} name={t.name} withMark />
                 </div>
               ))}
             </div>
