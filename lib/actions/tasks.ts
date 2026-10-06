@@ -332,7 +332,18 @@ export async function deleteTask(
     (files ?? []).map((file) => file.file_path),
   );
 
+  // notification.ref_id는 FK가 없어 cascade되지 않는다 — 고아 알림 정리.
+  const { error: notificationError } = await supabase
+    .from("notification")
+    .delete()
+    .eq("ref_table", "task")
+    .eq("ref_id", taskId);
+  if (notificationError) {
+    console.error("[deleteTask:notification]", notificationError.message);
+  }
+
   revalidateTaskScreens(companyId);
+  revalidatePath("/app", "layout");
   return { ok: true, error: null };
 }
 
