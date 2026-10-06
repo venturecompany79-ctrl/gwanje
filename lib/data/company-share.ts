@@ -12,9 +12,13 @@ import {
   type CompanyBrandEntry,
 } from "@/lib/companyBrand";
 import { daysFromToday } from "@/lib/datetime";
-import { TASK_STAGE_ORDER, type CompanyStatus } from "@/lib/labels";
+import {
+  TASK_WORK_STATUS_ORDER,
+  type ActiveTaskWorkStatus,
+  type CompanyStatus,
+} from "@/lib/labels";
 import type { Supabase } from "@/lib/actions/shared";
-import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
+import type { TaskWorkStatus } from "@/lib/database.types";
 
 export interface ShareGateInfo {
   id: string;
@@ -33,7 +37,6 @@ export interface SharedTaskRow {
   id: string;
   title: string;
   categoryName: string | null;
-  stage: TaskStage;
   workStatus: TaskWorkStatus;
   dueDate: string | null;
   daysLeft: number | null;
@@ -54,7 +57,7 @@ export interface SharedDashboardData {
     inProgress: number;
     done: number;
     progressPct: number;
-    byStage: Record<TaskStage, number>;
+    byStatus: Record<ActiveTaskWorkStatus, number>;
   };
   /** updated_at 최신순 상위 5건 */
   recentUpdates: SharedTaskRow[];
@@ -99,10 +102,12 @@ export async function getShareByToken(
 }
 
 function buildKpi(tasks: SharedTaskRow[]): SharedDashboardData["kpi"] {
-  const byStage = Object.fromEntries(
-    TASK_STAGE_ORDER.map((s) => [s, 0]),
-  ) as Record<TaskStage, number>;
-  for (const t of tasks) byStage[t.stage] += 1;
+  const byStatus = Object.fromEntries(
+    TASK_WORK_STATUS_ORDER.map((s) => [s, 0]),
+  ) as Record<ActiveTaskWorkStatus, number>;
+  for (const t of tasks) {
+    byStatus[t.workStatus === "on_hold" ? "waiting" : t.workStatus] += 1;
+  }
   const total = tasks.length;
   const done = tasks.filter((task) => task.workStatus === "completed").length;
   return {
@@ -110,7 +115,7 @@ function buildKpi(tasks: SharedTaskRow[]): SharedDashboardData["kpi"] {
     inProgress: total - done,
     done,
     progressPct: total > 0 ? Math.round((done / total) * 100) : 0,
-    byStage,
+    byStatus,
   };
 }
 
@@ -178,7 +183,7 @@ export async function getSharedDashboard(
     service
       .from("task")
       .select(
-        "id, title, category_id, stage, work_status, due_date, updated_at",
+        "id, title, category_id, work_status, due_date, updated_at",
       )
       .eq("tenant_id", share.tenantId)
       .eq("company_id", share.companyId)
@@ -210,7 +215,6 @@ export async function getSharedDashboard(
     categoryName: t.category_id
       ? (categoryName.get(t.category_id) ?? null)
       : null,
-    stage: t.stage,
     workStatus: t.work_status,
     dueDate: t.due_date,
     daysLeft: t.due_date ? daysFromToday(t.due_date) : null,
@@ -244,7 +248,6 @@ export function getDemoSharedDashboard(): SharedDashboardData {
     id: t.id,
     title: t.title,
     categoryName: t.categoryName,
-    stage: t.stage,
     workStatus: t.workStatus,
     dueDate: t.dueDate,
     daysLeft: t.daysLeft,

@@ -9,7 +9,7 @@ import {
   getFileExtension,
   normalizeCompanyDocumentMimeType,
 } from "@/lib/storage";
-import type { TaskStage, TaskWorkStatus } from "@/lib/database.types";
+import type { TaskWorkStatus } from "@/lib/database.types";
 import { daysFromToday } from "@/lib/datetime";
 import type { TaskRow } from "@/lib/data/company-detail";
 import {
@@ -22,18 +22,16 @@ import {
   type ActionResult,
 } from "@/lib/actions/shared";
 
-const TASK_STAGES: TaskStage[] = ["diagnosis", "proposal", "application", "result"];
+// on_hold는 waiting에 통합 — 새로 쓰지 않는다.
 const TASK_WORK_STATUSES: TaskWorkStatus[] = [
   "planned",
   "in_progress",
   "waiting",
-  "on_hold",
   "completed",
 ];
 
 export interface TaskStateMutationResult extends ActionResult {
   taskId?: string;
-  stage?: TaskStage;
   workStatus?: TaskWorkStatus;
   updatedAt?: string;
   conflict?: boolean;
@@ -193,17 +191,6 @@ export async function addTask(
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "과제명을 입력해 주세요." };
 
-  const stage = String(formData.get("stage") ?? "diagnosis") as TaskStage;
-  if (!TASK_STAGES.includes(stage)) {
-    return { ok: false, error: "단계 값이 올바르지 않습니다." };
-  }
-  const workStatus = String(
-    formData.get("work_status") ?? "planned",
-  ) as TaskWorkStatus;
-  if (!TASK_WORK_STATUSES.includes(workStatus)) {
-    return { ok: false, error: "업무상태 값이 올바르지 않습니다." };
-  }
-
   const dueDate = parseOptionalDate(formData, "due_date", "마감일");
   if (!dueDate.ok) return { ok: false, error: dueDate.error };
 
@@ -215,8 +202,7 @@ export async function addTask(
       company_id: companyId,
       title,
       category_id: optionalText(formData, "category_id"),
-      stage,
-      work_status: workStatus,
+      work_status: "planned",
       due_date: dueDate.value,
       assignee_id: allowed.userId,
       memo: optionalText(formData, "memo"),
@@ -347,73 +333,6 @@ export async function deleteTask(
   return { ok: true, error: null };
 }
 
-/** 칸반 드래그 이동 — 단계만 변경 (메모 보존) */
-export async function updateTaskStage(
-  companyId: string,
-  taskId: string,
-  stage: TaskStage,
-  expectedUpdatedAt?: string,
-): Promise<TaskStateMutationResult> {
-  const supabase = await createClient();
-  if (!supabase) return { ok: false, error: DEMO_ERROR };
-
-  const allowed = await requirePermission(supabase, "tasks.write");
-  if ("error" in allowed) return { ok: false, error: allowed.error };
-
-  if (!TASK_STAGES.includes(stage)) {
-    return { ok: false, error: "단계 값이 올바르지 않습니다." };
-  }
-
-  let updateQuery = supabase
-    .from("task")
-    .update({ stage })
-    .eq("id", taskId)
-    .eq("company_id", companyId);
-  if (expectedUpdatedAt) {
-    updateQuery = updateQuery.eq("updated_at", expectedUpdatedAt);
-  }
-  const { data, error } = await updateQuery.select(
-    "id, stage, work_status, updated_at",
-  );
-  if (error) {
-    console.error("[updateTaskStage]", error.code, error.message);
-    return { ok: false, error: `변경에 실패했습니다: ${error.message}` };
-  }
-  if (!data || data.length === 0) {
-    if (expectedUpdatedAt) {
-      const { data: current } = await supabase
-        .from("task")
-        .select("id, stage, work_status, updated_at")
-        .eq("id", taskId)
-        .eq("company_id", companyId)
-        .maybeSingle();
-      if (current) {
-        return {
-          ok: false,
-          error: "다른 사용자가 먼저 변경했습니다. 최신 상태를 다시 불러왔습니다.",
-          conflict: true,
-          taskId: current.id,
-          stage: current.stage,
-          workStatus: current.work_status,
-          updatedAt: current.updated_at,
-        };
-      }
-    }
-    return { ok: false, error: "과제를 찾을 수 없습니다." };
-  }
-
-  revalidateTaskScreens(companyId);
-  const task = data[0];
-  return {
-    ok: true,
-    error: null,
-    taskId: task.id,
-    stage: task.stage,
-    workStatus: task.work_status,
-    updatedAt: task.updated_at,
-  };
-}
-
 /** 기업 관제표/Task 행의 빠른 업무상태 변경. */
 export async function updateTaskWorkStatus(
   companyId: string,
@@ -441,7 +360,7 @@ export async function updateTaskWorkStatus(
   }
 
   const { data, error } = await updateQuery.select(
-    "id, stage, work_status, updated_at",
+    "id, work_status, updated_at",
   );
   if (error) {
     console.error("[updateTaskWorkStatus]", error.code, error.message);
@@ -451,7 +370,7 @@ export async function updateTaskWorkStatus(
     if (expectedUpdatedAt) {
       const { data: current } = await supabase
         .from("task")
-        .select("id, stage, work_status, updated_at")
+        .select("id, work_status, updated_at")
         .eq("id", taskId)
         .eq("company_id", companyId)
         .maybeSingle();
@@ -461,7 +380,6 @@ export async function updateTaskWorkStatus(
           error: "다른 사용자가 먼저 변경했습니다. 최신 상태를 다시 불러왔습니다.",
           conflict: true,
           taskId: current.id,
-          stage: current.stage,
           workStatus: current.work_status,
           updatedAt: current.updated_at,
         };
@@ -476,7 +394,6 @@ export async function updateTaskWorkStatus(
     ok: true,
     error: null,
     taskId: task.id,
-    stage: task.stage,
     workStatus: task.work_status,
     updatedAt: task.updated_at,
   };
@@ -510,7 +427,7 @@ export async function getCompanyPortfolioTasks(
     supabase
       .from("task")
       .select(
-        "id, title, category_id, stage, work_status, due_date, assignee_id, memo, updated_at",
+        "id, title, category_id, work_status, due_date, assignee_id, memo, updated_at",
       )
       .eq("company_id", companyId)
       .neq("work_status", "completed"),
@@ -542,8 +459,7 @@ export async function getCompanyPortfolioTasks(
       categoryName: task.category_id
         ? (categoryName.get(task.category_id) ?? null)
         : null,
-      stage: task.stage,
-      workStatus: task.work_status,
+        workStatus: task.work_status,
       dueDate: task.due_date,
       daysLeft: task.due_date ? daysFromToday(task.due_date) : null,
       assigneeId: task.assignee_id,
@@ -560,9 +476,6 @@ export async function getCompanyPortfolioTasks(
       const overdueA = a.daysLeft !== null && a.daysLeft < 0 ? 0 : 1;
       const overdueB = b.daysLeft !== null && b.daysLeft < 0 ? 0 : 1;
       if (overdueA !== overdueB) return overdueA - overdueB;
-      const holdA = a.workStatus === "on_hold" ? 0 : 1;
-      const holdB = b.workStatus === "on_hold" ? 0 : 1;
-      if (holdA !== holdB) return holdA - holdB;
       return (
         (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
         (b.daysLeft ?? Number.MAX_SAFE_INTEGER)

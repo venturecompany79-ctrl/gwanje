@@ -183,9 +183,6 @@ function demoCompany(
       const overdueA = a.daysLeft !== null && a.daysLeft < 0 ? 0 : 1;
       const overdueB = b.daysLeft !== null && b.daysLeft < 0 ? 0 : 1;
       if (overdueA !== overdueB) return overdueA - overdueB;
-      const holdA = a.workStatus === "on_hold" ? 0 : 1;
-      const holdB = b.workStatus === "on_hold" ? 0 : 1;
-      if (holdA !== holdB) return holdA - holdB;
       return (
         (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
         (b.daysLeft ?? Number.MAX_SAFE_INTEGER)
@@ -223,19 +220,12 @@ function demoCompany(
     unassignedTaskCount: activeTasks.filter(
       (task) => task.assigneeName === null,
     ).length,
-    stageCounts: {
-      diagnosis: activeTasks.filter((task) => task.stage === "diagnosis").length,
-      proposal: activeTasks.filter((task) => task.stage === "proposal").length,
-      application: activeTasks.filter((task) => task.stage === "application").length,
-      result: activeTasks.filter((task) => task.stage === "result").length,
-    },
     workStatusCounts: {
       planned: companyTasks.filter((task) => task.workStatus === "planned").length,
       in_progress: companyTasks.filter(
         (task) => task.workStatus === "in_progress",
       ).length,
       waiting: companyTasks.filter((task) => task.workStatus === "waiting").length,
-      on_hold: companyTasks.filter((task) => task.workStatus === "on_hold").length,
       completed: companyTasks.filter(
         (task) => task.workStatus === "completed",
       ).length,
@@ -246,7 +236,6 @@ function demoCompany(
           title: priorityTask.title,
           categoryId: priorityTask.categoryId,
           categoryName: priorityTask.categoryName,
-          stage: priorityTask.stage,
           workStatus: priorityTask.workStatus,
           dueDate: priorityTask.dueDate,
           daysLeft: priorityTask.daysLeft,
@@ -355,11 +344,9 @@ function demoTask(
   const workStatus: TaskWorkStatus =
     stage === "result"
       ? "completed"
-      : n === 2
+      : n === 2 || n === 7
         ? "waiting"
-        : n === 7
-          ? "on_hold"
-          : n === 9
+        : n === 9
             ? "planned"
             : "in_progress";
   return {
@@ -368,7 +355,6 @@ function demoTask(
     categoryId: categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].id,
     categoryName:
       categoryIdx === null ? null : DEMO_CATEGORIES[categoryIdx].name,
-    stage,
     workStatus,
     dueDate: dueInDays === null ? null : dateAfter(dueInDays),
     daysLeft: dueInDays,

@@ -12,7 +12,6 @@ import type {
   MeetingReportSourceRole,
   MeetingReportStatus,
   ScheduleType,
-  TaskStage,
   TaskWorkStatus,
 } from "@/lib/database.types";
 import { isReportSourceSupported } from "@/lib/reports/file-types";
@@ -120,7 +119,6 @@ export interface TaskRow {
   title: string;
   categoryId: string | null;
   categoryName: string | null;
-  stage: TaskStage;
   workStatus: TaskWorkStatus;
   dueDate: string | null;
   daysLeft: number | null;
@@ -280,7 +278,7 @@ export async function getCompanyDetail(
       supabase
         .from("task")
         .select(
-          "id, title, category_id, stage, work_status, due_date, assignee_id, memo, source_credential_id, updated_at",
+          "id, title, category_id, work_status, due_date, assignee_id, memo, source_credential_id, updated_at",
         )
         .eq("company_id", companyId),
       supabase
@@ -516,7 +514,6 @@ export async function getCompanyDetail(
       categoryName: t.category_id
         ? (categoryName.get(t.category_id) ?? null)
         : null,
-      stage: t.stage,
       workStatus: t.work_status,
       dueDate: t.due_date,
       daysLeft: t.due_date ? daysFromToday(t.due_date) : null,

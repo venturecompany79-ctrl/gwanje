@@ -9,38 +9,26 @@ import type {
   IpRightStatus,
   NotificationType,
   ScheduleType,
-  TaskStage,
   TaskWorkStatus,
 } from "@/lib/database.types";
 import type { SourceCode, SupportField } from "@/lib/gov-programs/types";
 
-export const TASK_STAGE_LABEL: Record<TaskStage, string> = {
-  diagnosis: "현황진단",
-  proposal: "제안",
-  application: "신청",
-  result: "결과",
-};
-
-export const TASK_STAGE_ORDER: TaskStage[] = [
-  "diagnosis",
-  "proposal",
-  "application",
-  "result",
-];
-
+// on_hold(보류)는 waiting(대기)에 통합됨 — enum 값만 남아 있어 라벨도 대기로 표시.
 export const TASK_WORK_STATUS_LABEL: Record<TaskWorkStatus, string> = {
-  planned: "예정",
+  planned: "할 일",
   in_progress: "진행중",
   waiting: "대기",
-  on_hold: "보류",
+  on_hold: "대기",
   completed: "완료",
 };
 
-export const TASK_WORK_STATUS_ORDER: TaskWorkStatus[] = [
+/** UI에서 선택 가능한 상태 (on_hold 제외) */
+export type ActiveTaskWorkStatus = Exclude<TaskWorkStatus, "on_hold">;
+
+export const TASK_WORK_STATUS_ORDER: ActiveTaskWorkStatus[] = [
   "planned",
   "in_progress",
   "waiting",
-  "on_hold",
   "completed",
 ];
 

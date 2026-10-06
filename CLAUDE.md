@@ -145,7 +145,8 @@ design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(
 > 대시보드 D-day 리스트/캘린더는 **`deadline_item` 뷰**를 쓴다(자격+과제+일정 통합). 3개 테이블 직접 조인 금지.
 
 ## 8. enum ↔ 한국어 라벨 (DB 영문 / UI 한국어 — `lib/labels.ts`)
-- `task_stage`: diagnosis 현황진단 · proposal 제안 · application 신청 · result 결과
+- `task_work_status`(★Task 상태는 이것 하나): planned 할 일 · in_progress 진행중 · waiting 대기 · completed 완료 (on_hold는 대기에 통합 — 새로 쓰지 않음)
+- `task_stage`: 2026-10 화면에서 제거(컬럼만 잔존, 추후 drop 예정) — UI에 다시 노출하지 말 것
 - `schedule_type`: expiry 만료 · deadline 마감 · meeting 미팅 · renewal 갱신 · etc 기타
 - `document_uploader`: consultant 컨설턴트 · client 고객사
 - `campaign_status`: draft 임시저장 · scheduled 예약됨 · sending 발송중 · sent 발송완료

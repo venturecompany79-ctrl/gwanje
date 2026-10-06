@@ -39,7 +39,7 @@ export interface BoardData {
 }
 
 const TASK_COLUMNS =
-  "id, title, category_id, stage, work_status, due_date, assignee_id, memo, company_id, updated_at";
+  "id, title, category_id, work_status, due_date, assignee_id, memo, company_id, updated_at";
 const ACTIVE_TASK_LIMIT = 500;
 const COMPLETED_TASK_LIMIT = 100;
 
@@ -118,7 +118,6 @@ export async function getBoardData(): Promise<BoardData> {
         categoryName: t.category_id
           ? (categoryName.get(t.category_id) ?? null)
           : null,
-        stage: t.stage,
         workStatus: t.work_status,
         dueDate: t.due_date,
         daysLeft: t.due_date ? daysFromToday(t.due_date) : null,

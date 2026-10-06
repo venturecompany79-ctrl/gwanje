@@ -34,6 +34,7 @@ import type { BoardData, BoardTask } from "@/lib/data/board";
 import {
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
+  type ActiveTaskWorkStatus,
 } from "@/lib/labels";
 import { CompanyName } from "@/components/ui/CompanyName";
 
@@ -101,7 +102,6 @@ function BoardCard({
         companyId={task.companyId}
         taskId={task.id}
         taskTitle={task.title}
-        stage={state.stage}
         workStatus={state.workStatus}
         updatedAt={state.updatedAt}
         canEdit={canWrite}
@@ -147,12 +147,12 @@ export function TaskBoard({
     searchParams.get("assignee") ?? "all",
   );
   const [workStatusFilter, setWorkStatusFilter] = useState<
-    "all" | TaskWorkStatus
+    "all" | ActiveTaskWorkStatus
   >(
     TASK_WORK_STATUS_ORDER.includes(
-      searchParams.get("status") as TaskWorkStatus,
+      searchParams.get("status") as ActiveTaskWorkStatus,
     )
-      ? (searchParams.get("status") as TaskWorkStatus)
+      ? (searchParams.get("status") as ActiveTaskWorkStatus)
       : "all",
   );
   const [showCompleted, setShowCompleted] = useState(
@@ -188,7 +188,6 @@ export function TaskBoard({
   const effectiveState = useCallback(
     (task: BoardTask): TaskStateSnapshot =>
       stateById[task.id] ?? {
-        stage: task.stage,
         workStatus: task.workStatus,
         updatedAt: task.updatedAt,
       },
@@ -311,22 +310,14 @@ export function TaskBoard({
       );
       if (!result.ok || !result.updatedAt) {
         const fallback =
-          result.conflict &&
-          result.stage &&
-          result.workStatus &&
-          result.updatedAt
-            ? {
-                stage: result.stage,
-                workStatus: result.workStatus,
-                updatedAt: result.updatedAt,
-              }
+          result.conflict && result.workStatus && result.updatedAt
+            ? { workStatus: result.workStatus, updatedAt: result.updatedAt }
             : previous;
         applyTaskState(task.id, fallback);
         showToast(result.error ?? "변경에 실패했습니다.");
         return;
       }
       const applied: TaskStateSnapshot = {
-        stage: result.stage ?? previous.stage,
         workStatus: result.workStatus ?? workStatus,
         updatedAt: result.updatedAt,
       };
@@ -342,14 +333,8 @@ export function TaskBoard({
             applied.updatedAt,
           );
           if (!undo.ok || !undo.updatedAt) {
-            if (
-              undo.conflict &&
-              undo.stage &&
-              undo.workStatus &&
-              undo.updatedAt
-            ) {
+            if (undo.conflict && undo.workStatus && undo.updatedAt) {
               applyTaskState(task.id, {
-                stage: undo.stage,
                 workStatus: undo.workStatus,
                 updatedAt: undo.updatedAt,
               });
@@ -360,11 +345,10 @@ export function TaskBoard({
           }
           const undoUpdatedAt = undo.updatedAt;
           applyTaskState(task.id, {
-            stage: undo.stage ?? previous.stage,
             workStatus: undo.workStatus ?? previous.workStatus,
             updatedAt: undoUpdatedAt,
           });
-          showToast("업무상태 변경을 되돌렸습니다.");
+          showToast("상태 변경을 되돌렸습니다.");
           router.refresh();
         },
       });
@@ -380,7 +364,7 @@ export function TaskBoard({
           title="첫 Task를 추가하세요"
           description={
             data.canWriteTasks
-              ? "관리 중인 기업의 Task를 등록하면 업무상태별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
+              ? "관리 중인 기업의 Task를 등록하면 상태별 보드에서 진행 상황을 한눈에 관제할 수 있습니다."
               : "조회할 Task가 아직 없습니다."
           }
           action={
@@ -471,13 +455,13 @@ export function TaskBoard({
               className="select-pill"
               value={workStatusFilter}
               onChange={(e) => {
-                const next = e.target.value as "all" | TaskWorkStatus;
+                const next = e.target.value as "all" | ActiveTaskWorkStatus;
                 setWorkStatusFilter(next);
                 if (next === "completed") setShowCompleted(true);
               }}
-              aria-label="업무상태 필터"
+              aria-label="상태 필터"
             >
-              <option value="all">업무상태 전체</option>
+              <option value="all">상태 전체</option>
               {TASK_WORK_STATUS_ORDER.map((status) => (
                 <option key={status} value={status}>
                   {TASK_WORK_STATUS_LABEL[status]}
@@ -543,7 +527,7 @@ export function TaskBoard({
                     className={`kcol${
                       overWorkStatus === workStatus ? " is-over" : ""
                     }`}
-                    aria-label={`${TASK_WORK_STATUS_LABEL[workStatus]} 업무상태 컬럼`}
+                    aria-label={`${TASK_WORK_STATUS_LABEL[workStatus]} 상태 컬럼`}
                     onDragOver={(e) => {
                       if (!data.canWriteTasks) return;
                       e.preventDefault();

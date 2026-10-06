@@ -21,12 +21,6 @@ import {
   IconPlus,
   IconX,
 } from "@/components/ui/icons";
-import {
-  TASK_STAGE_LABEL,
-  TASK_STAGE_ORDER,
-  TASK_WORK_STATUS_LABEL,
-  TASK_WORK_STATUS_ORDER,
-} from "@/lib/labels";
 import { addTask, deleteTask, updateTask } from "@/lib/actions/tasks";
 import type { CategoryOption, TaskRow } from "@/lib/data/company-detail";
 import { TaskDday } from "./Stepper";
@@ -54,7 +48,7 @@ interface SelectedTaskFile {
   file: File;
 }
 
-/** 과제 상세 — 단계 변경 라디오 / 메모 / 산출물 링크 / [변경 저장] */
+/** 과제 상세 — 상태 변경 / 메모 / 첨부 / [변경 저장] */
 export function TaskSlideOver({
   companyId,
   companyName,
@@ -79,7 +73,6 @@ export function TaskSlideOver({
 }) {
   const router = useRouter();
   const [stateSnapshot, setStateSnapshot] = useState<TaskStateSnapshot>({
-    stage: task.stage,
     workStatus: task.workStatus,
     updatedAt: task.updatedAt,
   });
@@ -202,12 +195,11 @@ export function TaskSlideOver({
               disabled={!editable}
             />
             <div className="field">
-              <label>진행단계 · 업무상태</label>
+              <label>상태</label>
               <TaskStateControls
                 companyId={companyId}
                 taskId={task.id}
                 taskTitle={task.title}
-                stage={stateSnapshot.stage}
                 workStatus={stateSnapshot.workStatus}
                 updatedAt={stateSnapshot.updatedAt}
                 canEdit={canEdit}
@@ -218,7 +210,7 @@ export function TaskSlideOver({
                 }}
               />
               <p className="form-hint">
-                단계와 상태는 상세 수정 모드와 관계없이 바로 변경됩니다.
+                상태는 수정 모드와 관계없이 바로 변경됩니다.
               </p>
             </div>
             <CategorySelect
@@ -471,33 +463,8 @@ export function AddTaskSlideOver({
             />
             <div className="form-grid2">
               <CategorySelect name="category_id" categories={categories} demo={demo} />
-              <div className="field">
-                <label htmlFor="task-stage">단계</label>
-                <select id="task-stage" name="stage" className="input" defaultValue="diagnosis">
-                  {TASK_STAGE_ORDER.map((s) => (
-                    <option key={s} value={s}>
-                      {TASK_STAGE_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <InputField label="마감일" name="due_date" type="date" />
             </div>
-            <div className="field">
-              <label htmlFor="task-work-status">업무상태</label>
-              <select
-                id="task-work-status"
-                name="work_status"
-                className="input"
-                defaultValue="planned"
-              >
-                {TASK_WORK_STATUS_ORDER.map((status) => (
-                  <option key={status} value={status}>
-                    {TASK_WORK_STATUS_LABEL[status]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <InputField label="마감일" name="due_date" type="date" />
             <div className="field">
               <label htmlFor="task-memo">메모</label>
               <textarea

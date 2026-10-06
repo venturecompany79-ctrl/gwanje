@@ -2559,51 +2559,6 @@ table.dlist .name {
   font-size: 11px;
 }
 
-/* 4단계 스테퍼 */
-.stepper {
-  display: flex;
-  align-items: center;
-}
-.stepper .seg {
-  display: flex;
-  align-items: center;
-}
-.stepper .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--color-hairline);
-  border: 2px solid var(--color-hairline);
-}
-.stepper .dot.is-done {
-  background: var(--color-ink-deep);
-  border-color: var(--color-ink-deep);
-}
-.stepper .dot.is-current {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
-}
-.stepper .bar {
-  width: 26px;
-  height: 2px;
-  background: var(--color-hairline);
-}
-.stepper .bar.is-done {
-  background: var(--color-ink-deep);
-}
-.stage-cap {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-charcoal);
-  margin-left: 11px;
-  letter-spacing: -0.14px;
-  white-space: nowrap;
-}
-.stage-cap.is-done {
-  color: var(--color-success);
-}
-
 /* 과제 슬라이드오버 — 단계 라디오 / 메모 / 산출물 */
 .so-sec {
   margin-bottom: 28px;
@@ -3752,7 +3707,7 @@ table.dlist .name {
    ============================================================= */
 .board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -3784,18 +3739,6 @@ table.dlist .name {
   border-radius: 50%;
   flex: none;
 }
-.kdot--diagnosis {
-  background: var(--color-stone);
-}
-.kdot--proposal {
-  background: var(--color-attention);
-}
-.kdot--application {
-  background: var(--color-primary);
-}
-.kdot--result {
-  background: var(--color-success);
-}
 .kdot--planned {
   background: var(--color-stone);
 }
@@ -3804,9 +3747,6 @@ table.dlist .name {
 }
 .kdot--waiting {
   background: var(--color-attention);
-}
-.kdot--on_hold {
-  background: var(--color-critical);
 }
 .kdot--completed {
   background: var(--color-success);
@@ -8265,20 +8205,20 @@ body {
   flex-basis: 0;
   min-width: 6px;
 }
-.share-stagebar-seg[data-stage="diagnosis"],
-.share-legend-dot[data-stage="diagnosis"] {
-  background: var(--color-primary-soft);
+.share-stagebar-seg[data-status="planned"],
+.share-legend-dot[data-status="planned"] {
+  background: var(--color-stone);
 }
-.share-stagebar-seg[data-stage="proposal"],
-.share-legend-dot[data-stage="proposal"] {
+.share-stagebar-seg[data-status="in_progress"],
+.share-legend-dot[data-status="in_progress"] {
   background: var(--color-primary);
 }
-.share-stagebar-seg[data-stage="application"],
-.share-legend-dot[data-stage="application"] {
-  background: var(--color-primary-deep);
+.share-stagebar-seg[data-status="waiting"],
+.share-legend-dot[data-status="waiting"] {
+  background: var(--color-attention);
 }
-.share-stagebar-seg[data-stage="result"],
-.share-legend-dot[data-stage="result"] {
+.share-stagebar-seg[data-status="completed"],
+.share-legend-dot[data-status="completed"] {
   background: var(--color-success);
 }
 .share-stagebar-legend {
@@ -8342,24 +8282,6 @@ body {
 }
 .share-task + .share-task {
   border-top: 1px solid var(--color-hairline-soft);
-}
-.share-task-stage {
-  flex: none;
-  min-width: 52px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.share-task-stage[data-stage="diagnosis"] {
-  color: var(--color-primary-soft);
-}
-.share-task-stage[data-stage="proposal"] {
-  color: var(--color-primary);
-}
-.share-task-stage[data-stage="application"] {
-  color: var(--color-primary-deep);
-}
-.share-task-stage[data-stage="result"] {
-  color: var(--color-success);
 }
 .share-task-title {
   font-size: 14px;
@@ -10402,41 +10324,6 @@ a.monitor-alert-strip:focus-visible {
 .portfolio-priority-task .badge {
   margin-top: 3px;
 }
-.portfolio-stage {
-  min-width: 118px;
-}
-.portfolio-stage-bar {
-  display: flex;
-  width: 100%;
-  height: 7px;
-  overflow: hidden;
-  border-radius: var(--radius-full);
-  background: var(--color-hairline-soft);
-}
-.portfolio-stage-bar span {
-  min-width: 3px;
-}
-.portfolio-stage-bar .is-diagnosis {
-  background: var(--color-stone);
-}
-.portfolio-stage-bar .is-proposal {
-  background: var(--color-attention);
-}
-.portfolio-stage-bar .is-application {
-  background: var(--color-primary);
-}
-.portfolio-stage-bar .is-result {
-  background: var(--color-success);
-}
-.portfolio-stage-labels {
-  display: flex;
-  gap: 5px 8px;
-  flex-wrap: wrap;
-  margin-top: 6px;
-  color: var(--color-steel);
-  font-size: 10.5px;
-  font-weight: 650;
-}
 .portfolio-status-list,
 .portfolio-risk-list {
   display: flex;
@@ -10463,10 +10350,6 @@ a.monitor-alert-strip:focus-visible {
 .portfolio-status--waiting {
   background: var(--app-st-soon-bg);
   color: var(--app-st-soon-text);
-}
-.portfolio-status--on_hold {
-  background: var(--app-st-expired-bg);
-  color: var(--app-st-expired-text);
 }
 .portfolio-status--completed {
   background: var(--app-st-valid-bg);
@@ -10687,12 +10570,6 @@ a.monitor-alert-strip:focus-visible {
   cursor: progress;
   opacity: 0.62;
 }
-.task-state-select--stage,
-.task-stage-pill {
-  border-color: var(--color-hairline);
-  background-color: var(--color-surface-soft);
-  color: var(--color-charcoal);
-}
 .task-state-select--in_progress {
   border-color: var(--color-primary);
   background-color: var(--app-ic-deadline-bg);
@@ -10702,11 +10579,6 @@ a.monitor-alert-strip:focus-visible {
   border-color: var(--color-attention);
   background-color: var(--app-st-soon-bg);
   color: var(--app-st-soon-text);
-}
-.task-state-select--on_hold {
-  border-color: var(--color-critical);
-  background-color: var(--app-st-expired-bg);
-  color: var(--app-st-expired-text);
 }
 .task-state-select--completed {
   border-color: var(--color-success);
@@ -10726,16 +10598,6 @@ a.monitor-alert-strip:focus-visible {
 }
 .task-state-controls.is-readonly {
   gap: 6px;
-}
-.task-stage-pill {
-  display: inline-flex;
-  min-height: 25px;
-  align-items: center;
-  padding: 3px 9px;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 750;
 }
 .task-view-tabs {
   padding: 14px 16px 0;

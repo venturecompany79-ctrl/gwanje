@@ -97,7 +97,7 @@ export async function buildAssistantGrounding(
           supabase
             .from("task")
             .select(
-              "id, company_id, title, stage, due_date, assignee_id, memo, updated_at",
+              "id, company_id, title, work_status, due_date, assignee_id, memo, updated_at",
             )
             .in("company_id", companyIds)
             .neq("work_status", "completed")

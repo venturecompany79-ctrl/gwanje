@@ -7,7 +7,7 @@ import { CategoryChip } from "@/components/ui/CategoryChip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Panel, PanelHead } from "@/components/ui/Panel";
 import { IconPlus, IconTarget } from "@/components/ui/icons";
-import { Stepper, TaskDday } from "@/components/tasks/Stepper";
+import { TaskDday } from "@/components/tasks/Stepper";
 import {
   TaskStateControls,
   type TaskStateSnapshot,
@@ -50,7 +50,6 @@ export function TasksTab({
         tasks.map((task) => [
           task.id,
           {
-            stage: task.stage,
             workStatus: task.workStatus,
             updatedAt: task.updatedAt,
           },
@@ -62,7 +61,6 @@ export function TasksTab({
     return state
       ? {
           ...task,
-          stage: state.stage,
           workStatus: state.workStatus,
           updatedAt: state.updatedAt,
         }
@@ -150,7 +148,6 @@ export function TasksTab({
                     <div className="tname">{task.title}</div>
                     <div className="tmeta">
                       <CategoryChip name={task.categoryName} />
-                      <Stepper stage={task.stage} />
                     </div>
                   </button>
                   <div className="spacer" />
@@ -170,7 +167,6 @@ export function TasksTab({
                     companyId={companyId}
                     taskId={task.id}
                     taskTitle={task.title}
-                    stage={task.stage}
                     workStatus={task.workStatus}
                     updatedAt={task.updatedAt}
                     canEdit={editable}

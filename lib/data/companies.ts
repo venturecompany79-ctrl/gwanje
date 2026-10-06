@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_COMPANIES } from "@/lib/demo-data";
 import { daysFromToday, todayKstDate } from "@/lib/datetime";
-import type { CompanyStatus } from "@/lib/labels";
+import type { ActiveTaskWorkStatus, CompanyStatus } from "@/lib/labels";
 import type {
   Database,
   Json,
-  TaskStage,
   TaskWorkStatus,
 } from "@/lib/database.types";
 import { getMemberContext } from "@/lib/actions/shared";
@@ -18,7 +17,6 @@ export interface CompanyPriorityTask {
   title: string;
   categoryId: string | null;
   categoryName: string | null;
-  stage: TaskStage;
   workStatus: TaskWorkStatus;
   dueDate: string | null;
   daysLeft: number | null;
@@ -27,20 +25,7 @@ export interface CompanyPriorityTask {
   updatedAt: string;
 }
 
-export interface CompanyStageCounts {
-  diagnosis: number;
-  proposal: number;
-  application: number;
-  result: number;
-}
-
-export interface CompanyWorkStatusCounts {
-  planned: number;
-  in_progress: number;
-  waiting: number;
-  on_hold: number;
-  completed: number;
-}
+export type CompanyWorkStatusCounts = Record<ActiveTaskWorkStatus, number>;
 
 export interface CompanyListRow {
   id: string;
@@ -81,7 +66,6 @@ export interface CompanyListRow {
   overdueTaskCount: number;
   due7TaskCount: number;
   unassignedTaskCount: number;
-  stageCounts: CompanyStageCounts;
   workStatusCounts: CompanyWorkStatusCounts;
   priorityTask: CompanyPriorityTask | null;
   latestTaskUpdatedAt: string | null;
@@ -126,12 +110,6 @@ function parseUpcomingItems(value: Json): CompanyListRow["upcomingItems"] {
   });
 }
 
-const TASK_STAGES: TaskStage[] = [
-  "diagnosis",
-  "proposal",
-  "application",
-  "result",
-];
 const TASK_WORK_STATUSES: TaskWorkStatus[] = [
   "planned",
   "in_progress",
@@ -147,7 +125,6 @@ function parsePriorityTask(value: Json | null): CompanyPriorityTask | null {
     title,
     categoryId,
     categoryName,
-    stage,
     workStatus,
     dueDate,
     daysLeft,
@@ -159,8 +136,6 @@ function parsePriorityTask(value: Json | null): CompanyPriorityTask | null {
   if (
     typeof id !== "string" ||
     typeof title !== "string" ||
-    typeof stage !== "string" ||
-    !TASK_STAGES.includes(stage as TaskStage) ||
     typeof workStatus !== "string" ||
     !TASK_WORK_STATUSES.includes(workStatus as TaskWorkStatus) ||
     typeof updatedAt !== "string"
@@ -173,7 +148,6 @@ function parsePriorityTask(value: Json | null): CompanyPriorityTask | null {
     title,
     categoryId: typeof categoryId === "string" ? categoryId : null,
     categoryName: typeof categoryName === "string" ? categoryName : null,
-    stage: stage as TaskStage,
     workStatus: workStatus as TaskWorkStatus,
     dueDate: typeof dueDate === "string" ? dueDate : null,
     daysLeft: typeof daysLeft === "number" ? daysLeft : null,
@@ -281,17 +255,12 @@ export async function getCompaniesData(): Promise<CompaniesData> {
         overdueTaskCount: stats?.overdue_task_count ?? 0,
         due7TaskCount: stats?.due7_task_count ?? 0,
         unassignedTaskCount: stats?.unassigned_task_count ?? 0,
-        stageCounts: {
-          diagnosis: stats?.diagnosis_task_count ?? 0,
-          proposal: stats?.proposal_task_count ?? 0,
-          application: stats?.application_task_count ?? 0,
-          result: stats?.result_task_count ?? 0,
-        },
         workStatusCounts: {
           planned: stats?.planned_task_count ?? 0,
           in_progress: stats?.in_progress_task_count ?? 0,
-          waiting: stats?.waiting_task_count ?? 0,
-          on_hold: stats?.on_hold_task_count ?? 0,
+          // 보류는 대기에 통합
+          waiting:
+            (stats?.waiting_task_count ?? 0) + (stats?.on_hold_task_count ?? 0),
           completed: stats?.completed_task_count ?? 0,
         },
         priorityTask: stats ? parsePriorityTask(stats.priority_task) : null,

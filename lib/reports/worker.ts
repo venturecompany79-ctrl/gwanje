@@ -192,7 +192,7 @@ async function buildCompanyProfile(
       .limit(20),
     service
       .from("task")
-      .select("title, stage, due_date, memo")
+      .select("title, work_status, due_date, memo")
       .eq("company_id", companyId)
       .limit(20),
     service

@@ -30,12 +30,9 @@ import type { TaskRow } from "@/lib/data/company-detail";
 import type {
   CompaniesData,
   CompanyListRow,
-  CompanyStageCounts,
   CompanyWorkStatusCounts,
 } from "@/lib/data/companies";
 import {
-  TASK_STAGE_LABEL,
-  TASK_STAGE_ORDER,
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
 } from "@/lib/labels";
@@ -49,7 +46,6 @@ type WorkStatusFilter =
   | "planned"
   | "in_progress"
   | "waiting"
-  | "on_hold"
   | "completed";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -88,7 +84,6 @@ function isWorkStatusFilter(value: string | null): value is WorkStatusFilter {
     value === "planned" ||
     value === "in_progress" ||
     value === "waiting" ||
-    value === "on_hold" ||
     value === "completed"
   );
 }
@@ -98,7 +93,6 @@ function hasAttention(company: CompanyListRow): boolean {
     company.overdueTaskCount > 0 ||
     company.due7TaskCount > 0 ||
     company.unassignedTaskCount > 0 ||
-    company.workStatusCounts.on_hold > 0 ||
     company.expiredCount > 0 ||
     (company.contractDaysLeft !== null && company.contractDaysLeft <= 30)
   );
@@ -107,7 +101,6 @@ function hasAttention(company: CompanyListRow): boolean {
 function riskTuple(company: CompanyListRow): number[] {
   return [
     company.overdueTaskCount > 0 || company.expiredCount > 0 ? 0 : 1,
-    company.workStatusCounts.on_hold > 0 ? 0 : 1,
     company.due7TaskCount > 0 ? 0 : 1,
     company.unassignedTaskCount > 0 ? 0 : 1,
     company.workStatusCounts.waiting > 0 ? 0 : 1,
@@ -136,45 +129,6 @@ function formatRecent(value: string | null): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}일 전`;
   return formatDotDateString(value.slice(0, 10));
-}
-
-function StageDistribution({
-  counts,
-}: {
-  counts: CompanyStageCounts;
-}) {
-  const total = TASK_STAGE_ORDER.reduce((sum, stage) => sum + counts[stage], 0);
-  if (total === 0) return <span className="portfolio-empty-value">진행 Task 없음</span>;
-
-  return (
-    <div
-      className="portfolio-stage"
-      aria-label={TASK_STAGE_ORDER.map(
-        (stage) => `${TASK_STAGE_LABEL[stage]} ${counts[stage]}건`,
-      ).join(", ")}
-    >
-      <div className="portfolio-stage-bar" aria-hidden="true">
-        {TASK_STAGE_ORDER.map((stage) =>
-          counts[stage] > 0 ? (
-            <span
-              key={stage}
-              className={`is-${stage}`}
-              style={{ flexGrow: counts[stage] }}
-            />
-          ) : null,
-        )}
-      </div>
-      <div className="portfolio-stage-labels">
-        {TASK_STAGE_ORDER.map((stage) =>
-          counts[stage] > 0 ? (
-            <span key={stage}>
-              {TASK_STAGE_LABEL[stage]} {counts[stage]}
-            </span>
-          ) : null,
-        )}
-      </div>
-    </div>
-  );
 }
 
 function WorkStatusSummary({
@@ -212,9 +166,6 @@ function RiskSummary({ company }: { company: CompanyListRow }) {
       ) : null}
       {company.expiredCount > 0 ? (
         <Badge tone="critical">자격 만료 {company.expiredCount}</Badge>
-      ) : null}
-      {company.workStatusCounts.on_hold > 0 ? (
-        <Badge tone="critical">보류 {company.workStatusCounts.on_hold}</Badge>
       ) : null}
       {company.due7TaskCount > 0 ? (
         <Badge tone="attention">7일 내 {company.due7TaskCount}</Badge>
@@ -279,7 +230,6 @@ function PortfolioTaskList({
         task.id === taskId
           ? {
               ...task,
-              stage: snapshot.stage,
               workStatus: snapshot.workStatus,
               updatedAt: snapshot.updatedAt,
             }
@@ -339,7 +289,6 @@ function PortfolioTaskList({
                 companyId={company.id}
                 taskId={task.id}
                 taskTitle={task.title}
-                stage={task.stage}
                 workStatus={task.workStatus}
                 updatedAt={task.updatedAt}
                 canEdit={editable}
@@ -596,9 +545,9 @@ export function CompaniesTable({
           onChange={(event) =>
             setWorkStatus(event.target.value as WorkStatusFilter)
           }
-          aria-label="업무상태 필터"
+          aria-label="상태 필터"
         >
-          <option value="all">업무상태 전체</option>
+          <option value="all">상태 전체</option>
           {TASK_WORK_STATUS_ORDER.map((status) => (
             <option key={status} value={status}>
               {TASK_WORK_STATUS_LABEL[status]}
@@ -675,8 +624,7 @@ export function CompaniesTable({
               <thead>
                 <tr>
                   <th>기업·주담당</th>
-                  <th>진행단계</th>
-                  <th>업무상태</th>
+                  <th>상태</th>
                   <th>위험 항목</th>
                   <th>다음 우선 Task</th>
                   <th>최근 업데이트</th>
@@ -744,9 +692,6 @@ function CompanyPortfolioRows({
           </div>
         </td>
         <td>
-          <StageDistribution counts={company.stageCounts} />
-        </td>
-        <td>
           <WorkStatusSummary counts={company.workStatusCounts} />
         </td>
         <td>
@@ -768,7 +713,6 @@ function CompanyPortfolioRows({
             <div className="portfolio-priority-task">
               <strong>{company.priorityTask.title}</strong>
               <span>
-                {TASK_STAGE_LABEL[company.priorityTask.stage]} ·{" "}
                 {TASK_WORK_STATUS_LABEL[company.priorityTask.workStatus]} ·{" "}
                 {company.priorityTask.assigneeName ?? "미배정"}
               </span>
@@ -810,7 +754,7 @@ function CompanyPortfolioRows({
       </tr>
       {expanded ? (
         <tr className="portfolio-drawer-row">
-          <td colSpan={8}>
+          <td colSpan={7}>
             <PortfolioTaskList
               company={company}
               categories={data.categories}

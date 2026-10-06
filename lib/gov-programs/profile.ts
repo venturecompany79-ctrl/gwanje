@@ -302,7 +302,7 @@ export async function buildCompanyMatchProfile(
         .order("updated_at", { ascending: false }),
       supabase
         .from("task")
-        .select("id, title, stage, work_status, due_date, memo, updated_at")
+        .select("id, title, work_status, due_date, memo, updated_at")
         .eq("company_id", companyId)
         .order("updated_at", { ascending: false }),
       supabase
@@ -390,7 +390,7 @@ export async function buildCompanyMatchProfile(
       kind: "task",
       id: item.id,
       label: item.title,
-      detail: [item.stage, item.work_status, item.memo].filter(Boolean).join(" · "),
+      detail: [item.work_status, item.memo].filter(Boolean).join(" · "),
       href: `/app/companies/${company.id}?tab=tasks`,
       included: includedFor(preferences, "task", item.id),
       updatedAt: item.updated_at,
