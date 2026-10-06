@@ -93,7 +93,9 @@ export async function PATCH(
     if (!TASK_WORK_STATUSES.includes(body.workStatus)) {
       return mobileError("업무상태 값이 올바르지 않습니다.");
     }
-    update.work_status = body.workStatus;
+    // 보류는 대기에 통합 — 구버전 앱 호환
+    update.work_status =
+      body.workStatus === "on_hold" ? "waiting" : body.workStatus;
   }
 
   const memo = optionalMemo(body.memo);

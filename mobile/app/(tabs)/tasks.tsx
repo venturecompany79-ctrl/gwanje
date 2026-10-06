@@ -5,10 +5,9 @@ import { Plus } from "lucide-react-native";
 import { colors, spacing, typography } from "@/design/tokens";
 import { monthDayKo } from "@/lib/dates";
 import {
-  TASK_STAGE_LABEL,
-  TASK_STAGES,
   TASK_WORK_STATUS_LABEL,
-  type TaskStage,
+  TASK_WORK_STATUSES,
+  type TaskWorkStatus,
 } from "@/lib/labels";
 import { loadTasks, type MobileTask } from "@/lib/queries";
 import { useAsyncData } from "@/lib/useAsyncData";
@@ -24,7 +23,7 @@ import {
 } from "@/ui/Primitives";
 import { Screen } from "@/ui/Screen";
 
-type StageFilter = "all" | TaskStage;
+type StatusFilter = "all" | TaskWorkStatus;
 
 function isActive(task: MobileTask) {
   return task.work_status !== "completed";
@@ -55,7 +54,7 @@ function TaskCell({
           </Text>
           <View style={styles.dotSep} />
           <StageBadge
-            label={`${TASK_STAGE_LABEL[task.stage]} · ${TASK_WORK_STATUS_LABEL[task.work_status]}`}
+            label={TASK_WORK_STATUS_LABEL[task.work_status]}
             done={done}
           />
         </View>
@@ -70,7 +69,7 @@ function TaskCell({
 
 export default function TasksScreen() {
   const router = useRouter();
-  const [filter, setFilter] = useState<StageFilter>("all");
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const { data, loading, refreshing, error, refresh } = useAsyncData(loadTasks);
 
   // 새 Task 생성 후 돌아오면 목록을 다시 불러온다 (최초 포커스는 건너뜀)
@@ -89,14 +88,14 @@ export default function TasksScreen() {
   ).length;
 
   const chips = useMemo(() => {
-    const base: { value: StageFilter; label: string; count: number }[] = [
+    const base: { value: StatusFilter; label: string; count: number }[] = [
       { value: "all", label: "전체", count: tasks.length },
     ];
-    for (const stage of TASK_STAGES) {
+    for (const status of TASK_WORK_STATUSES) {
       base.push({
-        value: stage,
-        label: TASK_STAGE_LABEL[stage],
-        count: tasks.filter((t) => t.stage === stage).length,
+        value: status,
+        label: TASK_WORK_STATUS_LABEL[status],
+        count: tasks.filter((t) => t.work_status === status).length,
       });
     }
     return base;
@@ -105,7 +104,7 @@ export default function TasksScreen() {
   const filtered = useMemo(
     () =>
       tasks
-        .filter((task) => filter === "all" || task.stage === filter)
+        .filter((task) => filter === "all" || task.work_status === filter)
         .slice()
         .sort((a, b) => {
           const doneDiff =

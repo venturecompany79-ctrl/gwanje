@@ -47,10 +47,12 @@ export async function POST(request: NextRequest) {
   if (!TASK_STAGES.includes(stage)) {
     return mobileError("단계 값이 올바르지 않습니다.");
   }
-  const workStatus = body?.workStatus ?? "planned";
-  if (!TASK_WORK_STATUSES.includes(workStatus)) {
+  const requestedStatus = body?.workStatus ?? "planned";
+  if (!TASK_WORK_STATUSES.includes(requestedStatus)) {
     return mobileError("업무상태 값이 올바르지 않습니다.");
   }
+  // 보류는 대기에 통합 — 구버전 앱 호환
+  const workStatus = requestedStatus === "on_hold" ? "waiting" : requestedStatus;
 
   let dueDate: string | null = null;
   if (body?.dueDate) {

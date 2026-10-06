@@ -15,7 +15,6 @@ import * as Haptics from "expo-haptics";
 import { Check, ChevronDown, Search } from "lucide-react-native";
 import { colors, radius, typography } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
-import { TASK_STAGE_LABEL, TASK_STAGES, type TaskStage } from "@/lib/labels";
 import {
   loadTaskFormOptions,
   type CompanyOption,
@@ -91,7 +90,6 @@ function NewTaskForm({
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
-  const [stage, setStage] = useState<TaskStage>("diagnosis");
   const [memo, setMemo] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [companyQuery, setCompanyQuery] = useState("");
@@ -132,7 +130,6 @@ function NewTaskForm({
           title: title.trim(),
           categoryId,
           dueDate: dueDate || null,
-          stage,
           memo: memo.trim() || null,
         },
       });
@@ -280,28 +277,6 @@ function NewTaskForm({
             </ScrollView>
           </>
         ) : null}
-
-        {/* 단계 */}
-        <SectionLabel style={styles.tightLabel}>단계</SectionLabel>
-        <Group>
-          {TASK_STAGES.map((item, i) => {
-            const active = stage === item;
-            return (
-              <Cell
-                key={item}
-                last={i === TASK_STAGES.length - 1}
-                onPress={() => setStage(item)}
-              >
-                <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
-                  {TASK_STAGE_LABEL[item]}
-                </Text>
-                {active ? (
-                  <Check size={17} color={colors.brand} strokeWidth={2.4} />
-                ) : null}
-              </Cell>
-            );
-          })}
-        </Group>
 
         <SectionLabel style={styles.tightLabel}>메모</SectionLabel>
         <TextInput
@@ -555,17 +530,6 @@ const styles = StyleSheet.create({
   catTextActive: {
     color: colors.brand,
     fontWeight: "600",
-  },
-  stageLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "400",
-    letterSpacing: -0.3,
-    color: colors.chipText,
-  },
-  stageLabelActive: {
-    fontWeight: "600",
-    color: colors.label,
   },
   memo: {
     backgroundColor: colors.card,

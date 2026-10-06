@@ -16,11 +16,8 @@ import { Check, X } from "lucide-react-native";
 import { colors, radius } from "@/design/tokens";
 import { mobileApi } from "@/lib/api";
 import {
-  TASK_STAGE_LABEL,
-  TASK_STAGES,
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUSES,
-  type TaskStage,
   type TaskWorkStatus,
 } from "@/lib/labels";
 import {
@@ -115,7 +112,6 @@ function TaskForm({
   const [title, setTitle] = useState(task.title);
   const [categoryId, setCategoryId] = useState<string | null>(task.category_id);
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
-  const [stage, setStage] = useState<TaskStage>(task.stage);
   const [workStatus, setWorkStatus] = useState<TaskWorkStatus>(
     task.work_status,
   );
@@ -136,7 +132,6 @@ function TaskForm({
           title: title.trim(),
           categoryId,
           dueDate: dueDate || null,
-          stage,
           workStatus,
           expectedUpdatedAt: task.updated_at,
           memo,
@@ -229,28 +224,7 @@ function TaskForm({
           </>
         ) : null}
 
-        <SectionLabel style={styles.tightLabel}>단계</SectionLabel>
-        <Group>
-          {TASK_STAGES.map((item, i) => {
-            const active = stage === item;
-            return (
-              <Cell
-                key={item}
-                last={i === TASK_STAGES.length - 1}
-                onPress={isEditing ? () => setStage(item) : undefined}
-              >
-                <Text style={[styles.stageLabel, active && styles.stageLabelActive]}>
-                  {TASK_STAGE_LABEL[item]}
-                </Text>
-                {active ? (
-                  <Check size={17} color={colors.brand} strokeWidth={2.4} />
-                ) : null}
-              </Cell>
-            );
-          })}
-        </Group>
-
-        <SectionLabel style={styles.tightLabel}>업무상태</SectionLabel>
+        <SectionLabel style={styles.tightLabel}>상태</SectionLabel>
         <Group>
           {TASK_WORK_STATUSES.map((item, i) => {
             const active = workStatus === item;
