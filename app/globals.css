@@ -8398,6 +8398,11 @@ body {
   align-items: center;
   margin-bottom: 18px;
 }
+
+.monitor-briefing-stack { display: flex; flex-direction: column; }
+@media (max-width: 640px) {
+  .monitor-briefing-stack > .monitor-alert-strip { order: -1; }
+}
 .monitor-page-kicker {
   margin-bottom: 5px;
   color: var(--color-primary);

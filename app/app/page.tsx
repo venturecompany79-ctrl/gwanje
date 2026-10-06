@@ -22,6 +22,7 @@ import {
 import { DashboardToolbar } from "./_components/DashboardToolbar";
 import { KpiRow } from "./_components/KpiRow";
 import { CompanyName } from "@/components/ui/CompanyName";
+import { HermesBriefingSection } from "./_components/HermesBriefingSection";
 
 export const metadata: Metadata = { title: "통합 관제 대시보드" };
 export const dynamic = "force-dynamic";
@@ -166,12 +167,19 @@ export default async function DashboardPage({
         />
       </header>
 
-      <AlertStrip
-        overdue={overview.mostOverdue}
-        urgent={overview.mostUrgent}
-        unassigned={overview.risk.unassigned}
-        teamScope={overview.scope === "team"}
-      />
+      <div className="monitor-briefing-stack">
+        {overview.scope === "mine" && overview.currentProfileId ? (
+          <Suspense fallback={<div className="panel" role="status">Hermes 업무 브리핑을 불러오는 중…</div>}>
+            <HermesBriefingSection userId={overview.currentProfileId} />
+          </Suspense>
+        ) : null}
+        <AlertStrip
+          overdue={overview.mostOverdue}
+          urgent={overview.mostUrgent}
+          unassigned={overview.risk.unassigned}
+          teamScope={overview.scope === "team"}
+        />
+      </div>
 
       <KpiRow risk={overview.risk} scope={overview.scope} />
 

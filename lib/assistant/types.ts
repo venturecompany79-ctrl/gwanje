@@ -12,6 +12,8 @@ export type AssistantScope =
   | { mode: "team"; consultantId?: string | "unassigned" | null };
 
 export interface AssistantChatRequest {
+  briefingId?: string | null;
+  briefingSourceId?: string | null;
   conversationId?: string | null;
   message: string;
   scope: AssistantScope;

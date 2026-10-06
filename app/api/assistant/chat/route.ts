@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { briefingContext } from "@/lib/briefing/service";
+import { briefingEnabled } from "@/lib/briefing/config";
+import { validId } from "@/lib/briefing/http";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requirePermission } from "@/lib/actions/shared";
@@ -44,6 +47,8 @@ function parseScope(value: unknown): AssistantScope | null {
 function parseRequest(value: unknown): AssistantChatRequest | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
+  if (body.briefingId != null && !validId(body.briefingId)) return null;
+  if (body.briefingSourceId != null && (typeof body.briefingSourceId !== "string" || body.briefingSourceId.length > 100)) return null;
   const message = typeof body.message === "string" ? body.message.trim() : "";
   const scope = parseScope(body.scope);
   if (!message || !scope) return null;
@@ -53,6 +58,8 @@ function parseRequest(value: unknown): AssistantChatRequest | null {
       )
     : [];
   return {
+    briefingId: typeof body.briefingId === "string" ? body.briefingId : null,
+    briefingSourceId: typeof body.briefingSourceId === "string" ? body.briefingSourceId : null,
     conversationId:
       typeof body.conversationId === "string" ? body.conversationId : null,
     message,
@@ -116,6 +123,12 @@ export async function POST(request: Request): Promise<Response> {
   try {
     await enforceAssistantRateLimit(supabase, member.userId);
     const grounding = await buildAssistantGrounding(supabase, member, input);
+    if (input.briefingId) {
+      if (input.scope.mode !== "mine" || !briefingEnabled(member.userId)) {
+        return NextResponse.json({ error: "개인 브리핑의 접근 범위를 확인해 주세요." }, { status: 403 });
+      }
+      grounding.contextText += `\n브리핑 후속 질문 문맥:\n${await briefingContext(member.userId, input.briefingId, input.briefingSourceId)}`;
+    }
     const conversationId = await getOrCreateConversation(supabase, {
       conversationId: input.conversationId,
       tenantId: member.tenantId,

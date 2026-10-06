@@ -288,6 +288,29 @@ export function AssistantPanel({
   const chatAbortRef = useRef<AbortController | null>(null);
   const historyAbortRef = useRef<AbortController | null>(null);
   const scopeGenerationRef = useRef(0);
+  const [briefingReference, setBriefingReference] = useState<{ briefingId: string; briefingSourceId?: string } | null>(null);
+
+  useEffect(() => {
+    function onBriefingQuestion(event: Event) {
+      if (scope !== "mine" || !configured) return;
+      const detail = (event as CustomEvent<{ briefingId: string; briefingSourceId?: string }>).detail;
+      if (!detail?.briefingId) return;
+      scopeGenerationRef.current += 1;
+      chatAbortRef.current?.abort();
+      historyAbortRef.current?.abort();
+      setSending(false);
+      setHistoryLoading(false);
+      setConversationId(null);
+      setMessages([WELCOME_MESSAGE]);
+      setSelectedDocumentIds([]);
+      setBriefingReference(detail);
+      setInput(detail.briefingSourceId ? "이 업무의 다음 행동을 구체적으로 알려주세요." : "이 브리핑을 바탕으로 오늘 할 일을 정리해 주세요.");
+      setOpen(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+    window.addEventListener("hermes:ask", onBriefingQuestion);
+    return () => window.removeEventListener("hermes:ask", onBriefingQuestion);
+  }, [scope, configured]);
 
   useEffect(() => {
     scopeGenerationRef.current += 1;
@@ -295,6 +318,7 @@ export function AssistantPanel({
     historyAbortRef.current?.abort();
     const controller = new AbortController();
     setConversationId(null);
+    setBriefingReference(null);
     setMessages([WELCOME_MESSAGE]);
     setSelectedDocumentIds([]);
     setConversations([]);
@@ -546,6 +570,7 @@ export function AssistantPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...briefingReference,
           conversationId: conversationId ?? undefined,
           message: trimmed,
           scope: {
@@ -653,6 +678,7 @@ export function AssistantPanel({
   }
 
   function resetConversation() {
+    setBriefingReference(null);
     scopeGenerationRef.current += 1;
     chatAbortRef.current?.abort();
     historyAbortRef.current?.abort();
@@ -667,6 +693,7 @@ export function AssistantPanel({
 
   async function loadConversation(id: string) {
     if (!id || id === conversationId || historyLoading || sending) return;
+    setBriefingReference(null);
     const generation = scopeGenerationRef.current;
     const controller = new AbortController();
     historyAbortRef.current?.abort();

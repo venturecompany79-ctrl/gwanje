@@ -1,0 +1,21 @@
+[Unit]
+Description=Gwanje Hermes briefing worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes-briefing
+WorkingDirectory=/opt/gwanje-hermes
+EnvironmentFile=/etc/gwanje-hermes.env
+ExecStart=/usr/bin/node /opt/gwanje-hermes/hermes-worker.mjs
+Restart=always
+RestartSec=10
+TimeoutStopSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

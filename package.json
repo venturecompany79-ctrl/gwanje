@@ -18,6 +18,8 @@
     "audit:test-data": "node scripts/audit-test-data.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "smoke:import": "node scripts/import-validate-smoke.mjs",
+    "smoke:briefing": "node scripts/briefing-smoke.mjs",
+    "hermes:worker": "node scripts/hermes-worker.mjs",
     "vercel:env:sync": "node scripts/vercel-env-sync.mjs",
     "vercel:env:ls": "npx vercel env ls"
   },

@@ -1039,6 +1039,51 @@ try {
 assert((disabledAccess[0]?.companies ?? 1) === 0, "비활성 팀원은 tenant 기업을 조회할 수 없음");
 assert((disabledAccess[0]?.notes ?? 1) === 0, "비활성 팀원은 업무일지도 조회할 수 없음");
 
+try {
+  await db.exec("begin");
+  const run = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const [queued] = await run("select hermes_enqueue($1, 'manual', now(), now() + interval '15 minutes') as id", [USER_A]);
+  const [duplicate] = await run("select hermes_enqueue($1, 'manual', now(), now() + interval '15 minutes') as id", [USER_A]);
+  assert(queued.id === duplicate.id, "Hermes 동시 요청은 하나의 활성 작업으로 합쳐짐");
+  const [claimed] = await run("select hermes_claim($1) as job", [USER_A]);
+  const job = claimed.job;
+  assert(job.status === "running" && job.attempts === 1 && Boolean(job.token), "Hermes 작업은 실행 토큰과 유효 시간으로 선점");
+  const [secondClaim] = await run("select hermes_claim($1) as job", [USER_A]);
+  assert(secondClaim.job === null, "Hermes 실행 중인 작업을 다시 선점하지 않음");
+  const [reserve] = await run("select hermes_reserve($1, $2) as ok", [job.id, job.token]);
+  const [reserveTwice] = await run("select hermes_reserve($1, $2) as ok", [job.id, job.token]);
+  assert(reserve.ok && !reserveTwice.ok, "Hermes 모델 사용량은 실행당 한 번만 예약");
+  await run("update ai_briefing_job set snapshot = '{}'::jsonb, input_hash = 'hash' where id = $1", [job.id]);
+  const [oldToken] = await run("select hermes_finish($1, gen_random_uuid(), '{}'::jsonb, null, now()) as ok", [job.id]);
+  assert(!oldToken.ok, "Hermes 다른 실행 토큰의 결과를 거절");
+  const [finished] = await run("select hermes_finish($1, $2, '{\"summary\":\"test\"}'::jsonb, null, now()) as ok", [job.id, job.token]);
+  const [replayed] = await run("select hermes_finish($1, $2, '{}'::jsonb, null, now()) as ok", [job.id, job.token]);
+  assert(finished.ok && !replayed.ok, "Hermes 결과는 원자적으로 한 번만 게시");
+  const [privileges] = await run("select has_table_privilege('authenticated', 'ai_briefing', 'select') as raw_read, has_function_privilege('authenticated', 'hermes_claim(uuid)', 'execute') as claim, has_function_privilege('anon', 'hermes_enqueue(uuid,text,timestamptz,timestamptz)', 'execute') as enqueue");
+  assert(!privileges.raw_read && !privileges.claim && !privileges.enqueue, "Hermes 원본 결과·작업 RPC는 검증 서버 경로로만 접근");
+  await run("select hermes_enqueue($1, 'check', now() + interval '1 hour', now())", [USER_A]);
+  const [{ job: retryJob }] = await run("select hermes_claim($1) as job", [USER_A]);
+  await run("select hermes_finish($1, $2, null, 'model_unavailable', now())", [retryJob.id, retryJob.token]);
+  const [retry] = await run("select status, available_at > now() as delayed from ai_briefing_job where id = $1", [retryJob.id]);
+  assert(retry.status === "queued" && retry.delayed, "Hermes 실패는 대기 후 재시도");
+  await run("update ai_briefing_job set available_at = now() where id = $1", [retryJob.id]);
+  const [{ job: quotaJob }] = await run("select hermes_claim($1) as job", [USER_A]);
+  await run("update ai_briefing_state set call_date = (now() at time zone 'Asia/Seoul')::date, call_count = 60 where user_id = $1", [USER_A]);
+  const [quota] = await run("select hermes_reserve($1, $2) as ok", [quotaJob.id, quotaJob.token]);
+  assert(!quota.ok, "Hermes 하루 60회 한도 초과 차단");
+  await run("update ai_briefing_job set lease_until = now() - interval '1 second' where id = $1", [quotaJob.id]);
+  const [{ job: recovered }] = await run("select hermes_claim($1) as job", [USER_A]);
+  assert(recovered.token !== quotaJob.token && recovered.attempts === 3, "Hermes 작업자 중단 후 새 실행 토큰으로 복구");
+  await run("update profile set status = 'disabled' where id = $1", [USER_A]);
+  const [revoked] = await run("select hermes_finish($1, $2, '{}'::jsonb, null, now()) as ok", [recovered.id, recovered.token]);
+  assert(!revoked.ok, "Hermes 결과 저장 시 계정 활성 상태 재검증");
+  await db.exec("rollback");
+} catch (error) {
+  failures++;
+  console.error(`✗ Hermes 작업 수명·권한 검증 실패\n${error.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+
 // ── 결과 ─────────────────────────────────────────────────────────────────
 console.log(`\n${"=".repeat(56)}`);
 if (failures === 0) {

@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_briefing: {
+        Row: { id: string; tenant_id: string; user_id: string; kind: string; result: Json; snapshot: Json; input_hash: string; created_at: string }
+        Insert: { id?: string; tenant_id: string; user_id: string; kind: string; result: Json; snapshot: Json; input_hash: string; created_at?: string }
+        Update: { result?: Json }
+        Relationships: []
+      }
+      ai_briefing_state: {
+        Row: { user_id: string; tenant_id: string; snapshot: Json | null; input_hash: string | null; latest_id: string | null; checked_at: string | null; next_at: string | null; call_date: string | null; call_count: number }
+        Insert: { user_id: string; tenant_id: string }
+        Update: { snapshot?: Json | null; input_hash?: string | null; latest_id?: string | null }
+        Relationships: []
+      }
+      ai_briefing_job: {
+        Row: { id: string; tenant_id: string; user_id: string; kind: string; slot: string; status: string; token: string | null; lease_until: string | null; available_at: string; attempts: number; error_code: string | null; snapshot: Json | null; previous_snapshot: Json | null; input_hash: string | null; data_as_of: string | null; model_reserved: boolean; created_at: string; finished_at: string | null }
+        Insert: { tenant_id: string; user_id: string; kind: string; slot: string }
+        Update: { snapshot?: Json; previous_snapshot?: Json | null; input_hash?: string; data_as_of?: string }
+        Relationships: []
+      }
       ai_action: {
         Row: {
           action_type: string
@@ -2391,6 +2409,10 @@ export type Database = {
       }
     }
     Functions: {
+      hermes_enqueue: { Args: { target: string; job_kind: string; job_slot: string; next_slot: string }; Returns: string }
+      hermes_claim: { Args: { target: string }; Returns: Json }
+      hermes_reserve: { Args: { job_id: string; lease_token: string }; Returns: boolean }
+      hermes_finish: { Args: { job_id: string; lease_token: string; output: Json | null; failure: string | null; next_slot: string }; Returns: boolean }
       app_permission_keys: { Args: never; Returns: string[] }
       auth_has_permission: {
         Args: { permission_key: string }
