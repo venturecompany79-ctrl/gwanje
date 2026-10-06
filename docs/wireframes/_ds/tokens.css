@@ -23,17 +23,17 @@
   --color-warning-bg: #ffc94d;
   --color-critical: #ff4d63;
   --color-critical-strong: #ff6076;
-  --color-canvas: #191919; /* 패널·카드 표면 — x.ai canvas-card */
-  --color-surface-soft: #0a0a0a; /* body·함몰 영역 — x.ai canvas */
+  --color-canvas: #25272b; /* 패널·카드 표면 — x.ai canvas-card */
+  --color-surface-soft: #181a1d; /* body·함몰 영역 — x.ai canvas */
   --color-ink-deep: #ffffff;
   --color-ink: #fafaf7;
-  --color-charcoal: #dadbdf;
+  --color-charcoal: #e2e3e7;
   --color-slate: #b9bcc2;
-  --color-steel: #9aa0a6;
-  --color-stone: #858a92;
-  --color-hairline: #2c2f34;
-  --color-hairline-soft: #212327;
-  --color-disabled-text: #5f636a;
+  --color-steel: #b3b8bf;
+  --color-stone: #a0a5ad;
+  --color-hairline: #4a4d54;
+  --color-hairline-soft: #383b41;
+  --color-disabled-text: #7a7f87;
 
   /* ---- rounded (design.md rounded:) ---- pill은 유지, 카드는 spacex 수준으로 축소 */
   --radius-xs: 2px;
@@ -97,4 +97,6 @@
   --app-dropzone-bg: color-mix(in srgb, var(--color-primary-soft) 14%, var(--color-canvas));
   --app-lp-hero-tint: #1a1c20; /* 랜딩 Hero 라디얼 틴트 — x.ai canvas-soft */
   --app-banner-critical-border: color-mix(in srgb, var(--color-critical) 40%, var(--color-canvas));
+  --app-surface-raised: color-mix(in srgb, var(--color-ink) 4%, var(--color-canvas));
+  --app-hover-bg: color-mix(in srgb, var(--color-ink) 6%, var(--color-canvas));
 }

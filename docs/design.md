@@ -28,20 +28,22 @@ colors:
   warning: "#ffc94d"
   critical: "#ff4d63"
   critical-strong: "#ff6076"
-  # 표면 — x.ai
-  canvas: "#191919"            # 패널·카드 (x.ai canvas-card)
-  surface-soft: "#0a0a0a"      # body·함몰 영역 (x.ai canvas)
+  # 표면 — x.ai 톤을 한 단계 밝힘(2026-10 대비 개선). 3단: surface-soft < canvas < raised
+  # (raised·hover 는 globals.css 의 --app-surface-raised / --app-hover-bg — canvas 에 ink 4%/6% 혼합.
+  #  hover 는 어둡게가 아니라 한 단계 밝게.)
+  canvas: "#25272b"            # 패널·카드 (x.ai canvas-card)
+  surface-soft: "#181a1d"      # body·함몰 영역 (x.ai canvas)
   # 텍스트 램프 — 위에서 아래로 대비 감소
   ink-deep: "#ffffff"
   ink: "#fafaf7"
-  charcoal: "#dadbdf"
+  charcoal: "#e2e3e7"
   slate: "#b9bcc2"
-  steel: "#9aa0a6"
-  stone: "#858a92"
-  disabled-text: "#5f636a"
+  steel: "#b3b8bf"
+  stone: "#a0a5ad"
+  disabled-text: "#7a7f87"
   # 라인
-  hairline: "#2c2f34"
-  hairline-soft: "#212327"     # x.ai hairline
+  hairline: "#4a4d54"
+  hairline-soft: "#383b41"     # x.ai hairline
 
 rounded:
   xs: 2px

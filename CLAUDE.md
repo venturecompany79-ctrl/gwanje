@@ -66,9 +66,9 @@ design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(
 | 1차 액션 | `primary` #ffffff · `primary-deep` #dadbdf · `primary-soft` #a0c3ec · `on-primary` #0a0a0a |
 | 마케팅 1차 | `ink-button` #ff7a17 (sunset pill) / `on-ink-button` #0a0a0a |
 | 폼 활성 | `fb-blue` #ffffff (선택 라디오·체크·인풋 포커스 — 흰색 아웃라인) |
-| 표면 | `canvas` #191919 (패널) · `surface-soft` #0a0a0a (body·함몰) |
-| 텍스트 | `ink-deep` #ffffff · `ink` #fafaf7 · `charcoal` #dadbdf · `slate` #b9bcc2 · `steel` #9aa0a6 · `stone` #858a92 |
-| 라인 | `hairline` #2c2f34 · `hairline-soft` #212327 |
+| 표면 | `canvas` #25272b (패널) · `surface-soft` #181a1d (body·함몰) · `--app-surface-raised`(떠 있는 요소) · `--app-hover-bg`(hover는 한 단계 밝게) |
+| 텍스트 | `ink-deep` #ffffff · `ink` #fafaf7 · `charcoal` #e2e3e7 · `slate` #b9bcc2 · `steel` #b3b8bf · `stone` #a0a5ad |
+| 라인 | `hairline` #4a4d54 · `hairline-soft` #383b41 |
 | 시맨틱 | `success` #35d07f · `attention` #ffb224 · `warning` #ffc94d · `critical` #ff4d63 · `critical-strong` #ff6076 |
 | radius | xs2 · sm4 · md6 · lg8 · **xl10** · xxl12 · **xxxl14** · feature16 · full100 · circle |
 | spacing(4px base) | xxs4 · xs8 · sm10 · md12 · base16 · lg20 · xl24 · xxl32 · xxxl40 · section-sm48 · section64 · section-lg80 · hero120 |
@@ -91,10 +91,10 @@ design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(
 
 | | 웹 (다크) | 모바일 (라이트) |
 |---|---|---|
-| 지면 | `canvas` #191919 / body #0a0a0a | `card` #FFFFFF / `grouped` #F0F0FA (spacex canvas-cool) |
+| 지면 | `canvas` #25272b / body #181a1d | `card` #FFFFFF / `grouped` #F0F0FA (spacex canvas-cool) |
 | 본문 | `ink-deep` #ffffff | `label` #000000 (순검정 · 21:1) |
 | 1차 액션 | 흰색 pill + 근검정 글자 | **검정 pill + 흰 글자** (`brand` #000000) |
-| 라인 | `hairline-soft` #212327 | `hairline` #E0E0E8 (spacex hairline-on-light) |
+| 라인 | `hairline-soft` #383b41 | `hairline` #E0E0E8 (spacex hairline-on-light) |
 
 **시그니처 규칙 (웹과 공통)**
 - 버튼은 **항상 pill**(`radius.full`). 사각 버튼 금지.
