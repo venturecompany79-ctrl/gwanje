@@ -23,8 +23,8 @@
   --color-attention: #ffb224;
   --color-warning: #ffc94d;
   --color-warning-bg: #ffc94d;
-  --color-critical: #ff4d63;
-  --color-critical-strong: #ff6076;
+  --color-critical: #ff7588;
+  --color-critical-strong: #ff7a8b;
   --color-canvas: #25272b; /* 패널·카드 표면 — x.ai canvas-card */
   --color-surface-soft: #181a1d; /* body·함몰 영역 — x.ai canvas */
   --color-ink-deep: #ffffff;
@@ -101,8 +101,8 @@
   --app-banner-critical-border: color-mix(in srgb, var(--color-critical) 40%, var(--color-canvas));
   /* 표면 3단 — body(surface-soft) < 패널(canvas) < 떠 있는 요소(raised).
      hover 는 함몰(더 어둡게)이 아니라 한 단계 밝게 — 다크에선 어두워지는 hover가 안 읽힌다. */
-  --app-surface-raised: color-mix(in srgb, var(--color-ink) 4%, var(--color-canvas));
-  --app-hover-bg: color-mix(in srgb, var(--color-ink) 6%, var(--color-canvas));
+  --app-surface-raised: color-mix(in srgb, var(--color-ink) 3%, var(--color-canvas));
+  --app-hover-bg: color-mix(in srgb, var(--color-ink) 8%, var(--color-canvas));
 }
 
 /* ---- base ---- */
@@ -793,16 +793,17 @@ h4 {
   gap: 6px;
   padding: 4px 8px 24px;
 }
+.brand-logo,
+.share-logo {
+  /* 로고 원본이 검정 PNG — 다크 단일 테마라 모든 노출 지점에서 반전해 흰 워드마크로 */
+  filter: invert(1);
+}
 .brand-logo {
   height: auto;
   width: auto;
 }
 .brand .brand-logo {
   height: 22px;
-}
-/* 로고 원본이 검정 PNG — 다크 사이드바에서 반전해 흰 워드마크로 */
-.shell-nav .brand-logo {
-  filter: invert(1);
 }
 .brand small {
   display: block;
@@ -4208,7 +4209,7 @@ table.dlist .name {
 }
 .task-file-upload.is-disabled,
 .task-file-upload.is-disabled:hover {
-  background: var(--app-hover-bg);
+  background: var(--color-surface-soft);
   border-color: var(--color-hairline-soft);
   color: var(--color-steel);
   cursor: default;
@@ -5858,7 +5859,7 @@ input.cond-input {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.86);
+  background: color-mix(in srgb, var(--color-surface-soft) 86%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-hairline-soft);
 }
@@ -6332,7 +6333,9 @@ input.cond-input {
 
 /* CTA 밴드 */
 .lp-band {
-  background: var(--color-ink-deep);
+  /* 다크 단일 테마 — 흰 밴드 위에 흰 글자·흰 버튼이 묻히던 것을 함몰 패널로 */
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-xxxl);
   padding: 64px 40px;
   text-align: center;
@@ -6342,7 +6345,7 @@ input.cond-input {
   font-size: 34px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-on-ink-button);
+  color: var(--color-ink-deep);
   font-feature-settings: "ss01" 1, "ss02" 1;
 }
 .lp-band p {
@@ -6359,7 +6362,7 @@ input.cond-input {
 }
 .lp-band .btn--ghost {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--color-on-ink-button);
+  color: var(--color-ink-deep);
   border-color: transparent;
 }
 .lp-band .btn--ghost:hover {

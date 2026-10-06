@@ -69,7 +69,7 @@ design.md 토큰은 이미 `app/globals.css`의 `:root`에 1:1 포팅돼 있다(
 | 표면 | `canvas` #25272b (패널) · `surface-soft` #181a1d (body·함몰) · `--app-surface-raised`(떠 있는 요소) · `--app-hover-bg`(hover는 한 단계 밝게) |
 | 텍스트 | `ink-deep` #ffffff · `ink` #fafaf7 · `charcoal` #e2e3e7 · `slate` #b9bcc2 · `steel` #b3b8bf · `stone` #a0a5ad |
 | 라인 | `hairline` #4a4d54 · `hairline-soft` #383b41 |
-| 시맨틱 | `success` #35d07f · `attention` #ffb224 · `warning` #ffc94d · `critical` #ff4d63 · `critical-strong` #ff6076 |
+| 시맨틱 | `success` #35d07f · `attention` #ffb224 · `warning` #ffc94d · `critical` #ff7588 · `critical-strong` #ff7a8b |
 | radius | xs2 · sm4 · md6 · lg8 · **xl10** · xxl12 · **xxxl14** · feature16 · full100 · circle |
 | spacing(4px base) | xxs4 · xs8 · sm10 · md12 · base16 · lg20 · xl24 · xxl32 · xxxl40 · section-sm48 · section64 · section-lg80 · hero120 |
 

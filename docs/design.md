@@ -26,10 +26,10 @@ colors:
   success: "#35d07f"
   attention: "#ffb224"
   warning: "#ffc94d"
-  critical: "#ff4d63"
-  critical-strong: "#ff6076"
+  critical: "#ff7588"
+  critical-strong: "#ff7a8b"
   # 표면 — x.ai 톤을 한 단계 밝힘(2026-10 대비 개선). 3단: surface-soft < canvas < raised
-  # (raised·hover 는 globals.css 의 --app-surface-raised / --app-hover-bg — canvas 에 ink 4%/6% 혼합.
+  # (raised·hover 는 globals.css 의 --app-surface-raised / --app-hover-bg — canvas 에 ink 3%/8% 혼합.
   #  hover 는 어둡게가 아니라 한 단계 밝게.)
   canvas: "#25272b"            # 패널·카드 (x.ai canvas-card)
   surface-soft: "#181a1d"      # body·함몰 영역 (x.ai canvas)

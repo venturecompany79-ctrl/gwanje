@@ -24,8 +24,8 @@ export function buildCategoryColorCss(entries: CategoryColorEntry[]): string {
       const sel = `.cat-chip[data-cat="${cssEscape(name)}"]`;
       return (
         `${sel}{` +
-        `background:color-mix(in srgb,${color} 18%,#191919);` +
-        `border-color:color-mix(in srgb,${color} 40%,#191919);` +
+        `background:color-mix(in srgb,${color} 18%,var(--color-canvas));` +
+        `border-color:color-mix(in srgb,${color} 40%,var(--color-canvas));` +
         `color:color-mix(in srgb,${color} 52%,#ffffff);` +
         `}`
       );

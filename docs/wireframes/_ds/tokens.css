@@ -21,8 +21,8 @@
   --color-attention: #ffb224;
   --color-warning: #ffc94d;
   --color-warning-bg: #ffc94d;
-  --color-critical: #ff4d63;
-  --color-critical-strong: #ff6076;
+  --color-critical: #ff7588;
+  --color-critical-strong: #ff7a8b;
   --color-canvas: #25272b; /* 패널·카드 표면 — x.ai canvas-card */
   --color-surface-soft: #181a1d; /* body·함몰 영역 — x.ai canvas */
   --color-ink-deep: #ffffff;
@@ -97,6 +97,6 @@
   --app-dropzone-bg: color-mix(in srgb, var(--color-primary-soft) 14%, var(--color-canvas));
   --app-lp-hero-tint: #1a1c20; /* 랜딩 Hero 라디얼 틴트 — x.ai canvas-soft */
   --app-banner-critical-border: color-mix(in srgb, var(--color-critical) 40%, var(--color-canvas));
-  --app-surface-raised: color-mix(in srgb, var(--color-ink) 4%, var(--color-canvas));
-  --app-hover-bg: color-mix(in srgb, var(--color-ink) 6%, var(--color-canvas));
+  --app-surface-raised: color-mix(in srgb, var(--color-ink) 3%, var(--color-canvas));
+  --app-hover-bg: color-mix(in srgb, var(--color-ink) 8%, var(--color-canvas));
 }
