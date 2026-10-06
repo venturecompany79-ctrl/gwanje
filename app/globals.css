@@ -8337,7 +8337,8 @@ body {
   border-radius: var(--radius-full);
   background: var(--color-canvas);
 }
-.monitor-scope-switch a {
+.monitor-scope-switch a,
+.monitor-scope-switch button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8350,13 +8351,27 @@ body {
   font-weight: 700;
   white-space: nowrap;
 }
-.monitor-scope-switch a:hover {
+.monitor-scope-switch a:hover,
+.monitor-scope-switch button:hover {
   background: var(--app-hover-bg);
   color: var(--color-ink-deep);
 }
-.monitor-scope-switch a.is-active {
+.monitor-scope-switch a.is-active,
+.monitor-scope-switch button.is-active {
   background: var(--color-ink-deep);
   color: var(--color-canvas);
+}
+.monitor-scope-switch button {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  letter-spacing: -0.14px;
+  cursor: pointer;
+}
+/* 세그먼트 안 건수 — 라벨보다 한 단계 약하게, 자릿수 고정 */
+.seg-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
 }
 .monitor-scope-switch svg,
 .monitor-refresh-button svg {
@@ -8365,6 +8380,7 @@ body {
   stroke: currentColor;
 }
 .monitor-scope-switch a:focus-visible,
+.monitor-scope-switch button:focus-visible,
 .monitor-refresh-button:focus-visible,
 .monitor-board-link:focus-visible,
 .assistant-panel button:focus-visible,
@@ -9848,7 +9864,8 @@ a.monitor-alert-strip:focus-visible {
   .monitor-scope-switch {
     width: 100%;
   }
-  .monitor-scope-switch a {
+  .monitor-scope-switch a,
+  .monitor-scope-switch button {
     flex: 1;
   }
   .monitor-refresh-meta {
@@ -10078,15 +10095,13 @@ a.monitor-alert-strip:focus-visible {
   margin-bottom: var(--space-md);
 }
 .portfolio-scope,
-.portfolio-view-tabs,
 .task-view-tabs {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   flex-wrap: wrap;
 }
-.portfolio-scope .pill-tab,
-.portfolio-view-tabs .pill-tab {
+.portfolio-scope .pill-tab {
   min-height: 38px;
 }
 .portfolio-scope svg {
@@ -10096,6 +10111,40 @@ a.monitor-alert-strip:focus-visible {
 }
 .portfolio-filter-bar {
   margin-bottom: var(--space-base);
+}
+.portfolio-toolbar {
+  flex-wrap: wrap;
+}
+/* 값이 걸린 필터 드롭다운 — 기본값과 구분되게 흰 아웃라인 */
+.select-pill.is-set {
+  border-color: var(--color-ink-deep);
+  color: var(--color-ink-deep);
+}
+.filter-reset {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  min-height: 40px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-steel);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.filter-reset:hover {
+  color: var(--color-ink-deep);
+}
+.filter-reset:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
 }
 .portfolio-panel {
   overflow: visible;
@@ -10736,14 +10785,8 @@ a.monitor-alert-strip:focus-visible {
 }
 
 @media (max-width: 640px) {
-  .portfolio-view-tabs,
   .portfolio-scope {
     width: 100%;
-  }
-  .portfolio-view-tabs .pill-tab {
-    flex: 1;
-    padding-right: 10px;
-    padding-left: 10px;
   }
   .portfolio-task-drawer-head {
     align-items: flex-start;

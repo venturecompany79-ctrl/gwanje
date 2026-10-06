@@ -502,13 +502,30 @@ export function CompaniesTable({
     workStatus !== "all" ||
     consultant !== "all";
 
+  function resetFilters() {
+    setQuery("");
+    setTag(null);
+    setConsultant("all");
+    setWorkStatus("all");
+  }
+
+  const viewTabs = [
+    ["all", "전체"],
+    ["attention", "집중관리"],
+    ["stable", "정상"],
+    ["ended", "종료"],
+  ] as const;
+  const viewLabel = viewTabs.find(([value]) => value === view)?.[1] ?? "전체";
+
   return (
     <>
+      {/* 1행: 무엇을 보는가 — 범위(누구 것) + 상태(어떤 기업). 같은 세그먼트 컨트롤 하나의 문법 */}
       <div className="portfolio-toolbar">
-        <div className="portfolio-scope" role="group" aria-label="기업 관제 범위">
+        <div className="monitor-scope-switch" role="group" aria-label="기업 관제 범위">
           <button
             type="button"
-            className={`pill-tab${scope === "mine" ? " is-active" : ""}`}
+            className={scope === "mine" ? "is-active" : undefined}
+            aria-pressed={scope === "mine"}
             onClick={() => {
               setScope("mine");
               setConsultant("all");
@@ -519,34 +536,30 @@ export function CompaniesTable({
           {data.canViewTeam ? (
             <button
               type="button"
-              className={`pill-tab${scope === "team" ? " is-active" : ""}`}
+              className={scope === "team" ? "is-active" : undefined}
+              aria-pressed={scope === "team"}
               onClick={() => setScope("team")}
             >
               <IconBuilding /> 팀 전체
             </button>
           ) : null}
         </div>
-        <div className="portfolio-view-tabs" role="group" aria-label="기업 상태 보기">
-          {(
-            [
-              ["all", "전체"],
-              ["attention", "집중관리"],
-              ["stable", "정상"],
-              ["ended", "종료"],
-            ] as const
-          ).map(([value, label]) => (
+        <div className="monitor-scope-switch" role="group" aria-label="기업 상태 보기">
+          {viewTabs.map(([value, label]) => (
             <button
               key={value}
               type="button"
-              className={`pill-tab${view === value ? " is-active" : ""}`}
+              className={view === value ? "is-active" : undefined}
+              aria-pressed={view === value}
               onClick={() => setView(value)}
             >
-              {label} {counts[value]}
+              {label} <span className="seg-count">{counts[value]}</span>
             </button>
           ))}
         </div>
       </div>
 
+      {/* 2행: 어떻게 좁히는가 — 검색 + 필터 드롭다운 + 정렬. 태그는 늘어나도 한 줄을 지키도록 select */}
       <div className="filter-bar portfolio-filter-bar">
         <div className="search-pill">
           <IconSearch />
@@ -560,7 +573,7 @@ export function CompaniesTable({
         </div>
         {scope === "team" ? (
           <select
-            className="select-pill"
+            className={`select-pill${consultant !== "all" ? " is-set" : ""}`}
             value={consultant}
             onChange={(event) => setConsultant(event.target.value)}
             aria-label="주담당 컨설턴트 필터"
@@ -575,7 +588,7 @@ export function CompaniesTable({
           </select>
         ) : null}
         <select
-          className="select-pill"
+          className={`select-pill${workStatus !== "all" ? " is-set" : ""}`}
           value={workStatus}
           onChange={(event) =>
             setWorkStatus(event.target.value as WorkStatusFilter)
@@ -589,25 +602,28 @@ export function CompaniesTable({
             </option>
           ))}
         </select>
-        <div className="tag-tabs" role="group" aria-label="컨디션 태그 필터">
-          <button
-            type="button"
-            className={`pill-tab${tag === null ? " is-active" : ""}`}
-            onClick={() => setTag(null)}
+        {allTags.length > 0 || tag ? (
+          <select
+            className={`select-pill${tag ? " is-set" : ""}`}
+            value={tag ?? ""}
+            onChange={(event) => setTag(event.target.value || null)}
+            aria-label="컨디션 태그 필터"
           >
-            태그 전체
+            <option value="">태그 전체</option>
+            {(tag && !allTags.includes(tag) ? [tag, ...allTags] : allTags).map(
+              (value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ),
+            )}
+          </select>
+        ) : null}
+        {isFiltered ? (
+          <button type="button" className="filter-reset" onClick={resetFilters}>
+            필터 초기화
           </button>
-          {allTags.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`pill-tab${tag === value ? " is-active" : ""}`}
-              onClick={() => setTag(tag === value ? null : value)}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
+        ) : null}
         <div className="spacer" />
         {view !== "ended" ? (
           <select
@@ -632,22 +648,23 @@ export function CompaniesTable({
             <p>
               {scope === "mine" && scopedCompanies.length === 0
                 ? "내 담당 기업이 없습니다"
-                : "조건에 맞는 기업이 없습니다"}
+                : view !== "all" && counts[view] === 0
+                  ? `${view === "ended" ? "종료된" : viewLabel} 기업이 없습니다`
+                  : "조건에 맞는 기업이 없습니다"}
             </p>
-            {isFiltered ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setQuery("");
-                  setTag(null);
-                  setConsultant("all");
-                  setWorkStatus("all");
-                }}
-              >
-                필터 초기화
-              </Button>
-            ) : null}
+            {/* 빈 결과의 원인이 상태 탭이면 탭을, 필터면 필터를 되돌리는 버튼을 준다 */}
+            <div className="empty-actions">
+              {view !== "all" ? (
+                <Button variant="ghost" size="sm" onClick={() => setView("all")}>
+                  전체 보기
+                </Button>
+              ) : null}
+              {isFiltered ? (
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  필터 초기화
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : (
           <div className="portfolio-table-wrap">
