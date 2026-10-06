@@ -295,6 +295,47 @@ export async function updateTask(
   return { ok: true, error: null };
 }
 
+/** 과제 슬라이드오버 [삭제] — task_file·변경이력은 cascade, 일정 연결은 set null */
+export async function deleteTask(
+  companyId: string,
+  taskId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  if (!supabase) return { ok: false, error: DEMO_ERROR };
+  if (!taskId) return { ok: false, error: "과제를 찾을 수 없습니다." };
+
+  const allowed = await requirePermission(supabase, "tasks.write");
+  if ("error" in allowed) return { ok: false, error: allowed.error };
+
+  // cascade로 메타데이터가 사라지기 전에 스토리지 경로를 확보한다.
+  const { data: files } = await supabase
+    .from("task_file")
+    .select("file_path")
+    .eq("task_id", taskId);
+
+  const { data, error } = await supabase
+    .from("task")
+    .delete()
+    .eq("id", taskId)
+    .eq("company_id", companyId)
+    .select("id");
+  if (error) {
+    console.error("[deleteTask]", error.code, error.message);
+    return { ok: false, error: `삭제에 실패했습니다: ${error.message}` };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "과제를 찾을 수 없습니다." };
+  }
+
+  await removeUploadedTaskFiles(
+    supabase,
+    (files ?? []).map((file) => file.file_path),
+  );
+
+  revalidateTaskScreens(companyId);
+  return { ok: true, error: null };
+}
+
 /** 칸반 드래그 이동 — 단계만 변경 (메모 보존) */
 export async function updateTaskStage(
   companyId: string,

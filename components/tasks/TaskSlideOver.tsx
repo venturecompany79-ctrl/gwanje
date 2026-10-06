@@ -28,7 +28,7 @@ import {
   TASK_WORK_STATUS_LABEL,
   TASK_WORK_STATUS_ORDER,
 } from "@/lib/labels";
-import { addTask, updateTask } from "@/lib/actions/tasks";
+import { addTask, deleteTask, updateTask } from "@/lib/actions/tasks";
 import type { CategoryOption, TaskRow } from "@/lib/data/company-detail";
 import { TaskDday } from "./Stepper";
 import {
@@ -84,6 +84,7 @@ export function TaskSlideOver({
     updatedAt: task.updatedAt,
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<SelectedTaskFile[]>([]);
   const [pending, startTransition] = useTransition();
@@ -120,6 +121,20 @@ export function TaskSlideOver({
       }
       onClose();
       showToast("저장되었습니다");
+      router.refresh();
+    });
+  }
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteTask(companyId, task.id);
+      if (!result.ok) {
+        setError(result.error);
+        setConfirmingDelete(false);
+        return;
+      }
+      onClose();
+      showToast("삭제되었습니다");
       router.refresh();
     });
   }
@@ -287,15 +302,48 @@ export function TaskSlideOver({
         {canEdit ? (
           <div className="slideover-foot">
             {isEditing ? (
-              <Button
-                variant="cta"
-                type="submit"
-                form={detailFormId}
-                full
-                disabled={pending}
-              >
-                {pending ? "저장 중…" : "변경 저장"}
-              </Button>
+              <>
+                <Button
+                  variant="cta"
+                  type="submit"
+                  form={detailFormId}
+                  disabled={pending}
+                >
+                  {pending ? "저장 중…" : "변경 저장"}
+                </Button>
+                <div className="slideover-foot-end">
+                  {confirmingDelete ? (
+                    <>
+                      <span className="form-hint">삭제할까요?</span>
+                      <Button
+                        variant="danger"
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={pending}
+                      >
+                        {pending ? "삭제 중…" : "삭제 확인"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        onClick={() => setConfirmingDelete(false)}
+                        disabled={pending}
+                      >
+                        취소
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost-danger"
+                      type="button"
+                      onClick={() => setConfirmingDelete(true)}
+                      disabled={pending}
+                    >
+                      삭제
+                    </Button>
+                  )}
+                </div>
+              </>
             ) : (
               <button
                 type="button"
