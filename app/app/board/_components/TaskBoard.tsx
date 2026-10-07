@@ -16,6 +16,7 @@ import { CategoryChip } from "@/components/ui/CategoryChip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   IconKanban,
+  IconList,
   IconPlus,
   IconSearch,
 } from "@/components/ui/icons";
@@ -39,6 +40,10 @@ import {
 import { CompanyName } from "@/components/ui/CompanyName";
 
 type DueFilter = "all" | "7" | "30" | "overdue";
+type ViewMode = "kanban" | "list";
+
+// 뷰 선택은 뷰어별 편의 설정 — URL(view=list)이 우선, 없으면 마지막 선택.
+const VIEW_STORAGE_KEY = "gwanje.taskBoard.view";
 
 const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
   { value: "all", label: "마감기간 전체" },
@@ -159,6 +164,9 @@ export function TaskBoard({
     searchParams.get("completed") === "1" ||
       searchParams.get("status") === "completed",
   );
+  const [view, setView] = useState<ViewMode>(
+    searchParams.get("view") === "list" ? "list" : "kanban",
+  );
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -179,6 +187,22 @@ export function TaskBoard({
   );
 
   useEffect(() => {
+    if (searchParams.get("view")) return;
+    try {
+      if (localStorage.getItem(VIEW_STORAGE_KEY) === "list") setView("list");
+    } catch {}
+    // 최초 1회만 — 이후 선택은 changeView가 저장한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function changeView(next: ViewMode) {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {}
+  }
+
+  useEffect(() => {
     if (addRequest === handledAddRequestRef.current) return;
     handledAddRequestRef.current = addRequest;
     if (!data.canWriteTasks) return;
@@ -197,6 +221,7 @@ export function TaskBoard({
   useEffect(() => {
     const params = new URLSearchParams();
     params.set("tab", "tasks");
+    if (view === "list") params.set("view", "list");
     if (scope === "team") params.set("scope", "team");
     if (scope === "team" && assigneeFilter !== "all") {
       params.set("assignee", assigneeFilter);
@@ -216,18 +241,19 @@ export function TaskBoard({
     query,
     scope,
     showCompleted,
+    view,
     workStatusFilter,
   ]);
+
+  // 칸반은 컬럼 자체가 상태라 상태 필터를 목록 보기에서만 적용한다.
+  const statusFilter = view === "list" ? workStatusFilter : "all";
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return data.tasks.filter((t) => {
       const taskState = effectiveState(t);
       if (!showCompleted && taskState.workStatus === "completed") return false;
-      if (
-        workStatusFilter !== "all" &&
-        taskState.workStatus !== workStatusFilter
-      ) {
+      if (statusFilter !== "all" && taskState.workStatus !== statusFilter) {
         return false;
       }
       if (scope === "mine" && t.assigneeId !== data.currentProfileId) return false;
@@ -278,8 +304,26 @@ export function TaskBoard({
     scope,
     showCompleted,
     effectiveState,
-    workStatusFilter,
+    statusFilter,
   ]);
+
+  // 목록: 진행 중 → 기한 지남 우선 → 마감 임박순, 완료는 맨 뒤
+  const sortedRows = useMemo(
+    () =>
+      [...filtered].sort((a, b) => {
+        const doneA = effectiveState(a).workStatus === "completed" ? 1 : 0;
+        const doneB = effectiveState(b).workStatus === "completed" ? 1 : 0;
+        if (doneA !== doneB) return doneA - doneB;
+        return (
+          (a.daysLeft ?? Number.MAX_SAFE_INTEGER) -
+          (b.daysLeft ?? Number.MAX_SAFE_INTEGER)
+        );
+      }),
+    [effectiveState, filtered],
+  );
+  const kanbanStatuses = showCompleted
+    ? TASK_WORK_STATUS_ORDER
+    : TASK_WORK_STATUS_ORDER.filter((status) => status !== "completed");
 
   const isFiltered =
     query.trim() !== "" ||
@@ -288,7 +332,7 @@ export function TaskBoard({
     dueFilter !== "all" ||
     scope !== "mine" ||
     assigneeFilter !== "all" ||
-    workStatusFilter !== "all" ||
+    statusFilter !== "all" ||
     showCompleted;
 
   const selected = data.tasks.find((t) => t.id === selectedId) ?? null;
@@ -377,36 +421,53 @@ export function TaskBoard({
         />
       ) : (
         <>
-          <div className="board-scope-row">
-            <div className="portfolio-scope" role="group" aria-label="Task 관제 범위">
-              <button
-                type="button"
-                className={`pill-tab${scope === "mine" ? " is-active" : ""}`}
-                onClick={() => {
-                  setScope("mine");
-                  setAssigneeFilter("all");
-                }}
-              >
-                내 Task
-              </button>
-              {data.canViewTeam ? (
+          <div className="task-toolbar">
+            {data.canViewTeam ? (
+              <div className="seg-toggle" role="group" aria-label="Task 범위">
                 <button
                   type="button"
-                  className={`pill-tab${scope === "team" ? " is-active" : ""}`}
+                  aria-pressed={scope === "mine"}
+                  onClick={() => {
+                    setScope("mine");
+                    setAssigneeFilter("all");
+                  }}
+                >
+                  내 Task
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={scope === "team"}
                   onClick={() => setScope("team")}
                 >
                   팀 전체
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
+            <div className="spacer" />
             <button
               type="button"
               className={`pill-tab${showCompleted ? " is-active" : ""}`}
               aria-pressed={showCompleted}
               onClick={() => setShowCompleted((value) => !value)}
             >
-              {showCompleted ? "완료 숨기기" : "완료 보기"}
+              완료 포함
             </button>
+            <div className="seg-toggle" role="group" aria-label="보기 방식">
+              <button
+                type="button"
+                aria-pressed={view === "kanban"}
+                onClick={() => changeView("kanban")}
+              >
+                <IconKanban /> 칸반
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "list"}
+                onClick={() => changeView("list")}
+              >
+                <IconList /> 목록
+              </button>
+            </div>
           </div>
           <div className="filter-bar">
             {scope === "team" ? (
@@ -451,23 +512,25 @@ export function TaskBoard({
                 </option>
               ))}
             </select>
-            <select
-              className="select-pill"
-              value={workStatusFilter}
-              onChange={(e) => {
-                const next = e.target.value as "all" | ActiveTaskWorkStatus;
-                setWorkStatusFilter(next);
-                if (next === "completed") setShowCompleted(true);
-              }}
-              aria-label="상태 필터"
-            >
-              <option value="all">상태 전체</option>
-              {TASK_WORK_STATUS_ORDER.map((status) => (
-                <option key={status} value={status}>
-                  {TASK_WORK_STATUS_LABEL[status]}
-                </option>
-              ))}
-            </select>
+            {view === "list" ? (
+              <select
+                className="select-pill"
+                value={workStatusFilter}
+                onChange={(e) => {
+                  const next = e.target.value as "all" | ActiveTaskWorkStatus;
+                  setWorkStatusFilter(next);
+                  if (next === "completed") setShowCompleted(true);
+                }}
+                aria-label="상태 필터"
+              >
+                <option value="all">상태 전체</option>
+                {TASK_WORK_STATUS_ORDER.map((status) => (
+                  <option key={status} value={status}>
+                    {TASK_WORK_STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <select
               className="select-pill"
               value={dueFilter}
@@ -515,9 +578,78 @@ export function TaskBoard({
                 </Button>
               ) : null}
             </div>
+          ) : view === "list" ? (
+            <div className="panel task-list-wrap">
+              <table className="dlist task-list">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>분류</th>
+                    <th>마감</th>
+                    {scope === "team" ? <th>담당</th> : null}
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRows.map((t) => {
+                    const taskState = effectiveState(t);
+                    return (
+                      <tr
+                        key={t.id}
+                        className={
+                          taskState.workStatus === "completed" ? "is-done" : undefined
+                        }
+                      >
+                        <td>
+                          <button
+                            type="button"
+                            className="task-list-open"
+                            onClick={() => setSelectedId(t.id)}
+                          >
+                            <span className="task-list-title">{t.title}</span>
+                            <CompanyName
+                              id={t.companyId}
+                              name={t.companyName}
+                              withMark
+                            />
+                          </button>
+                        </td>
+                        <td>
+                          <CategoryChip name={t.categoryName} />
+                        </td>
+                        <td>
+                          <TaskDday
+                            workStatus={taskState.workStatus}
+                            daysLeft={t.daysLeft}
+                          />
+                        </td>
+                        {scope === "team" ? (
+                          <td className="cell-muted">
+                            {t.assigneeName ?? "미배정"}
+                          </td>
+                        ) : null}
+                        <td>
+                          <TaskStateControls
+                            companyId={t.companyId}
+                            taskId={t.id}
+                            taskTitle={t.title}
+                            workStatus={taskState.workStatus}
+                            updatedAt={taskState.updatedAt}
+                            canEdit={data.canWriteTasks}
+                            compact
+                            showToast={showToast}
+                            onChange={(snapshot) => applyTaskState(t.id, snapshot)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <div className="board">
-              {TASK_WORK_STATUS_ORDER.map((workStatus) => {
+            <div className={`board${showCompleted ? "" : " board--3"}`}>
+              {kanbanStatuses.map((workStatus) => {
                 const columnTasks = filtered.filter(
                   (t) => effectiveState(t).workStatus === workStatus,
                 );

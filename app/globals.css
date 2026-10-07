@@ -3711,6 +3711,10 @@ table.dlist .name {
   gap: 16px;
   align-items: start;
 }
+/* 완료 숨김 시 3열 */
+.board--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .kcol {
   background: var(--color-surface-soft);
   border: 1px solid var(--color-hairline-soft);
@@ -10177,28 +10181,18 @@ a.monitor-alert-strip:focus-visible {
 /* =============================================================
    기업 관제표 · Task 빠른 상태 변경
    ============================================================= */
-.portfolio-toolbar,
-.board-scope-row {
+.portfolio-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   margin-bottom: var(--space-md);
 }
-.portfolio-scope,
 .task-view-tabs {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   flex-wrap: wrap;
-}
-.portfolio-scope .pill-tab {
-  min-height: 38px;
-}
-.portfolio-scope svg {
-  width: 15px;
-  height: 15px;
-  stroke: currentColor;
 }
 .portfolio-filter-bar {
   margin-bottom: var(--space-base);
@@ -10660,9 +10654,6 @@ a.monitor-alert-strip:focus-visible {
 .kcard .kc-owner + .task-state-controls {
   margin-top: 8px;
 }
-.board-scope-row {
-  margin-top: -4px;
-}
 .toast {
   display: flex;
   max-width: min(620px, calc(100vw - 32px));
@@ -10692,8 +10683,7 @@ a.monitor-alert-strip:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .portfolio-toolbar,
-  .board-scope-row {
+  .portfolio-toolbar {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -10816,9 +10806,6 @@ a.monitor-alert-strip:focus-visible {
 }
 
 @media (max-width: 640px) {
-  .portfolio-scope {
-    width: 100%;
-  }
   .portfolio-task-drawer-head {
     align-items: flex-start;
   }
@@ -10854,5 +10841,100 @@ a.monitor-alert-strip:focus-visible {
     width: calc(100vw - 28px);
     justify-content: space-between;
     padding: 12px 16px;
+  }
+}
+
+/* === Task 보드 · 툴바 / 목록 보기 === */
+.task-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+/* 상호배타 선택(범위·보기 방식) — 페이지 탭(pill-tab)과 위계를 구분하는 세그먼트 */
+.seg-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  background: var(--color-canvas);
+}
+.seg-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-steel);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.seg-toggle button:hover {
+  color: var(--color-ink);
+}
+.seg-toggle button[aria-pressed="true"] {
+  background: var(--color-ink-deep);
+  color: var(--color-on-primary);
+}
+.seg-toggle button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.seg-toggle svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+.task-list-wrap {
+  padding: 0;
+  overflow-x: auto;
+}
+.task-list {
+  min-width: 720px;
+}
+.task-list td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.task-list tr.is-done .task-list-title {
+  color: var(--color-stone);
+}
+.task-list-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.task-list-open:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+.task-list-title {
+  font-weight: 700;
+  color: var(--color-ink-deep);
+}
+.task-list-open:hover .task-list-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .task-toolbar .spacer {
+    display: none;
   }
 }

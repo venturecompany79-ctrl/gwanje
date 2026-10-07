@@ -5,11 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Toast, useToast } from "@/components/ui/Toast";
-import {
-  IconKanban,
-  IconList,
-  IconPlus,
-} from "@/components/ui/icons";
+import { IconCalendar, IconKanban, IconPlus } from "@/components/ui/icons";
 import type { BoardData } from "@/lib/data/board";
 import { TODO_BOARD_DAY_COUNT, type TodoBoardData } from "@/lib/todos";
 import { TodoBoard } from "./TodoBoard";
@@ -24,6 +20,11 @@ const TaskBoard = dynamic(
 function TaskBoardFallback() {
   return (
     <>
+      <div className="task-toolbar">
+        <div className="skeleton" style={{ width: 160, height: 38, borderRadius: 100 }} />
+        <div className="spacer" />
+        <div className="skeleton" style={{ width: 200, height: 38, borderRadius: 100 }} />
+      </div>
       <div className="filter-bar">
         {Array.from({ length: 3 }, (_, i) => (
           <div
@@ -38,14 +39,14 @@ function TaskBoardFallback() {
           style={{ width: 280, height: 42, borderRadius: 100 }}
         />
       </div>
-      <div className="board">
-        {Array.from({ length: 4 }, (_, col) => (
+      <div className="board board--3">
+        {Array.from({ length: 3 }, (_, col) => (
           <div key={col} className="kcol" style={{ minHeight: 360 }}>
             <div className="kcol-head">
               <div className="skeleton" style={{ width: 90, height: 18 }} />
             </div>
             <div className="kcol-body">
-              {Array.from({ length: col === 3 ? 1 : 2 }, (_, i) => (
+              {Array.from({ length: col === 2 ? 1 : 2 }, (_, i) => (
                 <div
                   key={i}
                   className="skeleton"
@@ -145,7 +146,7 @@ export function BoardView(props: BoardViewProps) {
           role="tab"
           aria-selected={activeTab === "todos"}
         >
-          <IconList /> 업무일지
+          <IconCalendar /> 업무일지
         </Link>
         <Link
           href={tasksHref}
