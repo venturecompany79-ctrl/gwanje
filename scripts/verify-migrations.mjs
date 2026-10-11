@@ -1089,8 +1089,8 @@ try {
   const run = async (sql, args = []) => (await db.query(sql, args)).rows;
   const [task] = await run("insert into agent_task(tenant_id, created_by, source, title, body) select tenant_id, id, 'app', 'queue test', '' from profile where id = $1 returning *", [USER_A]);
   const [otherTask] = await run("insert into agent_task(tenant_id, created_by, source, title, body) select tenant_id, id, 'slack', 'other tenant', '' from profile where id = $1 returning *", [USER_B]);
-  const [step] = await run("insert into agent_step(tenant_id, task_id, role, seq) values ($1, $2, 'researcher', 1) returning *", [task.tenant_id, task.id]);
-  await run("insert into agent_message(tenant_id, task_id, step_id, role, content) values ($1, $2, $3, 'researcher', 'test')", [task.tenant_id, task.id, step.id]);
+  const [step] = await run("insert into agent_step(tenant_id, task_id, role, seq) values ($1, $2, 'finance', 1) returning *", [task.tenant_id, task.id]);
+  await run("insert into agent_message(tenant_id, task_id, step_id, role, content) values ($1, $2, $3, 'finance', 'test')", [task.tenant_id, task.id, step.id]);
   const claim = async () => (await run("select agent_claim($1) as job", [task.id]))[0].job;
   const finish = async (job, failure = null) => (await run("select agent_finish($1, $2, '{\"answer\":42}'::jsonb, $3) as ok", [job.id, job.token, failure]))[0].ok;
   const heartbeat = async (job) => (await run("select agent_heartbeat($1, $2) as ok", [job.id, job.token]))[0].ok;
@@ -1178,7 +1178,7 @@ try {
   const run = async (sql, args = []) => (await db.query(sql, args)).rows;
   const createTask = async (createdAt, userId = USER_A) => {
     const [task] = await run("insert into agent_task(tenant_id, created_by, source, title, body, created_at) select tenant_id, id, 'app', 'sequence test', '', $2 from profile where id = $1 returning *", [userId, createdAt]);
-    await run("insert into agent_step(tenant_id, task_id, role, seq) values ($1, $2, 'researcher', 1), ($1, $2, 'writer', 2)", [task.tenant_id, task.id]);
+    await run("insert into agent_step(tenant_id, task_id, role, seq) values ($1, $2, 'finance', 1), ($1, $2, 'strategy', 2)", [task.tenant_id, task.id]);
     return task;
   };
   const claim = async (task) => (await run("select agent_claim($1) as job", [task.id]))[0].job;
@@ -1275,14 +1275,14 @@ try {
   const [{ job }] = await run("select agent_claim($1) as job", [taskId]);
   assert(job.seq === 0 && job.role === 'orchestrator' && job.tenant_id === task.tenant_id && task.created_by === USER_A, "Agent enqueue는 생성자 tenant의 태스크·seq 0 지휘자 생성");
   const finishSql = "select agent_finish($1, $2, '{\"plan\":true}', null, $3::jsonb, $4::jsonb) as ok";
-  const nextSteps = [{ role: 'researcher' }, { role: 'writer' }];
+  const nextSteps = [{ role: 'finance' }, { role: 'strategy' }];
   const messages = [{ role: 'orchestrator', content: '조사 후 작성해 주세요.' }];
   const [finished] = await run(finishSql, [job.id, job.token, JSON.stringify(nextSteps), JSON.stringify(messages)]);
   const [ongoing] = await run("select * from agent_task where id = $1", [taskId]);
   const steps = await run("select * from agent_step where task_id = $1 order by seq", [taskId]);
   const stored = await run("select * from agent_message where task_id = $1", [taskId]);
   assert(finished.ok && ongoing.status === 'running' && ongoing.finished_at === null && steps.length === 3 && steps[0].status === 'succeeded', "Agent 지휘자 완료 시 후속 단계 삽입 후 완료 판정: 태스크 running 유지");
-  assert(steps[1].seq === 1 && steps[1].role === 'researcher' && steps[2].seq === 2 && steps[2].role === 'writer', "Agent 후속 단계 배열 순서대로 최대 seq 다음 번호 부여");
+  assert(steps[1].seq === 1 && steps[1].role === 'finance' && steps[2].seq === 2 && steps[2].role === 'strategy', "Agent 후속 단계 배열 순서대로 최대 seq 다음 번호 부여");
   assert(stored.length === 1 && stored[0].step_id === job.id && stored[0].tenant_id === task.tenant_id && stored[0].content === messages[0].content, "Agent 메시지는 현재 단계·태스크·tenant에 저장");
   const [replayed] = await run(finishSql, [job.id, job.token, JSON.stringify(nextSteps), JSON.stringify(messages)]);
   assert(!replayed.ok, "Agent 결과 재전송으로 단계·메시지를 중복 생성하지 않음");
@@ -1292,16 +1292,17 @@ try {
     [{ role: 'not-an-array' }, null],
     [[{ role: 42 }], null],
     [[{ role: 'x'.repeat(65) }], null],
-    [[{ role: 'valid' }], [{ role: 'writer', content: 'x'.repeat(8001) }]],
+    [[{ role: 'finance' }], [{ role: 'strategy', content: 'x'.repeat(8001) }]],
     [null, [{ role: 'x'.repeat(65), content: '' }]],
-    [null, [{ role: 'writer', content: null }]],
+    [null, [{ role: 'strategy', content: null }]],
     [null, {}],
   ]) {
     await reject(finishSql, [researcher.id, researcher.token, next === null ? null : JSON.stringify(next), notes === null ? null : JSON.stringify(notes)], '22023');
   }
   const [unchanged] = await run("select (select count(*)::int from agent_step where task_id = $1) as steps, (select count(*)::int from agent_message where task_id = $1) as messages, (select status from agent_step where id = $2) as status", [taskId, researcher.id]);
   assert(unchanged.steps === 3 && unchanged.messages === 1 && unchanged.status === 'running', "Agent 검증 예외 시 동적 추가·완료 처리 전체 롤백");
-  await run(finishSql, [researcher.id, researcher.token, JSON.stringify(Array.from({ length: 5 }, () => ({ role: 'x'.repeat(64) }))), JSON.stringify([{ role: 'writer', content: '한'.repeat(8000) }])]);
+  await run("insert into agent_role(tenant_id, key, name, kind, instructions) values ($1, $2, '경계 테스트', 'specialist', '지침')", [task.tenant_id, 'x'.repeat(64)]);
+  await run(finishSql, [researcher.id, researcher.token, JSON.stringify(Array.from({ length: 5 }, () => ({ role: 'x'.repeat(64) }))), JSON.stringify([{ role: 'strategy', content: '한'.repeat(8000) }])]);
   const [maximum] = await run("select count(*)::int as count, max(seq)::int as seq from agent_step where task_id = $1", [taskId]);
   assert(maximum.count === 8 && maximum.seq === 7, "Agent 총 8단계·role 64자·content 8000자 경계 허용");
   const [{ job: writer }] = await run("select agent_claim($1) as job", [taskId]);
@@ -1324,6 +1325,96 @@ try {
 } catch (error) {
   failures++;
   console.error(`✗ Agent 동적 단계·메시지·enqueue 검증 실패\n${error.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+
+
+try {
+  await db.exec("begin");
+  const run = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const reject = async (sql, args, expectedCode) => {
+    await db.exec("savepoint role_reject");
+    let blocked = false;
+    try { await run(sql, args); } catch (error) { blocked = error.code === expectedCode; }
+    await db.exec("rollback to savepoint role_reject");
+    assert(blocked, `Agent 역할 제약·권한 차단 (${expectedCode})`);
+  };
+  const [member] = await run("select tenant_id from profile where id = $1", [USER_A]);
+  const [other] = await run("select tenant_id from profile where id = $1", [USER_B]);
+  const [seeded] = await run("select count(*)::int as count from agent_role where tenant_id = $1", [member.tenant_id]);
+  assert(seeded.count === 7, "Agent 새 tenant에 기본 공통 역할 7개 자동 생성");
+  await run("select agent_seed_roles($1)", [member.tenant_id]);
+  const [seededAgain] = await run("select count(*)::int as count from agent_role where tenant_id = $1", [member.tenant_id]);
+  assert(seededAgain.count === 7, "Agent 기본 역할 시드는 멱등");
+  const [company] = await run("insert into company(tenant_id, name) values ($1, '역할 테스트 법인') returning id", [member.tenant_id]);
+  const [secondCompany] = await run("insert into company(tenant_id, name) values ($1, '다른 법인') returning id", [member.tenant_id]);
+  await reject("insert into agent_role(tenant_id, company_id, key, name, kind, instructions) values ($1, $2, 'custom', '담당', 'specialist', '지침')", [other.tenant_id, company.id], '23503');
+  await reject("insert into agent_role(tenant_id, key, name, kind, instructions) values ($1, 'finance', '중복', 'specialist', '지침')", [member.tenant_id], '23505');
+  await reject("insert into agent_role(tenant_id, company_id, key, name, kind, instructions) values ($1, $2, 'synthesizer', '종합', 'synthesizer', '지침')", [member.tenant_id, company.id], '23514');
+  const [scoped] = await run("insert into agent_role(tenant_id, company_id, key, name, kind, instructions) values ($1, $2, 'company-only', '법인 담당', 'specialist', '법인 전용 지침') returning *", [member.tenant_id, company.id]);
+  const [override] = await run("insert into agent_role(tenant_id, company_id, key, name, kind, instructions) values ($1, $2, 'finance', '법인 재무', 'specialist', '법인 우선 지침') returning *", [member.tenant_id, company.id]);
+
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const [visible] = await run("select count(*)::int as count from agent_role");
+  assert(visible.count === 9, "Agent 역할 RLS는 같은 tenant만 조회");
+  const [edited] = await run("update agent_role set instructions = '수정 지침', version = 99 where id = $1 returning *", [override.id]);
+  assert(edited.version === 2 && edited.updated_by === USER_A, "Agent owner 수정 시 version 자동 증가 및 수정자 기록");
+  const [audit] = await run("select * from agent_role_version where role_id = $1", [override.id]);
+  assert(audit.version === 1 && audit.snapshot.instructions === '법인 우선 지침', "Agent 역할 수정 전 내용 자동 보존");
+  await db.exec(`set local "test.uid" = '${USER_B}'`);
+  const [isolated] = await run("select count(*)::int as count from agent_role_version");
+  assert(isolated.count === 0, "Agent 역할 버전 기록도 tenant 격리");
+  const hiddenUpdate = await run("update agent_role set name = '침범' where id = $1 returning id", [override.id]);
+  assert(hiddenUpdate.length === 0, "Agent 타 tenant owner도 역할 수정 불가");
+  await db.exec("reset role");
+  await run("update profile set status = 'active', permissions = array['ai.assistant.use'] where id = $1", [USER_C]);
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_C}'`);
+  const [reader] = await run("select count(*)::int as count from agent_role");
+  assert(reader.count === 9, "Agent AI 권한 있는 팀원은 역할 조회");
+  const deniedUpdate = await run("update agent_role set name = '팀원 변경' where id = $1 returning id", [scoped.id]);
+  assert(deniedUpdate.length === 0, "Agent owner 아닌 팀원은 역할 수정 불가");
+  await reject("insert into agent_role(tenant_id, key, name, kind, instructions) values ($1, 'denied', '차단', 'specialist', '지침')", [member.tenant_id], '42501');
+  await reject("delete from agent_role_version where role_id = $1", [override.id], '42501');
+  await db.exec("reset role");
+  await run("update profile set permissions = '{}' where id = $1", [USER_C]);
+  await db.exec("set local role authenticated");
+  const [noPermission] = await run("select count(*)::int as count from agent_role");
+  assert(noPermission.count === 0, "Agent AI 권한 없는 팀원 역할 조회 불가");
+  await db.exec("reset role");
+  await db.exec('set local "test.uid" = \'\'');
+  const enqueue = async (companyId) => (await run("select agent_enqueue($1, 'app', '역할 검증', '', $2) as id", [USER_A, companyId]))[0].id;
+  const claim = async (taskId) => (await run("select agent_claim($1) as job", [taskId]))[0].job;
+  const finishSql = "select agent_finish($1, $2, '{}', null, $3::jsonb)";
+  const otherTask = await enqueue(secondCompany.id);
+  const otherJob = await claim(otherTask);
+  assert(!otherJob.roles.specialists.some((role) => role.key === 'company-only'), "Agent 다른 법인 전용 역할은 claim 목록에 없음");
+  await reject(finishSql, [otherJob.id, otherJob.token, '[{"role":"company-only"}]'], '22023');
+  await reject(finishSql, [otherJob.id, otherJob.token, '[{"role":"missing"}]'], '22023');
+  const currentTask = await enqueue(company.id);
+  const currentJob = await claim(currentTask);
+  assert(currentJob.roles.specialists.filter((role) => role.key === 'finance').length === 1 && currentJob.roles.specialists.find((role) => role.key === 'finance').name === '법인 재무', "Agent claim은 공통·법인 역할을 합치고 법인 재정의를 우선");
+  await run(finishSql, [currentJob.id, currentJob.token, '[{"role":"finance"},{"role":"synthesizer"}]']);
+  const finance = await claim(currentTask);
+  assert(finance.role_version === 2 && finance.roles.current.version === 2 && finance.roles.current.instructions === '수정 지침', "Agent 선점 시 실제 사용 지침의 버전을 기록");
+  await run("update agent_role set instructions = '다음 실행 지침' where id = $1", [override.id]);
+  const [pinned] = await run("select role_version from agent_step where id = $1", [finance.id]);
+  assert(pinned.role_version === 2 && finance.roles.current.instructions === '수정 지침', "Agent 실행 중 역할 수정은 이미 선점한 버전·지침에 영향 없음");
+  await run("update agent_role set enabled = false where id = $1", [override.id]);
+  const disabledTask = await enqueue(company.id);
+  const disabledJob = await claim(disabledTask);
+  assert(!disabledJob.roles.specialists.some((role) => role.key === 'finance'), "Agent 꺼진 법인 재정의는 공통 역할로 되돌아가지 않음");
+  await reject(finishSql, [disabledJob.id, disabledJob.token, '[{"role":"finance"}]'], '22023');
+  await run("update agent_role set enabled = false where key = 'risk' and tenant_id = $1", [member.tenant_id]);
+  await reject(finishSql, [otherJob.id, otherJob.token, '[{"role":"risk"}]'], '22023');
+  await run("select agent_finish($1, $2, '{}', null)", [finance.id, finance.token]);
+  const finalStep = await claim(currentTask);
+  assert(finalStep.role === 'synthesizer' && finalStep.roles.current.key === 'synthesizer', "Agent 종합 역할은 후속 단계로 허용");
+  await db.exec("rollback");
+} catch (error) {
+  failures++;
+  console.error(`✗ Agent DB 역할·버전·RLS 검증 실패\n${error.message}`);
   try { await db.exec("rollback"); } catch {}
 }
 

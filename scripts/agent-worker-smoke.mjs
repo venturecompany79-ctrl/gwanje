@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
-import { workerConfig, runCycle, resultBody as buildResultBody, loadRoles, rolePrompt } from './agent-worker.mjs';
-import { cpSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { workerConfig, runCycle, resultBody as buildResultBody, rolePrompt } from './agent-worker.mjs';
 
 const config = workerConfig({ AGENT_APP_URL: 'https://app.example.test', AGENT_WORKER_SECRET: 'worker-test', HERMES_API_KEY: 'model-test' });
-const resultBody = (step, raw, definitions = config.roles) => buildResultBody(step, raw, definitions);
+const catalog = ['finance', 'legal', 'operations', 'strategy', 'risk'].map((key) => ({ key, name: key + ' 담당자', mode: 'optional' }));
+const rolesFor = (key, specialists = catalog) => ({
+  current: { key, name: key + ' 담당자', instructions: 'DB에서 전달한 역할 지침입니다.', version: 2 },
+  ...(key === 'orchestrator' ? { specialists } : {}),
+});
+const resultBody = (step, raw, definitions = rolesFor(step.role)) => buildResultBody(step, raw, definitions);
+const claimed = (step, task, history, roles = rolesFor(step.role)) => ({ step: { ...step, role_version: roles.current.version }, task, history, roles });
 const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
 const logs = [];
 const log = (entry) => logs.push(entry);
@@ -50,7 +51,7 @@ const fetcher = async (url, options) => {
     const role = queue.shift();
     if (!role) return reply({ step: null });
     active = { id: `step-${submitted.length}`, token: `token-${submitted.length}`, role, seq: submitted.length };
-    return reply({ step: active, task, history });
+    return reply(claimed(active, task, history));
   }
   assert.ok(address.endsWith(`/steps/${active.id}/result`));
   assert.equal(body.token, active.token);
@@ -76,7 +77,7 @@ assert.equal(submitted[3].messages, undefined);
 for (const role of ['orchestrator', 'finance', 'legal', 'operations', 'strategy', 'risk', 'synthesizer']) {
   let result;
   await runCycle(mock, async (url, options) => {
-    if (String(url).endsWith('/claim')) return reply({ step: { id: 'mock', token: 'token', role }, task, history });
+    if (String(url).endsWith('/claim')) return reply(claimed({ id: 'mock', token: 'token', role }, task, history));
     assert.ok(String(url).endsWith('/mock/result'));
     result = JSON.parse(options.body);
     return reply({ ok: true });
@@ -93,7 +94,7 @@ assert.throws(() => resultBody({ role: 'synthesizer' }, { ...outputs.synthesizer
 for (const scenario of ['parse', 'envelope', 'schema', 'http', 'network']) {
   let failure;
   await runCycle(config, async (url, options) => {
-    if (String(url).endsWith('/claim')) return reply({ step: { id: 'failure', token: 'token', role: 'orchestrator' }, task, history });
+    if (String(url).endsWith('/claim')) return reply(claimed({ id: 'failure', token: 'token', role: 'orchestrator' }, task, history));
     if (String(url).endsWith('/result')) { failure = JSON.parse(options.body); return reply({ ok: true }); }
     if (scenario === 'network') throw new Error('network_failure');
     if (scenario === 'http') return reply({}, 503);
@@ -111,7 +112,7 @@ for (const scenario of ['expired', 'healthy', 'shutdown']) {
   let resolveModel;
   await runCycle(config, async (url, options) => {
     const address = String(url);
-    if (address.endsWith('/claim')) return reply({ step: { id: 'slow', token: 'token', role: 'orchestrator' }, task, history });
+    if (address.endsWith('/claim')) return reply(claimed({ id: 'slow', token: 'token', role: 'orchestrator' }, task, history));
     if (address.endsWith('/heartbeat')) {
       assert.deepEqual(JSON.parse(options.body), { token: 'token' });
       heartbeats++;
@@ -130,78 +131,23 @@ for (const scenario of ['expired', 'healthy', 'shutdown']) {
   assert.equal(results, scenario === 'healthy' ? 1 : 0);
 }
 assert.ok(logs.some((entry) => entry.event === 'lease_expired'));
-const temporary = mkdtempSync(join(tmpdir(), 'agent-roles-'));
-const sourceRoles = fileURLToPath(new URL('../agents/', import.meta.url));
-const workerFile = fileURLToPath(new URL('./agent-worker.mjs', import.meta.url));
-try {
-  cpSync(sourceRoles, temporary, { recursive: true });
-  const definitions = loadRoles(temporary);
-  assert.equal(definitions.specialists.length, 5);
-  assert.equal(definitions.orchestrator.name, '지휘자');
-  assert.ok(rolePrompt('finance', definitions).includes('재무·현금흐름·비용'));
-  assert.ok(rolePrompt('orchestrator', definitions).includes('finance: 재무 담당자'));
-  const customFile = join(temporary, 'roles', 'custom.md');
-  writeFileSync(customFile, '---\nid: customer-care\nname: "고객 지원"\nmode: always\n---\n고객 불편과 지원 절차를 검토하세요.\n');
-  const custom = workerConfig({ AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary });
-  assert.ok(rolePrompt('orchestrator', custom.roles).includes('customer-care: 고객 지원 (always)'));
-  assert.ok(rolePrompt('customer-care', custom.roles).includes('고객 불편과 지원 절차'));
-  const expanded = resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['finance'] }, custom.roles);
-  assert.deepEqual(expanded.nextSteps.map((entry) => entry.role), ['finance', 'customer-care', 'synthesizer']);
-  const deduplicated = resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care', 'customer-care'] }, custom.roles);
-  assert.deepEqual(deduplicated.output.roles, ['customer-care']);
-  assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: [] }, custom.roles).output.roles, ['customer-care']);
-  let customResult;
-  await runCycle(custom, async (url, options) => {
-    if (String(url).endsWith('/claim')) return reply({ step: { id: 'custom', role: 'customer-care', token: 'token' }, task, history });
-    customResult = JSON.parse(options.body);
+
+const dbRoles = rolesFor('orchestrator', [...catalog, { key: 'customer-care', name: '고객 지원', mode: 'always' }]);
+assert.ok(rolePrompt('orchestrator', dbRoles).includes('customer-care: 고객 지원 (always)'));
+assert.ok(rolePrompt('orchestrator', dbRoles).includes(dbRoles.current.instructions));
+assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['finance'] }, dbRoles).output.roles, ['finance', 'customer-care']);
+assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care', 'customer-care'] }, dbRoles).output.roles, ['customer-care']);
+assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: [] }, dbRoles).output.roles, ['customer-care']);
+assert.throws(() => rolePrompt('finance', rolesFor('risk')), /invalid_model_output/);
+for (const role of ['orchestrator', 'customer-care']) {
+  let response;
+  await runCycle(mock, async (url, options) => {
+    if (String(url).endsWith('/claim')) return reply(claimed({ id: 'custom', role, token: 'token' }, task, history,
+      role === 'orchestrator' ? rolesFor(role, [{ key: 'customer-care', name: '고객 지원', mode: 'always' }]) : rolesFor(role)));
+    response = JSON.parse(options.body);
     return reply({ ok: true });
   }, log);
-  assert.ok(customResult.output.opinion.includes('고객 지원'));
-  writeFileSync(customFile, '---\nid: customer-care\nname: 고객 지원\nmode: optional\n---\n고객 지원을 검토하세요.');
-  assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care'] }, loadRoles(temporary)).output.roles, ['customer-care']);
-  for (const content of [
-    '본문만 있음',
-    '---\nid: Bad_ID\nname: 고객 지원\nmode: optional\n---\n지침',
-    `---\nid: ${'a'.repeat(65)}\nname: 고객 지원\nmode: optional\n---\n지침`,
-    '---\nid: finance\nname: 고객 지원\nmode: optional\n---\n지침',
-    '---\nid: orchestrator\nname: 고객 지원\nmode: optional\n---\n지침',
-    '---\nid: custom\nname: 고객 지원\nmode: other\n---\n지침',
-    '---\nid: custom\nname: 고객 지원\n---\n지침',
-    '---\nid: custom\nname: 고객 지원\nmode: optional\n---\n  ',
-    '---\nid: custom\nid: repeated\nname: 고객 지원\nmode: optional\n---\n지침',
-  ]) {
-    writeFileSync(customFile, content);
-    assert.throws(() => workerConfig({ AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary }), (error) => error.message === 'invalid_roles' && Boolean(error.file) && Boolean(error.reason));
-  }
-  const refused = spawnSync(process.execPath, [workerFile, '--once'], {
-    cwd: tmpdir(), encoding: 'utf8', timeout: 5000,
-    env: { ...process.env, AGENT_APP_URL: 'http://127.0.0.1:1', AGENT_WORKER_SECRET: 'test', AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary },
-  });
-  assert.equal(refused.status, 1);
-  const diagnostic = JSON.parse(refused.stderr.trim());
-  assert.equal(diagnostic.event, 'configuration_invalid');
-  assert.equal(diagnostic.file, customFile);
-  assert.ok(diagnostic.reason);
-  rmSync(customFile);
-  const orchestratorFile = join(temporary, 'orchestrator.md');
-  writeFileSync(orchestratorFile, readFileSync(orchestratorFile, 'utf8').replace('name:', 'mode: always\nname:'));
-  assert.throws(() => loadRoles(temporary), (error) => error.file === orchestratorFile);
-  cpSync(sourceRoles, temporary, { recursive: true });
-  for (const suffix of ['a', 'b', 'c', 'd', 'e']) writeFileSync(join(temporary, 'roles', `${suffix}.md`), `---\nid: extra-${suffix}\nname: 추가 역할\nmode: optional\n---\n추가 검토 지침`);
-  const tenRoles = loadRoles(temporary);
-  assert.equal(tenRoles.specialists.length, 10);
-  for (const entry of tenRoles.specialists.slice(0, 6)) writeFileSync(entry.file, readFileSync(entry.file, 'utf8').replace('mode: optional', 'mode: always'));
-  const mandatory = loadRoles(temporary);
-  assert.equal(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['strategy', 'risk'] }, mandatory).nextSteps.length, 7);
-  const seventh = tenRoles.specialists[6];
-  writeFileSync(seventh.file, readFileSync(seventh.file, 'utf8').replace('mode: optional', 'mode: always'));
-  assert.throws(() => loadRoles(temporary), /invalid_roles/);
-  writeFileSync(join(temporary, 'roles', 'eleventh.md'), '---\nid: eleventh\nname: 추가 역할\nmode: optional\n---\n지침');
-  assert.throws(() => loadRoles(temporary), /invalid_roles/);
-  rmSync(join(temporary, 'roles'), { recursive: true });
-  cpSync(sourceRoles, temporary, { recursive: true });
-  for (const entry of loadRoles(temporary).specialists) rmSync(entry.file);
-  assert.throws(() => loadRoles(temporary), /invalid_roles/);
-} finally { rmSync(temporary, { recursive: true, force: true }); }
-console.log('✓ 역할 md 로딩·시작 거부와 파일 진단·필수 역할·동적 역할·개수 제한 통과');
-console.log('✓ Agent worker 역할 순서·요청 본문·모의 응답·heartbeat 중단·종료·모델 오류 처리 통과');
+  assert.ok(response.output);
+  if (role === 'orchestrator') assert.deepEqual(response.nextSteps, [{ role: 'customer-care' }, { role: 'synthesizer' }]);
+}
+console.log('✓ DB 역할 지침·동적 목록·필수 역할·모의 응답·기존 큐/heartbeat 동작 통과');

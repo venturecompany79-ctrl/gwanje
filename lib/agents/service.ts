@@ -4,6 +4,10 @@ import type { resultInput, taskInput } from "./validation";
 
 type Step = Database["public"]["Tables"]["agent_step"]["Row"];
 type Message = Database["public"]["Tables"]["agent_message"]["Row"];
+type ClaimRoles = {
+  current: { key: string; name: string; instructions: string; version: number };
+  specialists?: { key: string; name: string; mode: string }[];
+};
 
 function serviceClient() {
   const service = createServiceClient();
@@ -33,7 +37,7 @@ export async function claimStep() {
   const claimed = await service.rpc("agent_claim_next");
   assertResult(claimed.error);
   if (!claimed.data) return { step: null };
-  const step = claimed.data as unknown as Step;
+  const { roles, ...step } = claimed.data as unknown as Step & { roles: ClaimRoles };
   try {
     const [task, previous] = await Promise.all([
       service.from("agent_task").select("title, body, company_id").eq("id", step.task_id).eq("tenant_id", step.tenant_id).single(),
@@ -53,6 +57,7 @@ export async function claimStep() {
     }
     return {
       step,
+      roles,
       task: { title: task.data.title, body: task.data.body, companyId: task.data.company_id },
       history: { steps: previous.data ?? [], messages },
     };

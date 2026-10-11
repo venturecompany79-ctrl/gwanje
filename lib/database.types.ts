@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_role: {
+        Row: { id: string; tenant_id: string; company_id: string | null; key: string; name: string; kind: string; mode: string; instructions: string; enabled: boolean; version: number; updated_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; tenant_id: string; company_id?: string | null; key: string; name: string; kind: string; mode?: string; instructions: string; enabled?: boolean; updated_by?: string | null }
+        Update: { company_id?: string | null; key?: string; name?: string; kind?: string; mode?: string; instructions?: string; enabled?: boolean; updated_by?: string | null }
+        Relationships: []
+      }
+      agent_role_version: {
+        Row: { id: string; tenant_id: string; role_id: string; version: number; snapshot: Json; created_at: string }
+        Insert: { tenant_id: string; role_id: string; version: number; snapshot: Json }
+        Update: { snapshot?: Json }
+        Relationships: []
+      }
       agent_task: {
         Row: { id: string; tenant_id: string; created_by: string; source: string; company_id: string | null; title: string; body: string; status: string; result: Json | null; created_at: string; finished_at: string | null }
         Insert: { id?: string; tenant_id: string; created_by: string; source: string; company_id?: string | null; title: string; body: string; status?: string; result?: Json | null; created_at?: string; finished_at?: string | null }
@@ -21,7 +33,7 @@ export type Database = {
         Relationships: []
       }
       agent_step: {
-        Row: { id: string; tenant_id: string; task_id: string; role: string; seq: number; status: string; token: string | null; lease_until: string | null; available_at: string; attempts: number; error_code: string | null; output: Json | null; created_at: string; finished_at: string | null }
+        Row: { id: string; tenant_id: string; task_id: string; role: string; role_version: number | null; seq: number; status: string; token: string | null; lease_until: string | null; available_at: string; attempts: number; error_code: string | null; output: Json | null; created_at: string; finished_at: string | null }
         Insert: { id?: string; tenant_id: string; task_id: string; role: string; seq: number; status?: string; token?: string | null; lease_until?: string | null; available_at?: string; attempts?: number; error_code?: string | null; output?: Json | null; created_at?: string; finished_at?: string | null }
         Update: { status?: string; token?: string | null; lease_until?: string | null; available_at?: string; attempts?: number; error_code?: string | null; output?: Json | null; finished_at?: string | null }
         Relationships: []
