@@ -1113,6 +1113,7 @@ try {
       job = await claim();
     }
   }
+  await run("update agent_task set status = 'queued', finished_at = null where id = $1", [task.id]);
   await run("update agent_step set status = 'queued', attempts = 0, available_at = now() where id = $1", [step.id]);
   job = await claim();
   await run("update agent_step set lease_until = now() - interval '1 second' where id = $1", [job.id]);
@@ -1123,11 +1124,13 @@ try {
   assert(await finish(recovered) && !await finish(recovered) && !await heartbeat(recovered), "Agent 완료는 한 번만 허용하며 완료 후 heartbeat 거절");
   const [saved] = await run("select * from agent_step where id = $1", [step.id]);
   assert(saved.status === 'succeeded' && saved.output.answer === 42 && saved.token === null && saved.lease_until === null, "Agent 결과 저장과 임대 해제는 원자적");
+  await run("update agent_task set status = 'queued', finished_at = null where id = $1", [task.id]);
   await run("update agent_step set status = 'queued', attempts = 0 where id = $1", [step.id]);
   job = await claim();
   await finish(job, 'quota');
   const [quota] = await run("select status from agent_step where id = $1", [step.id]);
   assert(quota.status === 'failed', "Agent quota 오류는 즉시 최종 실패");
+  await run("update agent_task set status = 'running', finished_at = null where id = $1", [task.id]);
   await run("update agent_step set status = 'running', attempts = 4, token = gen_random_uuid(), lease_until = now() - interval '1 second' where id = $1", [step.id]);
   assert(await claim() === null, "Agent 4회 시도 후 임대 만료는 재선점 불가");
   const [timeout] = await run("select * from agent_step where id = $1", [step.id]);
@@ -1150,10 +1153,11 @@ try {
   const [hidden] = await run("select (select count(*)::int from agent_task) as tasks, (select count(*)::int from agent_step) as steps, (select count(*)::int from agent_message) as messages");
   assert(hidden.tasks === 1 && hidden.steps === 0 && hidden.messages === 0, "Agent 타 테넌트 태스크·단계·대화 격리");
   await db.exec("reset role");
-  for (const signature of ['agent_claim(uuid)', 'agent_finish(uuid,uuid,jsonb,text)', 'agent_heartbeat(uuid,uuid)']) {
+  for (const signature of ['agent_claim(uuid)', 'agent_claim_next()', 'agent_finish(uuid,uuid,jsonb,text)', 'agent_heartbeat(uuid,uuid)']) {
     const [privilege] = await run("select has_function_privilege('authenticated', $1, 'execute') as member, has_function_privilege('anon', $1, 'execute') as anonymous, has_function_privilege('service_role', $1, 'execute') as service", [signature]);
     assert(!privilege.member && !privilege.anonymous && privilege.service, `Agent RPC service_role 전용: ${signature}`);
   }
+  await run("update agent_task set status = 'queued', finished_at = null where id = $1", [task.id]);
   await run("update agent_step set status = 'queued', attempts = 0, available_at = now() where id = $1", [step.id]);
   job = await claim();
   await run("update profile set status = 'disabled' where id = $1", [USER_A]);
@@ -1166,6 +1170,92 @@ try {
 } catch (error) {
   failures++;
   console.error(`✗ Agent 큐 수명·권한·테넌트 격리 검증 실패\n${error.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+
+try {
+  await db.exec("begin");
+  const run = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const createTask = async (createdAt, userId = USER_A) => {
+    const [task] = await run("insert into agent_task(tenant_id, created_by, source, title, body, created_at) select tenant_id, id, 'app', 'sequence test', '', $2 from profile where id = $1 returning *", [userId, createdAt]);
+    await run("insert into agent_step(tenant_id, task_id, role, seq) values ($1, $2, 'researcher', 1), ($1, $2, 'writer', 2)", [task.tenant_id, task.id]);
+    return task;
+  };
+  const claim = async (task) => (await run("select agent_claim($1) as job", [task.id]))[0].job;
+  const claimNext = async () => (await run("select agent_claim_next() as job"))[0].job;
+  const finish = async (job, failure = null) => (await run("select agent_finish($1, $2, $3::jsonb, $4) as ok", [job.id, job.token, JSON.stringify({ seq: job.seq }), failure]))[0].ok;
+  const state = async (task) => (await run("select * from agent_task where id = $1", [task.id]))[0];
+  const task = await createTask('2026-10-01T00:00:00Z');
+  assert(task.status === 'queued' && task.finished_at === null, "Agent 태스크는 queued 상태로 시작");
+  let first = await claim(task);
+  assert(first.seq === 1 && first.created_at !== null && first.finished_at === null && (await state(task)).status === 'running', "Agent 첫 단계 선점 시 태스크 queued → running");
+  assert(await claim(task) === null, "Agent 1번 단계 실행 중 2번 선점 불가");
+  await finish(first, 'model_unavailable');
+  assert(await claim(task) === null && await claimNext() === null, "Agent 1번 단계 백오프 중 직접·전역 선점 모두 2번 차단");
+  assert((await state(task)).status === 'running' && (await state(task)).finished_at === null, "Agent 재시도 대기 중 태스크는 running 유지");
+  await run("update agent_step set available_at = now() where id = $1", [first.id]);
+  first = await claim(task);
+  await finish(first);
+  assert((await state(task)).status === 'running', "Agent 중간 단계 성공 시 태스크는 running 유지");
+  const second = await claim(task);
+  assert(second.seq === 2, "Agent 1번 성공 후 2번 선점 가능");
+  await finish(second);
+  const completed = await state(task);
+  const completedSteps = await run("select * from agent_step where task_id = $1", [task.id]);
+  assert(completed.status === 'succeeded' && completed.finished_at !== null && completed.result.seq === 2, "Agent 모든 단계 성공 시 태스크 succeeded·완료시각·마지막 결과 저장");
+  assert(completedSteps.every((step) => step.status === 'succeeded' && step.finished_at !== null), "Agent 성공한 모든 단계에 완료시각 기록");
+
+  for (const scenario of ['exhausted', 'quota', 'timeout', 'disabled_claim', 'disabled_finish']) {
+    await db.exec("savepoint agent_terminal");
+    const pending = await createTask('2026-10-02T00:00:00Z');
+    const job = await claim(pending);
+    if (scenario === 'exhausted') {
+      await run("update agent_step set attempts = 4 where id = $1", [job.id]);
+      await finish(job, 'model_unavailable');
+    } else if (scenario === 'quota') {
+      await finish(job, 'quota');
+    } else if (scenario === 'timeout') {
+      await run("update agent_step set attempts = 4, lease_until = now() - interval '1 second' where id = $1", [job.id]);
+      assert(await claimNext() === null, "Agent 전역 선점도 최종 임대 만료를 처리");
+    } else {
+      await run("update profile set status = 'disabled' where id = $1", [USER_A]);
+      if (scenario === 'disabled_claim') assert(await claim(pending) === null, "Agent 선점 시 비활성 생성자 거절");
+      else assert(!await finish(job), "Agent 완료 시 비활성 생성자 거절");
+    }
+    const terminal = await state(pending);
+    const steps = await run("select * from agent_step where task_id = $1 order by seq", [pending.id]);
+    const expected = scenario.startsWith('disabled') ? 'cancelled' : 'failed';
+    assert(terminal.status === expected && terminal.finished_at !== null, `Agent ${scenario}: 태스크 ${expected} 및 완료시각`);
+    assert(steps[0].status === expected && steps[1].status === 'cancelled' && steps.every((step) => step.finished_at !== null && step.token === null && step.lease_until === null), `Agent ${scenario}: 종료 단계·남은 단계 취소 및 완료시각`);
+    assert(await claim(pending) === null && (await state(pending)).status === expected, "Agent 종료된 태스크 재선점 차단 및 종료 상태 유지");
+    await db.exec("rollback to savepoint agent_terminal");
+  }
+
+  const newer = await createTask('2026-10-04T00:00:00Z');
+  const older = await createTask('2026-10-03T00:00:00Z');
+  const oldestJob = await claimNext();
+  const newestJob = await claimNext();
+  assert(oldestJob.task_id === older.id && newestJob.task_id === newer.id, "Agent 전역 선점은 삽입 순서 대신 created_at 오래된 태스크 우선");
+  assert(await claimNext() === null, "Agent 전역 선점은 실행 중인 선행 단계를 건너뛰지 않음");
+  await run("update agent_step set lease_until = now() - interval '1 second' where id = $1", [oldestJob.id]);
+  const recovered = await claimNext();
+  assert(recovered.id === oldestJob.id && recovered.token !== oldestJob.token && recovered.attempts === 2, "Agent 전역 선점은 만료된 선행 단계를 복구");
+  await finish(recovered);
+  assert((await claimNext()).task_id === older.id, "Agent 전역 선점은 성공한 선행 단계의 후속 단계 선택");
+  const disabled = await createTask('2026-09-01T00:00:00Z', USER_B);
+  const ready = await createTask('2026-10-05T00:00:00Z');
+  await run("update profile set status = 'disabled' where id = $1", [USER_B]);
+  assert((await claimNext()).task_id === ready.id && (await state(disabled)).status === 'cancelled', "Agent 전역 선점은 null을 반환한 태스크 이후 계속 탐색");
+
+  const [company] = await run("insert into company(tenant_id, name) values ($1, 'agent delete test') returning id", [task.tenant_id]);
+  await run("update agent_task set company_id = $1 where id = $2", [company.id, task.id]);
+  await run("delete from company where id = $1", [company.id]);
+  const retained = await state(task);
+  assert(retained.company_id === null && retained.tenant_id === task.tenant_id, "Agent 기업 삭제 시 company_id만 null로 변경하고 태스크·tenant 유지");
+  await db.exec("rollback");
+} catch (error) {
+  failures++;
+  console.error(`✗ Agent 단계 순서·태스크 상태 전이 검증 실패\n${error.message}`);
   try { await db.exec("rollback"); } catch {}
 }
 
