@@ -8,16 +8,20 @@
 | --- | --- | --- |
 | `AGENT_APP_URL` | VPS | 관제 앱 URL. HTTPS 필수, `localhost`, `127.0.0.1`, `[::1]`만 HTTP 허용 |
 | `AGENT_WORKER_SECRET` | VPS·Vercel | 같은 Bearer 시크릿. Hermes 브리핑 시크릿과 별도 사용 |
-| `HERMES_API_URL` | VPS | 기본 `http://127.0.0.1:8642/v1/chat/completions`. 앱 URL과 같은 URL 검증 적용 |
-| `HERMES_API_KEY` | VPS | 모델 API 키. 모의 모드가 아니면 필수 |
-| `HERMES_API_MODEL` | VPS | 기본 `hermes-agent` |
+| `LLM_API_URL` | VPS | 모델 Chat Completions URL. 기본 URL 없음. 모의 모드가 아니면 필수이며 앱 URL과 같은 URL 검증 적용 |
+| `LLM_API_KEY` | VPS | 모델 API 키. 모의 모드가 아니면 필수 |
+| `LLM_API_MODEL` | VPS | 모델 이름. 기본 `hermes-agent` |
 | `AGENT_WORKER_MOCK` | VPS | 정확히 `true`이면 모델 호출 없이 역할별 고정 응답 사용 |
 | `AGENT_ORCHESTRATION_ENABLED` | Vercel | 정확히 `true`여야 내부 agents API 활성화 |
 | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Vercel | 내부 API의 DB 연결 설정. 워커에 DB 키를 전달할 필요 없음 |
 
 URL 사용자명·비밀번호와 HTTP(S) 이외 프로토콜은 거절한다. 모델 요청은 180초, 내부 API 요청은 60초 제한이다. 모델 호출 중 60초마다 heartbeat를 보낸다. 409이면 모델 호출을 중단하고 결과를 제출하지 않는다. 다른 heartbeat 오류는 로그를 남기고 다음 주기에 재시도한다. 성공·실패 제출의 최종 임대 유효성은 DB에서 검사한다.
 
-모델 통신 실패는 `model_unavailable`, JSON 파싱·출력 형식 오류는 `invalid_model_output`으로 보고한다. 재시도·백오프는 DB 큐가 처리한다. 결과 본문은 UTF-8 기준 256KiB, 다른 API는 32KiB 제한이다. 각 대화 메시지는 Unicode 문자 기준 최대 4000자로 잘라 전송한다.
+새 `LLM_API_*` 값을 우선 사용한다. 개별 값이 없거나 빈 문자열이면 대응하는 기존 `HERMES_API_*` 값으로 대체하므로 이전 환경 파일도 사용할 수 있다. 모의 모드에서는 URL·키를 생략할 수 있다. 기존 환경에서 URL을 생략했다면 이제 명시적으로 설정해야 한다.
+
+모델 통신 실패는 `model_unavailable`, JSON 파싱·출력 형식 오류는 `invalid_model_output`, claim 역할 정의·버전 불일치는 `invalid_role_definition`으로 보고한다. 잘못된 역할 정의는 LLM 호출 전에 거절한다. 재시도·백오프는 DB 큐가 처리한다. 결과 본문은 UTF-8 기준 256KiB, 다른 API는 32KiB 제한이다. 각 대화 메시지는 Unicode 문자 기준 최대 4000자로 잘라 전송한다.
+
+지휘자는 꼭 필요한 역할만 선택한다. 단순 태스크는 1~2개, 복합 태스크도 3개를 기본으로 하며 4개 이상이면 plan에 이유를 쓰도록 지시한다. 모든 역할에 사실과 추론의 구분, 법률·세무·노무 주장 끝의 `(전문가 확인 필요)` 표기를 지시한다. 종합 결과의 owner는 `대표님`, `에이전트`, `외부 전문가` 중 하나다. 에이전트에는 원문·history만으로 가능한 계산·초안·체크리스트만 배정하고, 문서 열람·외부 연락·계약 확인은 대표님 또는 외부 전문가에게 배정하도록 지시한다.
 
 ## 로컬 검증
 
@@ -74,9 +78,9 @@ sudoedit /etc/gwanje-agent.env
 ```dotenv
 AGENT_APP_URL=https://관제-도메인
 AGENT_WORKER_SECRET=Vercel과-동일한-시크릿
-HERMES_API_URL=http://127.0.0.1:8642/v1/chat/completions
-HERMES_API_KEY=모델-API-키
-HERMES_API_MODEL=hermes-agent
+LLM_API_URL=https://llm.example.com/v1/chat/completions
+LLM_API_KEY=모델-API-키
+LLM_API_MODEL=모델-이름
 AGENT_WORKER_MOCK=false
 ```
 
@@ -113,4 +117,6 @@ DB에 로그인한 owner만 같은 tenant의 역할을 수정할 수 있다. 조
 
 최종 프롬프트는 공통 안전 규칙 + DB 지침 + 코드의 JSON 출력 형식이다. 표에는 역할 지침만 작성한다. 출력 JSON 형식·검증은 코드에 남아 있다. 모의 모드도 claim의 역할 목록을 사용하며, finance·risk가 없으면 목록의 앞 두 역할을 선택한다.
 
-DB의 태스크 총 8단계 제한 때문에 지휘자·종합 담당자를 제외한 전문 역할은 최대 6개다. 지휘자가 고른 최대 5개와 always 역할을 중복 제거해 포함하고, always를 먼저 확보한 뒤 남는 자리에 선택 역할을 배치한다. 적용 가능한 always가 6개를 초과하면 워커는 `invalid_model_output`으로 보고한다. 변경 전에 법인별 공통·전용 역할의 합계를 확인한다.
+핵심 역할(orchestrator·synthesizer)은 owner의 삭제 정책에서도 제외된다. 전문 역할은 owner가 삭제할 수 있다. 관리 대시보드·service_role처럼 RLS를 우회하는 권한에는 이 삭제 정책이 적용되지 않는다.
+
+DB의 태스크 총 8단계 제한 때문에 지휘자·종합 담당자를 제외한 전문 역할은 최대 6개다. 지휘자가 고른 최대 5개와 always 역할을 중복 제거해 포함하고, always를 먼저 확보한 뒤 남는 자리에 선택 역할을 배치한다. 적용 가능한 always가 6개를 초과하면 워커는 `invalid_role_definition`으로 보고한다. 변경 전에 법인별 공통·전용 역할의 합계를 확인한다.

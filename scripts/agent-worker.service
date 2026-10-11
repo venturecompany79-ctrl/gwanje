@@ -8,6 +8,8 @@ Type=simple
 User=gwanje-agent
 WorkingDirectory=/opt/gwanje-agent
 EnvironmentFile=/etc/gwanje-agent.env
+# /etc/gwanje-agent.env: LLM_API_URL=https://llm.example.com/v1/chat/completions
+# LLM_API_KEY and LLM_API_MODEL are configured in the same environment file.
 ExecStart=/usr/bin/node /opt/gwanje-agent/agent-worker.mjs
 Restart=always
 RestartSec=10

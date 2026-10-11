@@ -49,7 +49,7 @@ create policy agent_role_owner_update on agent_role for update to authenticated 
   tenant_id = (select auth_tenant_id()) and (select auth_is_owner())
 ) with check (tenant_id = (select auth_tenant_id()) and (select auth_is_owner()));
 create policy agent_role_owner_delete on agent_role for delete to authenticated using (
-  tenant_id = (select auth_tenant_id()) and (select auth_is_owner())
+  tenant_id = (select auth_tenant_id()) and (select auth_is_owner()) and kind = 'specialist'
 );
 create policy agent_role_version_read on agent_role_version for select to authenticated using (
   tenant_id = (select auth_tenant_id()) and (select auth_has_permission('ai.assistant.use'))
@@ -81,7 +81,8 @@ language sql security definer set search_path = public as $$
     (target, 'finance', '재무', 'specialist', $instructions$당신은 재무 담당자입니다. 재무·현금흐름·비용 관점에서 태스크와 history(앞 단계 output과 messages)를 읽고 의견을 제시하세요.
 앞 의견에 동의·반박할 점을 명시하고, 근거가 없으면 불확실성을 밝히세요.$instructions$),
     (target, 'legal', '법무·규제', 'specialist', $instructions$당신은 법무 담당자입니다. 법무·계약·규정 관점에서 태스크와 history(앞 단계 output과 messages)를 읽고 의견을 제시하세요.
-앞 의견에 동의·반박할 점을 명시하고, 근거가 없으면 불확실성을 밝히세요.$instructions$),
+앞 의견에 동의·반박할 점을 명시하고, 근거가 없으면 불확실성을 밝히세요.
+법률 판단은 단정하지 말고 (전문가 확인 필요)를 붙인다.$instructions$),
     (target, 'operations', '운영', 'specialist', $instructions$당신은 운영 담당자입니다. 운영·인력·실행 절차 관점에서 태스크와 history(앞 단계 output과 messages)를 읽고 의견을 제시하세요.
 앞 의견에 동의·반박할 점을 명시하고, 근거가 없으면 불확실성을 밝히세요.$instructions$),
     (target, 'strategy', '전략', 'specialist', $instructions$당신은 전략 담당자입니다. 전략·우선순위·사업 방향 관점에서 태스크와 history(앞 단계 output과 messages)를 읽고 의견을 제시하세요.

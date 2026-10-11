@@ -1358,6 +1358,15 @@ try {
   await db.exec(`set local "test.uid" = '${USER_A}'`);
   const [visible] = await run("select count(*)::int as count from agent_role");
   assert(visible.count === 9, "Agent 역할 RLS는 같은 tenant만 조회");
+  const coreDeleted = await run("delete from agent_role where kind in ('orchestrator', 'synthesizer') returning id");
+  const [coreRemaining] = await run("select count(*)::int as count from agent_role where kind in ('orchestrator', 'synthesizer')");
+  assert(coreDeleted.length === 0 && coreRemaining.count === 2, "Agent owner도 핵심 역할 삭제 불가");
+  await db.exec("savepoint specialist_delete");
+  const specialistDeleted = await run("delete from agent_role where id = $1 returning id", [scoped.id]);
+  assert(specialistDeleted.length === 1, "Agent owner는 전문 역할 삭제 가능");
+  await db.exec("rollback to savepoint specialist_delete");
+  const [legalSeed] = await run("select instructions from agent_role where key = 'legal' and company_id is null");
+  assert(legalSeed.instructions.includes('법률 판단은 단정하지 말고 (전문가 확인 필요)를 붙인다'), "Agent 법무 시드에 전문가 확인 지침 포함");
   const [edited] = await run("update agent_role set instructions = '수정 지침', version = 99 where id = $1 returning *", [override.id]);
   assert(edited.version === 2 && edited.updated_by === USER_A, "Agent owner 수정 시 version 자동 증가 및 수정자 기록");
   const [audit] = await run("select * from agent_role_version where role_id = $1", [override.id]);

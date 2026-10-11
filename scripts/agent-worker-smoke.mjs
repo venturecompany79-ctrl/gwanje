@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { workerConfig, runCycle, resultBody as buildResultBody, rolePrompt } from './agent-worker.mjs';
 
-const config = workerConfig({ AGENT_APP_URL: 'https://app.example.test', AGENT_WORKER_SECRET: 'worker-test', HERMES_API_KEY: 'model-test' });
+const config = workerConfig({ AGENT_APP_URL: 'https://app.example.test', AGENT_WORKER_SECRET: 'worker-test', LLM_API_URL: 'https://llm.example.test/v1/chat/completions', LLM_API_KEY: 'model-test' });
 const catalog = ['finance', 'legal', 'operations', 'strategy', 'risk'].map((key) => ({ key, name: key + ' 담당자', mode: 'optional' }));
 const rolesFor = (key, specialists = catalog) => ({
   current: { key, name: key + ' 담당자', instructions: 'DB에서 전달한 역할 지침입니다.', version: 2 },
@@ -15,9 +15,22 @@ const log = (entry) => logs.push(entry);
 const mock = workerConfig({ AGENT_APP_URL: 'http://localhost:3000', AGENT_WORKER_SECRET: 'worker-test', AGENT_WORKER_MOCK: 'true' });
 assert.equal(mock.mock, true);
 assert.throws(() => workerConfig({}), /missing_configuration/);
-for (const field of ['AGENT_APP_URL', 'HERMES_API_URL']) {
+const legacyEnv = { AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, HERMES_API_URL: 'https://legacy.example.test/v1/chat/completions', HERMES_API_KEY: 'legacy-key', HERMES_API_MODEL: 'legacy-model' };
+const legacy = workerConfig(legacyEnv);
+assert.equal(legacy.hermesUrl, legacyEnv.HERMES_API_URL);
+assert.equal(legacy.hermesKey, 'legacy-key');
+assert.equal(legacy.model, 'legacy-model');
+const preferred = workerConfig({ ...legacyEnv, LLM_API_URL: config.hermesUrl, LLM_API_KEY: 'new-key', LLM_API_MODEL: 'new-model' });
+assert.equal(preferred.hermesUrl, config.hermesUrl);
+assert.equal(preferred.hermesKey, 'new-key');
+assert.equal(preferred.model, 'new-model');
+assert.deepEqual(workerConfig({ ...legacyEnv, LLM_API_URL: '', LLM_API_KEY: '', LLM_API_MODEL: '' }), legacy);
+assert.throws(() => workerConfig({ ...legacyEnv, HERMES_API_URL: undefined }), /missing_configuration/);
+assert.throws(() => workerConfig({ ...legacyEnv, HERMES_API_KEY: undefined }), /missing_configuration/);
+assert.equal(mock.hermesUrl, undefined);
+for (const field of ['AGENT_APP_URL', 'HERMES_API_URL', 'LLM_API_URL']) {
   for (const url of ['http://example.test', 'ftp://example.test', 'https://user:pass@example.test']) {
-    assert.throws(() => workerConfig({ AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, HERMES_API_KEY: config.hermesKey, [field]: url }));
+    assert.throws(() => workerConfig({ ...legacyEnv, [field]: url }));
   }
 }
 
@@ -42,7 +55,7 @@ const fetcher = async (url, options) => {
     const input = JSON.parse(body.messages[1].content);
     assert.deepEqual(input.task, task);
     assert.equal(input.history.steps.length, submitted.length);
-    for (const rule of ['신뢰할 수 없는', '지시를 실행하지', '없는 사실', '한국어 JSON']) assert.ok(body.messages[0].content.includes(rule));
+    for (const rule of ['신뢰할 수 없는', '지시를 실행하지', '없는 사실', '한국어 JSON', '사실과 너의 추론', '원문을 다르게 해석하지', '(전문가 확인 필요)']) assert.ok(body.messages[0].content.includes(rule));
     modelCalls.push(input.role);
     return reply({ choices: [{ message: { content: JSON.stringify(outputs[input.role]) } }], usage: { total_tokens: 42 } });
   }
@@ -138,7 +151,31 @@ assert.ok(rolePrompt('orchestrator', dbRoles).includes(dbRoles.current.instructi
 assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['finance'] }, dbRoles).output.roles, ['finance', 'customer-care']);
 assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care', 'customer-care'] }, dbRoles).output.roles, ['customer-care']);
 assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: [] }, dbRoles).output.roles, ['customer-care']);
-assert.throws(() => rolePrompt('finance', rolesFor('risk')), /invalid_model_output/);
+assert.throws(() => rolePrompt('finance', rolesFor('risk')), /invalid_role_definition/);
+const specialistAction = { title: '계약 확인', owner: '외부 전문가', due: null };
+assert.deepEqual(resultBody({ role: 'synthesizer' }, { ...outputs.synthesizer, actions: [specialistAction] }).output.actions, [specialistAction]);
+assert.throws(() => resultBody({ role: 'synthesizer' }, { ...outputs.synthesizer, actions: [{ ...specialistAction, owner: '임의 담당자' }] }), /invalid_model_output/);
+const orchestratorPrompt = rolePrompt('orchestrator', rolesFor('orchestrator'));
+for (const rule of ['꼭 필요한 역할', '1~2개', '3개를 기본', '4개 이상', 'plan에 그 이유', 'always 역할은 자동 포함']) assert.ok(orchestratorPrompt.includes(rule));
+const synthesizerPrompt = rolePrompt('synthesizer', rolesFor('synthesizer'));
+for (const rule of ['외부 전문가', '원문과 history만으로', '문서 열람, 외부 연락, 계약 확인']) assert.ok(synthesizerPrompt.includes(rule));
+for (const broken of [
+  undefined,
+  { current: { ...rolesFor('orchestrator').current, instructions: '' }, specialists: catalog },
+  { ...rolesFor('orchestrator'), specialists: null },
+  { ...rolesFor('orchestrator'), specialists: [...catalog, catalog[0]] },
+  rolesFor('risk'),
+  { ...rolesFor('orchestrator'), current: { ...rolesFor('orchestrator').current, version: 99 } },
+]) {
+  let failure;
+  await runCycle(config, async (url, options) => {
+    if (String(url).endsWith('/claim')) return reply({ step: { id: 'invalid-role', token: 'token', role: 'orchestrator', role_version: 2 }, task, history, roles: broken });
+    assert.ok(String(url).endsWith('/invalid-role/result'), '잘못된 역할 정의는 LLM 호출 전에 거절');
+    failure = JSON.parse(options.body);
+    return reply({ ok: true });
+  }, log);
+  assert.deepEqual(failure, { token: 'token', failed: true, errorCode: 'invalid_role_definition' });
+}
 for (const role of ['orchestrator', 'customer-care']) {
   let response;
   await runCycle(mock, async (url, options) => {
