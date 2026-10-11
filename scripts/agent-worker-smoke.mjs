@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
-import { workerConfig, runCycle, resultBody } from './agent-worker.mjs';
+import { workerConfig, runCycle, resultBody as buildResultBody, loadRoles, rolePrompt } from './agent-worker.mjs';
+import { cpSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const config = workerConfig({ AGENT_APP_URL: 'https://app.example.test', AGENT_WORKER_SECRET: 'worker-test', HERMES_API_KEY: 'model-test' });
+const resultBody = (step, raw, definitions = config.roles) => buildResultBody(step, raw, definitions);
 const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
 const logs = [];
 const log = (entry) => logs.push(entry);
@@ -124,4 +130,78 @@ for (const scenario of ['expired', 'healthy', 'shutdown']) {
   assert.equal(results, scenario === 'healthy' ? 1 : 0);
 }
 assert.ok(logs.some((entry) => entry.event === 'lease_expired'));
+const temporary = mkdtempSync(join(tmpdir(), 'agent-roles-'));
+const sourceRoles = fileURLToPath(new URL('../agents/', import.meta.url));
+const workerFile = fileURLToPath(new URL('./agent-worker.mjs', import.meta.url));
+try {
+  cpSync(sourceRoles, temporary, { recursive: true });
+  const definitions = loadRoles(temporary);
+  assert.equal(definitions.specialists.length, 5);
+  assert.equal(definitions.orchestrator.name, '지휘자');
+  assert.ok(rolePrompt('finance', definitions).includes('재무·현금흐름·비용'));
+  assert.ok(rolePrompt('orchestrator', definitions).includes('finance: 재무 담당자'));
+  const customFile = join(temporary, 'roles', 'custom.md');
+  writeFileSync(customFile, '---\nid: customer-care\nname: "고객 지원"\nmode: always\n---\n고객 불편과 지원 절차를 검토하세요.\n');
+  const custom = workerConfig({ AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary });
+  assert.ok(rolePrompt('orchestrator', custom.roles).includes('customer-care: 고객 지원 (always)'));
+  assert.ok(rolePrompt('customer-care', custom.roles).includes('고객 불편과 지원 절차'));
+  const expanded = resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['finance'] }, custom.roles);
+  assert.deepEqual(expanded.nextSteps.map((entry) => entry.role), ['finance', 'customer-care', 'synthesizer']);
+  const deduplicated = resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care', 'customer-care'] }, custom.roles);
+  assert.deepEqual(deduplicated.output.roles, ['customer-care']);
+  assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: [] }, custom.roles).output.roles, ['customer-care']);
+  let customResult;
+  await runCycle(custom, async (url, options) => {
+    if (String(url).endsWith('/claim')) return reply({ step: { id: 'custom', role: 'customer-care', token: 'token' }, task, history });
+    customResult = JSON.parse(options.body);
+    return reply({ ok: true });
+  }, log);
+  assert.ok(customResult.output.opinion.includes('고객 지원'));
+  writeFileSync(customFile, '---\nid: customer-care\nname: 고객 지원\nmode: optional\n---\n고객 지원을 검토하세요.');
+  assert.deepEqual(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['customer-care'] }, loadRoles(temporary)).output.roles, ['customer-care']);
+  for (const content of [
+    '본문만 있음',
+    '---\nid: Bad_ID\nname: 고객 지원\nmode: optional\n---\n지침',
+    `---\nid: ${'a'.repeat(65)}\nname: 고객 지원\nmode: optional\n---\n지침`,
+    '---\nid: finance\nname: 고객 지원\nmode: optional\n---\n지침',
+    '---\nid: orchestrator\nname: 고객 지원\nmode: optional\n---\n지침',
+    '---\nid: custom\nname: 고객 지원\nmode: other\n---\n지침',
+    '---\nid: custom\nname: 고객 지원\n---\n지침',
+    '---\nid: custom\nname: 고객 지원\nmode: optional\n---\n  ',
+    '---\nid: custom\nid: repeated\nname: 고객 지원\nmode: optional\n---\n지침',
+  ]) {
+    writeFileSync(customFile, content);
+    assert.throws(() => workerConfig({ AGENT_APP_URL: config.appUrl, AGENT_WORKER_SECRET: config.workerKey, AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary }), (error) => error.message === 'invalid_roles' && Boolean(error.file) && Boolean(error.reason));
+  }
+  const refused = spawnSync(process.execPath, [workerFile, '--once'], {
+    cwd: tmpdir(), encoding: 'utf8', timeout: 5000,
+    env: { ...process.env, AGENT_APP_URL: 'http://127.0.0.1:1', AGENT_WORKER_SECRET: 'test', AGENT_WORKER_MOCK: 'true', AGENT_ROLES_DIR: temporary },
+  });
+  assert.equal(refused.status, 1);
+  const diagnostic = JSON.parse(refused.stderr.trim());
+  assert.equal(diagnostic.event, 'configuration_invalid');
+  assert.equal(diagnostic.file, customFile);
+  assert.ok(diagnostic.reason);
+  rmSync(customFile);
+  const orchestratorFile = join(temporary, 'orchestrator.md');
+  writeFileSync(orchestratorFile, readFileSync(orchestratorFile, 'utf8').replace('name:', 'mode: always\nname:'));
+  assert.throws(() => loadRoles(temporary), (error) => error.file === orchestratorFile);
+  cpSync(sourceRoles, temporary, { recursive: true });
+  for (const suffix of ['a', 'b', 'c', 'd', 'e']) writeFileSync(join(temporary, 'roles', `${suffix}.md`), `---\nid: extra-${suffix}\nname: 추가 역할\nmode: optional\n---\n추가 검토 지침`);
+  const tenRoles = loadRoles(temporary);
+  assert.equal(tenRoles.specialists.length, 10);
+  for (const entry of tenRoles.specialists.slice(0, 6)) writeFileSync(entry.file, readFileSync(entry.file, 'utf8').replace('mode: optional', 'mode: always'));
+  const mandatory = loadRoles(temporary);
+  assert.equal(resultBody({ role: 'orchestrator' }, { plan: 'test', roles: ['strategy', 'risk'] }, mandatory).nextSteps.length, 7);
+  const seventh = tenRoles.specialists[6];
+  writeFileSync(seventh.file, readFileSync(seventh.file, 'utf8').replace('mode: optional', 'mode: always'));
+  assert.throws(() => loadRoles(temporary), /invalid_roles/);
+  writeFileSync(join(temporary, 'roles', 'eleventh.md'), '---\nid: eleventh\nname: 추가 역할\nmode: optional\n---\n지침');
+  assert.throws(() => loadRoles(temporary), /invalid_roles/);
+  rmSync(join(temporary, 'roles'), { recursive: true });
+  cpSync(sourceRoles, temporary, { recursive: true });
+  for (const entry of loadRoles(temporary).specialists) rmSync(entry.file);
+  assert.throws(() => loadRoles(temporary), /invalid_roles/);
+} finally { rmSync(temporary, { recursive: true, force: true }); }
+console.log('✓ 역할 md 로딩·시작 거부와 파일 진단·필수 역할·동적 역할·개수 제한 통과');
 console.log('✓ Agent worker 역할 순서·요청 본문·모의 응답·heartbeat 중단·종료·모델 오류 처리 통과');
