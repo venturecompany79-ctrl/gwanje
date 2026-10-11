@@ -85,9 +85,10 @@ for (const [route, module] of Object.entries(routes)) {
   process.env.AGENT_ORCHESTRATION_ENABLED = 'true';
   assert.equal((await invoke(route, '{bad')).status, 400);
   assert.equal((await invoke(route, [])).status, 400);
-  assert.equal((await invoke(route, '한'.repeat(11_000))).status, 413);
+  const limit = route === 'steps/[id]/result' ? 256 * 1024 : 32 * 1024;
+  assert.equal((await invoke(route, '한'.repeat(Math.ceil(limit / 3)))).status, 413);
   const oversized = request({});
-  oversized.headers.set('content-length', '32769');
+  oversized.headers.set('content-length', String(limit + 1));
   assert.equal((await module.POST(oversized, { params: Promise.resolve({ id }) })).status, 413);
 }
 assert.equal(calls.length, 0);
@@ -118,6 +119,7 @@ assert.equal(claimed.history.messages[500].id, '0500');
 rpcResult = { data: null, error: null };
 assert.deepEqual(await (await invoke('steps/claim')).json(), { step: null });
 rpcResult = { data: true, error: null };
+assert.equal((await invoke('steps/[id]/result', { token, output: { text: '한'.repeat(20_000) } })).status, 200);
 assert.equal((await invoke('steps/[id]/heartbeat', { token })).status, 200);
 assert.deepEqual(calls.at(-1), { name: 'agent_heartbeat', args: { step_id: id, lease_token: token } });
 const result = { token, output: { answer: 42 }, nextSteps: [{ role: 'reviewer' }], messages: [{ role: 'writer', content: 'done' }] };
@@ -141,4 +143,4 @@ queryError = { code: 'internal', message: 'context failed' };
 assert.equal((await invoke('steps/claim')).status, 503);
 assert.equal(calls.at(-1).name, 'agent_finish');
 assert.equal(calls.at(-1).args.failure, 'context_unavailable');
-console.log('✓ Agent API 인증·활성 플래그·32KB 제한·검증·RPC·이력 페이지네이션·오류 처리 통과');
+console.log('✓ Agent API 인증·활성 플래그·32/256KB 제한·검증·RPC·이력 페이지네이션·오류 처리 통과');

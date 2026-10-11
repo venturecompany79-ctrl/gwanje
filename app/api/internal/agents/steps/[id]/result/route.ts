@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     workerAuth(request);
     const { id } = await params;
-    await finishStep(id, resultInput(id, await readBody(request)));
+    await finishStep(id, resultInput(id, await readBody(request, false, 256 * 1024)));
     return json({ ok: true });
   } catch (error) { return failure(error); }
 }

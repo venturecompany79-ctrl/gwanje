@@ -1,0 +1,21 @@
+[Unit]
+Description=Gwanje agent orchestration worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gwanje-agent
+WorkingDirectory=/opt/gwanje-agent
+EnvironmentFile=/etc/gwanje-agent.env
+ExecStart=/usr/bin/node /opt/gwanje-agent/agent-worker.mjs
+Restart=always
+RestartSec=10
+TimeoutStopSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

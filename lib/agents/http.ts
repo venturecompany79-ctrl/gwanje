@@ -11,8 +11,7 @@ export function workerAuth(request: Request) {
   if (process.env.AGENT_ORCHESTRATION_ENABLED !== "true") throw new Error("disabled");
 }
 
-export async function readBody(request: Request, allowEmpty = false): Promise<Record<string, unknown>> {
-  const limit = 32 * 1024;
+export async function readBody(request: Request, allowEmpty = false, limit = 32 * 1024): Promise<Record<string, unknown>> {
   if (Number(request.headers.get("content-length")) > limit) throw new Error("payload_too_large");
   const reader = request.body?.getReader();
   const chunks: Uint8Array[] = [];
