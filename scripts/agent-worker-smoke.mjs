@@ -1,5 +1,43 @@
 import assert from 'node:assert/strict';
-import { workerConfig, runCycle, resultBody as buildResultBody, rolePrompt } from './agent-worker.mjs';
+import { workerConfig, runCycle, resultBody as buildResultBody, rolePrompt, loadEnvFiles } from './agent-worker.mjs';
+import { mkdtempSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { createTask, explainError } from './agent-task.mjs';
+import { formatResult } from './agent-result.mjs';
+
+const directory = mkdtempSync(join(tmpdir(), 'agent-env-'));
+try {
+  assert.deepEqual(loadEnvFiles({}, directory), {});
+  const file = join(directory, '.env.agent.local');
+  writeFileSync(file, '# comment\n\nSHARED=agent\nPROCESS=file\nQUOTED="  value  "\nSINGLE=\' quoted \'\nTOKEN=a=b\n', { mode: 0o600 });
+  writeFileSync(join(directory, '.env.local'), 'SHARED=app\nAGENT_WORKER_SECRET=app-secret\nPROCESS=app\n');
+  const warnings = [];
+  const env = loadEnvFiles({ PROCESS: 'process' }, directory, (entry) => warnings.push(entry));
+  assert.deepEqual(env, { PROCESS: 'process', SHARED: 'agent', QUOTED: 'value', SINGLE: 'quoted', TOKEN: 'a=b', AGENT_WORKER_SECRET: 'app-secret' });
+  assert.equal(warnings.length, 0);
+  chmodSync(file, 0o644);
+  loadEnvFiles({}, directory, (entry) => warnings.push(entry));
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].event, 'env_permissions_warning');
+  assert.ok(!JSON.stringify(warnings).includes('app-secret'));
+  writeFileSync(join(directory, 'custom.env'), 'SHARED=custom\n', { mode: 0o600 });
+  assert.equal(loadEnvFiles({ AGENT_WORKER_ENV_FILE: 'custom.env' }, directory).SHARED, 'custom');
+  assert.equal(loadEnvFiles({ AGENT_WORKER_ENV_FILE: 'missing.env' }, directory).SHARED, 'app');
+  assert.equal(loadEnvFiles({ SHARED: '' }, directory, () => {}).SHARED, '');
+} finally { rmSync(directory, { recursive: true, force: true }); }
+
+const testId = '11111111-1111-1111-1111-111111111111';
+const taskEnv = { AGENT_APP_URL: 'http://localhost:3000', AGENT_WORKER_SECRET: 'test', AGENT_CREATOR_ID: testId };
+assert.equal(await createTask(['제목', '본문', testId], taskEnv, async (url, options) => {
+  assert.ok(String(url).endsWith('/api/internal/agents/tasks'));
+  assert.deepEqual(JSON.parse(options.body), { createdBy: testId, source: 'app', title: '제목', body: '본문', companyId: testId });
+  return new Response(JSON.stringify({ taskId: testId }));
+}), testId);
+await assert.rejects(createTask(['제목', '본문'], taskEnv, async () => new Response('{"error":"disabled"}', { status: 404 })), /disabled/);
+assert.ok(explainError('unauthorized').includes('AGENT_WORKER_SECRET'));
+const formatted = formatResult({ task: { id: testId, title: '제목', status: 'succeeded', result: { conclusion: '결론', rationale: ['근거'], actions: [{ title: '검토', owner: '외부 전문가', due: null }], openQuestions: ['질문'] } }, steps: [{ seq: 0, role: 'orchestrator', status: 'succeeded', attempts: 1, created_at: '2026-01-01T00:00:00Z', finished_at: '2026-01-01T00:00:02Z' }], messages: [{ role: 'finance', content: '의견' }] });
+for (const expected of ['2.0초', '결론', '근거', '외부 전문가', '질문', '[finance] 의견']) assert.ok(formatted.includes(expected));
 
 const config = workerConfig({ AGENT_APP_URL: 'https://app.example.test', AGENT_WORKER_SECRET: 'worker-test', LLM_API_URL: 'https://llm.example.test/v1/chat/completions', LLM_API_KEY: 'model-test' });
 const catalog = ['finance', 'legal', 'operations', 'strategy', 'risk'].map((key) => ({ key, name: key + ' 담당자', mode: 'optional' }));

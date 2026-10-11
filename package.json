@@ -21,6 +21,8 @@
     "smoke:briefing": "node scripts/briefing-smoke.mjs",
     "hermes:worker": "node scripts/hermes-worker.mjs",
     "agent:worker": "node scripts/agent-worker.mjs",
+    "agent:task": "node scripts/agent-task.mjs",
+    "agent:result": "node scripts/agent-result.mjs",
     "smoke:agent-worker": "node scripts/agent-worker-smoke.mjs",
     "vercel:env:sync": "node scripts/vercel-env-sync.mjs",
     "vercel:env:ls": "npx vercel env ls"

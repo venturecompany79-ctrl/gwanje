@@ -35,23 +35,32 @@ npm run typecheck
 npm run lint
 ```
 
-실제 내부 API와 모의 모델을 함께 확인하려면 개발 앱에 Supabase 설정, `AGENT_ORCHESTRATION_ENABLED=true`, `AGENT_WORKER_SECRET`을 설정하고 `npm run dev`로 실행한다. API와 워커에 동일한 시크릿을 설정한다.
+앱의 `.env.local`에 Supabase 설정, `AGENT_ORCHESTRATION_ENABLED=true`, `AGENT_WORKER_SECRET`을 설정한다. 결과 조회에는 `NEXT_PUBLIC_SUPABASE_URL`과 `SUPABASE_SERVICE_ROLE_KEY`도 필요하다. 로컬 전용 설정은 다음과 같이 준비한다.
 
 ```sh
-export AGENT_APP_URL=http://localhost:3000
-export AGENT_WORKER_SECRET='로컬-검증용-시크릿'
-export AGENT_WORKER_MOCK=true
-export CREATOR_UUID='활성-ai.assistant.use-사용자의-UUID'
-
-curl --fail-with-body "$AGENT_APP_URL/api/internal/agents/tasks" \
-  -H "Authorization: Bearer $AGENT_WORKER_SECRET" \
-  -H 'Content-Type: application/json' \
-  --data "{\"createdBy\":\"$CREATOR_UUID\",\"source\":\"app\",\"title\":\"모의 분석\",\"body\":\"확장 계획의 재무와 위험을 검토해 주세요.\"}"
-
-npm run agent:worker -- --once
+cp .env.agent.example .env.agent.local
+chmod 600 .env.agent.local
 ```
 
-`--once`는 한 단계만 처리하고 종료한다. 모의 태스크를 끝내려면 네 번 실행하거나 `npm run agent:worker`로 계속 실행한다. 다른 대기 태스크가 있다면 가장 오래된 실행 가능 태스크부터 처리한다. 모의 모드도 실제 DB에 결과를 저장하므로 테스트용 태스크·환경을 사용한다. 단계가 없거나 사이클 오류가 발생하면 10초 대기한다. 처리할 단계가 있으면 다음 사이클을 바로 실행한다.
+`.env.agent.local`에서 `AGENT_APP_URL=http://localhost:3000`, `AGENT_CREATOR_ID=<활성 AI 권한 사용자 profile UUID>`, `AGENT_WORKER_MOCK=true`를 입력한다. 실제 모델을 쓰려면 mock을 false로 바꾸고 LLM URL·키·모델을 입력한다. 앱 시크릿을 다시 복사할 필요 없이 `.env.local`의 값을 읽는다.
+
+세 명령 모두 프로세스 환경변수 → 저장소 루트의 `.env.agent.local` → `.env.local` 순서로 값을 채운다. 이미 존재하는 값은 빈 문자열도 덮어쓰지 않는다. `AGENT_WORKER_ENV_FILE`을 지정하면 첫 번째 파일 대신 해당 파일을 읽는다(상대 경로는 저장소 루트 기준). 없는 파일은 건너뛴다. KEY=VALUE, 빈 줄·주석 줄, 앞뒤 따옴표·공백 제거만 지원하며 변수 치환과 인라인 주석은 지원하지 않는다. agent 설정 파일에 다른 사용자 읽기 권한이 있으면 값 없이 경고 로그를 출력한다. systemd EnvironmentFile로 이미 설정한 값은 유지된다.
+
+```sh
+npm run dev
+# 다른 터미널에서
+npm run agent:task -- "모의 분석" "확장 계획의 재무와 위험을 검토해 주세요."
+npm run agent:worker
+# 결과 확인
+npm run agent:result
+npm run agent:result -- <taskId>
+# 법인을 지정해서 등록
+npm run agent:task -- "법인 분석" "검토할 내용" <companyId>
+```
+
+등록 성공 시 taskId를 출력하고, 인증·권한·비활성 오류는 한국어 안내를 출력한다. 결과 조회는 service_role로 읽으며 `AGENT_CREATOR_ID`가 있으면 해당 생성자로 조회 범위를 제한한다. taskId를 생략하면 그 범위에서 가장 최근 태스크를 선택한다. 생성자 설정이 없으면 전체 태스크가 조회 범위다. 단계별 시간은 생성부터 완료(진행 중이면 현재)까지의 경과 초로 대기·재시도를 포함한다.
+
+`npm run agent:worker -- --once`는 한 단계만 처리한다. 기본 모의 태스크는 네 번 실행하거나 워커를 계속 실행하면 완료된다. 모의 모드도 실제 DB에 결과를 저장한다. 단계가 없거나 사이클 오류가 발생하면 10초 대기한다. 로컬 설정 파일은 gitignore 대상이며 저장소에는 값 없는 `.env.agent.example`만 커밋한다.
 
 프로덕션 빌드에는 앱의 Supabase 공개 환경변수가 필요하다. 실제 설정 없는 환경에서 컴파일만 검증하려면 다음 더미 값으로 실행할 수 있다. 이 빌드로 운영 연결을 검증한 것은 아니다.
 
