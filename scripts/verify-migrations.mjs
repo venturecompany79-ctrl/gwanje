@@ -1153,7 +1153,7 @@ try {
   const [hidden] = await run("select (select count(*)::int from agent_task) as tasks, (select count(*)::int from agent_step) as steps, (select count(*)::int from agent_message) as messages");
   assert(hidden.tasks === 1 && hidden.steps === 0 && hidden.messages === 0, "Agent 타 테넌트 태스크·단계·대화 격리");
   await db.exec("reset role");
-  for (const signature of ['agent_claim(uuid)', 'agent_claim_next()', 'agent_finish(uuid,uuid,jsonb,text)', 'agent_heartbeat(uuid,uuid)']) {
+  for (const signature of ['agent_enqueue(uuid,text,text,text,uuid)', 'agent_claim(uuid)', 'agent_claim_next()', 'agent_finish(uuid,uuid,jsonb,text,jsonb,jsonb)', 'agent_heartbeat(uuid,uuid)']) {
     const [privilege] = await run("select has_function_privilege('authenticated', $1, 'execute') as member, has_function_privilege('anon', $1, 'execute') as anonymous, has_function_privilege('service_role', $1, 'execute') as service", [signature]);
     assert(!privilege.member && !privilege.anonymous && privilege.service, `Agent RPC service_role 전용: ${signature}`);
   }
@@ -1256,6 +1256,74 @@ try {
 } catch (error) {
   failures++;
   console.error(`✗ Agent 단계 순서·태스크 상태 전이 검증 실패\n${error.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+
+try {
+  await db.exec("begin");
+  const run = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const reject = async (sql, args, code) => {
+    await db.exec("savepoint agent_invalid");
+    let rejected = false;
+    try { await run(sql, args); } catch (error) { rejected = error.code === code; }
+    await db.exec("rollback to savepoint agent_invalid");
+    assert(rejected, `Agent 잘못된 요청 거절 (${code})`);
+  };
+  const enqueueSql = "select agent_enqueue($1, 'app', 'dynamic test', 'body', $2) as id";
+  const [{ id: taskId }] = await run(enqueueSql, [USER_A, null]);
+  const [task] = await run("select * from agent_task where id = $1", [taskId]);
+  const [{ job }] = await run("select agent_claim($1) as job", [taskId]);
+  assert(job.seq === 0 && job.role === 'orchestrator' && job.tenant_id === task.tenant_id && task.created_by === USER_A, "Agent enqueue는 생성자 tenant의 태스크·seq 0 지휘자 생성");
+  const finishSql = "select agent_finish($1, $2, '{\"plan\":true}', null, $3::jsonb, $4::jsonb) as ok";
+  const nextSteps = [{ role: 'researcher' }, { role: 'writer' }];
+  const messages = [{ role: 'orchestrator', content: '조사 후 작성해 주세요.' }];
+  const [finished] = await run(finishSql, [job.id, job.token, JSON.stringify(nextSteps), JSON.stringify(messages)]);
+  const [ongoing] = await run("select * from agent_task where id = $1", [taskId]);
+  const steps = await run("select * from agent_step where task_id = $1 order by seq", [taskId]);
+  const stored = await run("select * from agent_message where task_id = $1", [taskId]);
+  assert(finished.ok && ongoing.status === 'running' && ongoing.finished_at === null && steps.length === 3 && steps[0].status === 'succeeded', "Agent 지휘자 완료 시 후속 단계 삽입 후 완료 판정: 태스크 running 유지");
+  assert(steps[1].seq === 1 && steps[1].role === 'researcher' && steps[2].seq === 2 && steps[2].role === 'writer', "Agent 후속 단계 배열 순서대로 최대 seq 다음 번호 부여");
+  assert(stored.length === 1 && stored[0].step_id === job.id && stored[0].tenant_id === task.tenant_id && stored[0].content === messages[0].content, "Agent 메시지는 현재 단계·태스크·tenant에 저장");
+  const [replayed] = await run(finishSql, [job.id, job.token, JSON.stringify(nextSteps), JSON.stringify(messages)]);
+  assert(!replayed.ok, "Agent 결과 재전송으로 단계·메시지를 중복 생성하지 않음");
+  const [{ job: researcher }] = await run("select agent_claim($1) as job", [taskId]);
+  await reject(finishSql, [researcher.id, researcher.token, JSON.stringify(Array.from({ length: 6 }, () => ({ role: 'extra' }))), null], '22023');
+  for (const [next, notes] of [
+    [{ role: 'not-an-array' }, null],
+    [[{ role: 42 }], null],
+    [[{ role: 'x'.repeat(65) }], null],
+    [[{ role: 'valid' }], [{ role: 'writer', content: 'x'.repeat(8001) }]],
+    [null, [{ role: 'x'.repeat(65), content: '' }]],
+    [null, [{ role: 'writer', content: null }]],
+    [null, {}],
+  ]) {
+    await reject(finishSql, [researcher.id, researcher.token, next === null ? null : JSON.stringify(next), notes === null ? null : JSON.stringify(notes)], '22023');
+  }
+  const [unchanged] = await run("select (select count(*)::int from agent_step where task_id = $1) as steps, (select count(*)::int from agent_message where task_id = $1) as messages, (select status from agent_step where id = $2) as status", [taskId, researcher.id]);
+  assert(unchanged.steps === 3 && unchanged.messages === 1 && unchanged.status === 'running', "Agent 검증 예외 시 동적 추가·완료 처리 전체 롤백");
+  await run(finishSql, [researcher.id, researcher.token, JSON.stringify(Array.from({ length: 5 }, () => ({ role: 'x'.repeat(64) }))), JSON.stringify([{ role: 'writer', content: '한'.repeat(8000) }])]);
+  const [maximum] = await run("select count(*)::int as count, max(seq)::int as seq from agent_step where task_id = $1", [taskId]);
+  assert(maximum.count === 8 && maximum.seq === 7, "Agent 총 8단계·role 64자·content 8000자 경계 허용");
+  const [{ job: writer }] = await run("select agent_claim($1) as job", [taskId]);
+  await run("select agent_finish($1, $2, null, 'model_unavailable', '[{\"role\":\"ignored\"}]', '[{\"role\":\"writer\",\"content\":\"ignored\"}]')", [writer.id, writer.token]);
+  const [ignored] = await run("select (select count(*)::int from agent_step where task_id = $1) as steps, (select count(*)::int from agent_message where task_id = $1) as messages", [taskId]);
+  assert(ignored.steps === 8 && ignored.messages === 2, "Agent 실패 처리에서는 next_steps·messages 미사용");
+
+  const [foreignCompany] = await run("select company.id from company join profile on profile.tenant_id = company.tenant_id where profile.id = $1 limit 1", [USER_B]);
+  await reject(enqueueSql, [USER_A, foreignCompany.id], '42501');
+  await reject(enqueueSql, [USER_C, null], '42501');
+  await reject(enqueueSql, ['99999999-9999-9999-9999-999999999999', null], '42501');
+  await run("update profile set status = 'active', role = 'member', permissions = '{}' where id = $1", [USER_B]);
+  await reject(enqueueSql, [USER_B, null], '42501');
+  await run("update profile set permissions = array['ai.assistant.use'] where id = $1", [USER_B]);
+  const [authorized] = await run(enqueueSql, [USER_B, foreignCompany.id]);
+  assert(Boolean(authorized.id), "Agent 권한 있는 활성 생성자와 같은 tenant 기업은 enqueue 허용");
+  const [count] = await run("select count(*)::int as count from agent_task");
+  assert(count.count === 2, "Agent enqueue 권한 거절 시 태스크를 남기지 않음");
+  await db.exec("rollback");
+} catch (error) {
+  failures++;
+  console.error(`✗ Agent 동적 단계·메시지·enqueue 검증 실패\n${error.message}`);
   try { await db.exec("rollback"); } catch {}
 }
 

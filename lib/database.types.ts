@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_task: {
+        Row: { id: string; tenant_id: string; created_by: string; source: string; company_id: string | null; title: string; body: string; status: string; result: Json | null; created_at: string; finished_at: string | null }
+        Insert: { id?: string; tenant_id: string; created_by: string; source: string; company_id?: string | null; title: string; body: string; status?: string; result?: Json | null; created_at?: string; finished_at?: string | null }
+        Update: { status?: string; result?: Json | null; finished_at?: string | null }
+        Relationships: []
+      }
+      agent_step: {
+        Row: { id: string; tenant_id: string; task_id: string; role: string; seq: number; status: string; token: string | null; lease_until: string | null; available_at: string; attempts: number; error_code: string | null; output: Json | null; created_at: string; finished_at: string | null }
+        Insert: { id?: string; tenant_id: string; task_id: string; role: string; seq: number; status?: string; token?: string | null; lease_until?: string | null; available_at?: string; attempts?: number; error_code?: string | null; output?: Json | null; created_at?: string; finished_at?: string | null }
+        Update: { status?: string; token?: string | null; lease_until?: string | null; available_at?: string; attempts?: number; error_code?: string | null; output?: Json | null; finished_at?: string | null }
+        Relationships: []
+      }
+      agent_message: {
+        Row: { id: string; tenant_id: string; task_id: string; step_id: string | null; role: string; content: string; created_at: string }
+        Insert: { id?: string; tenant_id: string; task_id: string; step_id?: string | null; role: string; content: string; created_at?: string }
+        Update: { content?: string }
+        Relationships: []
+      }
       ai_briefing: {
         Row: { id: string; tenant_id: string; user_id: string; kind: string; result: Json; snapshot: Json; input_hash: string; created_at: string }
         Insert: { id?: string; tenant_id: string; user_id: string; kind: string; result: Json; snapshot: Json; input_hash: string; created_at?: string }
@@ -2409,6 +2427,11 @@ export type Database = {
       }
     }
     Functions: {
+      agent_enqueue: { Args: { creator: string; task_source: string; task_title: string; task_body: string; task_company: string | null }; Returns: string }
+      agent_claim: { Args: { target: string }; Returns: Json }
+      agent_claim_next: { Args: Record<PropertyKey, never>; Returns: Json }
+      agent_finish: { Args: { step_id: string; lease_token: string; output: Json | null; failure: string | null; next_steps?: Json | null; messages?: Json | null }; Returns: boolean }
+      agent_heartbeat: { Args: { step_id: string; lease_token: string }; Returns: boolean }
       hermes_enqueue: { Args: { target: string; job_kind: string; job_slot: string; next_slot: string }; Returns: string }
       hermes_claim: { Args: { target: string }; Returns: Json }
       hermes_reserve: { Args: { job_id: string; lease_token: string }; Returns: boolean }

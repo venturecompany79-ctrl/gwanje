@@ -19,7 +19,7 @@ create table agent_step (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null,
   task_id uuid not null,
-  role text not null,
+  role text not null check (char_length(role) between 1 and 64),
   seq integer not null check (seq >= 0),
   status text not null default 'queued' check (status in ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
   token uuid,
@@ -40,8 +40,8 @@ create table agent_message (
   tenant_id uuid not null,
   task_id uuid not null,
   step_id uuid,
-  role text not null,
-  content text not null,
+  role text not null check (char_length(role) between 1 and 64),
+  content text not null check (char_length(content) <= 8000),
   created_at timestamptz not null default now(),
   foreign key (tenant_id, task_id) references agent_task(tenant_id, id) on delete cascade,
   foreign key (tenant_id, task_id, step_id) references agent_step(tenant_id, task_id, id) on delete cascade
@@ -73,6 +73,26 @@ create policy agent_step_tenant on agent_step for select to authenticated using 
 create policy agent_message_tenant on agent_message for select to authenticated using (
   tenant_id = (select auth_tenant_id()) and (select auth_has_permission('ai.assistant.use'))
 );
+
+create function agent_enqueue(creator uuid, task_source text, task_title text, task_body text, task_company uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare member profile; task_id uuid;
+begin
+  select * into member from profile where id = creator and status = 'active'
+    and (role = 'owner' or 'ai.assistant.use' = any(permissions)) for share;
+  if member.id is null then raise exception 'forbidden' using errcode = '42501'; end if;
+  if task_company is not null and not exists (
+    select 1 from company where id = task_company and tenant_id = member.tenant_id
+  ) then raise exception 'forbidden' using errcode = '42501'; end if;
+  if task_source is null or task_source not in ('app', 'slack') or task_title is null
+    or btrim(task_title) = '' or task_body is null then
+    raise exception 'invalid_request' using errcode = '22023';
+  end if;
+  insert into agent_task(tenant_id, created_by, source, company_id, title, body)
+    values(member.tenant_id, creator, task_source, task_company, task_title, task_body) returning id into task_id;
+  insert into agent_step(tenant_id, task_id, role, seq) values(member.tenant_id, task_id, 'orchestrator', 0);
+  return task_id;
+end $$;
 
 create function agent_claim(target uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -141,9 +161,9 @@ begin
   return null;
 end $$;
 
-create function agent_finish(step_id uuid, lease_token uuid, output jsonb, failure text)
+create function agent_finish(step_id uuid, lease_token uuid, output jsonb, failure text, next_steps jsonb default null, messages jsonb default null)
 returns boolean language plpgsql security definer set search_path = public as $$
-declare job agent_step; task agent_task;
+declare job agent_step; task agent_task; entry jsonb; next_seq integer; step_count integer;
 begin
   select * into task from agent_task
     where id = (select task_id from agent_step where id = step_id) for update;
@@ -175,6 +195,31 @@ begin
     end if;
     return true;
   end if;
+  if next_steps is not null then
+    if jsonb_typeof(next_steps) <> 'array' then raise exception 'invalid_request' using errcode = '22023'; end if;
+    select count(*), coalesce(max(seq), -1) + 1 into step_count, next_seq from agent_step where task_id = task.id;
+    if step_count + jsonb_array_length(next_steps) > 8 then raise exception 'step_limit' using errcode = '22023'; end if;
+    for entry in select value from jsonb_array_elements(next_steps) loop
+      if jsonb_typeof(entry) <> 'object' or jsonb_typeof(entry->'role') is distinct from 'string'
+        or char_length(entry->>'role') not between 1 and 64 then
+        raise exception 'invalid_request' using errcode = '22023';
+      end if;
+      insert into agent_step(tenant_id, task_id, role, seq) values(task.tenant_id, task.id, entry->>'role', next_seq);
+      next_seq := next_seq + 1;
+    end loop;
+  end if;
+  if messages is not null then
+    if jsonb_typeof(messages) <> 'array' then raise exception 'invalid_request' using errcode = '22023'; end if;
+    for entry in select value from jsonb_array_elements(messages) loop
+      if jsonb_typeof(entry) <> 'object' or jsonb_typeof(entry->'role') is distinct from 'string'
+        or char_length(entry->>'role') not between 1 and 64
+        or jsonb_typeof(entry->'content') is distinct from 'string' or char_length(entry->>'content') > 8000 then
+        raise exception 'invalid_request' using errcode = '22023';
+      end if;
+      insert into agent_message(tenant_id, task_id, step_id, role, content)
+        values(task.tenant_id, task.id, job.id, entry->>'role', entry->>'content');
+    end loop;
+  end if;
   update agent_step set status = 'succeeded', output = agent_finish.output,
     token = null, lease_until = null, error_code = null, finished_at = now() where id = step_id;
   if not exists(select 1 from agent_step where task_id = task.id and status <> 'succeeded') then
@@ -193,5 +238,5 @@ begin
   return found;
 end $$;
 
-revoke all on function agent_claim(uuid), agent_claim_next(), agent_finish(uuid,uuid,jsonb,text), agent_heartbeat(uuid,uuid) from public, anon, authenticated;
-grant execute on function agent_claim(uuid), agent_claim_next(), agent_finish(uuid,uuid,jsonb,text), agent_heartbeat(uuid,uuid) to service_role;
+revoke all on function agent_enqueue(uuid,text,text,text,uuid), agent_claim(uuid), agent_claim_next(), agent_finish(uuid,uuid,jsonb,text,jsonb,jsonb), agent_heartbeat(uuid,uuid) from public, anon, authenticated;
+grant execute on function agent_enqueue(uuid,text,text,text,uuid), agent_claim(uuid), agent_claim_next(), agent_finish(uuid,uuid,jsonb,text,jsonb,jsonb), agent_heartbeat(uuid,uuid) to service_role;
