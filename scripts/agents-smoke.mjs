@@ -20,7 +20,7 @@ function load(relative) {
   return compiledModule.exports;
 }
 
-const routes = Object.fromEntries(['tasks', 'steps/claim', 'steps/[id]/heartbeat', 'steps/[id]/result'].map((route) => [route, load(`app/api/internal/agents/${route}/route.ts`)]));
+const routes = Object.fromEntries(['tasks', 'steps/claim', 'steps/[id]/heartbeat', 'steps/[id]/result', 'triggers/tick'].map((route) => [route, load(`app/api/internal/agents/${route}/route.ts`)]));
 const id = '11111111-1111-1111-1111-111111111111';
 const token = '22222222-2222-2222-2222-222222222222';
 const taskId = '33333333-3333-3333-3333-333333333333';
@@ -148,3 +148,60 @@ assert.equal((await invoke('steps/claim')).status, 503);
 assert.equal(calls.at(-1).name, 'agent_finish');
 assert.equal(calls.at(-1).args.failure, 'context_unavailable');
 console.log('✓ Agent API 인증·활성 플래그·32/256KB 제한·검증·RPC·이력 페이지네이션·오류 처리 통과');
+
+const { buildTaskContext } = load('lib/agents/context.ts');
+const contextRows = {
+  company: [{ id, tenant_id: tenantId, name: '내 기업', memo: '내 메모', condition_tags: [] }, { id: token, tenant_id: token, name: '외부 비밀' }],
+  task: [{ id: taskId, tenant_id: tenantId, company_id: id, title: '내 업무', category_id: null, due_date: null, work_status: 'waiting', memo: '보류 사유' }],
+  deadline_item: [{ id: 'other', source: 'task', tenant_id: tenantId, company_id: id, title: '다른 마감', due_date: '2099-01-01', days_left: 3 }, { id: 'foreign', source: 'task', tenant_id: token, company_id: id, title: '외부 비밀', days_left: 2 }],
+  credential: [{ id: taskId, tenant_id: tenantId, company_id: id, type: '확인서', issued_date: null, expires_date: '2099-01-01', renew_lead_days: 30 }],
+  ip_deadline: [{ id: taskId, tenant_id: tenantId, company_id: id, type: 'annuity', ip_right_id: id }],
+  ip_right: [{ id, tenant_id: tenantId, company_id: id, title: '내 권리' }],
+};
+fakeService = {
+  from(table) {
+    let rows = [...contextRows[table]];
+    const filters = [];
+    const query = {
+      select() { return query; },
+      eq(column, value) { filters.push([column, value]); rows = rows.filter((row) => row[column] === value); return query; },
+      gte(column, value) { rows = rows.filter((row) => row[column] >= value); return query; },
+      lte(column, value) { rows = rows.filter((row) => row[column] <= value); return query; },
+      order() { return query; },
+      limit(limit) { rows = rows.slice(0, limit); return query; },
+      result() { assert.ok(filters.some(([column, value]) => column === 'tenant_id' && value === tenantId)); return { data: rows, error: null }; },
+      async single() { const result = query.result(); return { ...result, data: result.data[0] ?? null }; },
+      then(resolve, reject) { return Promise.resolve(query.result()).then(resolve, reject); },
+    };
+    return query;
+  },
+};
+const input = { tenantId, companyId: id, sourceId: taskId };
+for (const source of ['task', 'credential', 'ip_deadline']) {
+  const context = await buildTaskContext({ ...input, source });
+  assert.ok(context.startsWith('[관제 자료 — 참고용 사실]'));
+  assert.ok(context.includes('내 기업') && context.includes('미입력') && !context.includes('외부 비밀'));
+  assert.ok(context.length <= 6000);
+}
+await assert.rejects(buildTaskContext({ ...input, companyId: token, source: 'task' }), /forbidden/);
+contextRows.task[0].tenant_id = token;
+await assert.rejects(buildTaskContext({ ...input, source: 'task' }), /forbidden/);
+contextRows.task[0].tenant_id = tenantId;
+contextRows.company[0].memo = '긴 자료'.repeat(6000);
+contextRows.deadline_item = Array.from({ length: 20 }, (_, index) => ({ id: String(index), source: 'task', company_id: id, tenant_id: tenantId, title: '마감'.repeat(500), days_left: 3 }));
+assert.ok((await buildTaskContext({ ...input, source: 'task' })).length <= 6000);
+assert.equal((await invoke('triggers/tick', { dryRun: true })).status, 404);
+process.env.AGENT_TRIGGER_ENABLED = 'true';
+process.env.AGENT_TRIGGER_PROFILE_ID = id;
+process.env.AGENT_TRIGGER_DAILY_LIMIT = '';
+const triggerCalls = [];
+fakeService = { async rpc(name, args) { triggerCalls.push({ name, args }); return { data: { started: 0, skipped: {}, targets: [] }, error: null }; } };
+assert.equal((await invoke('triggers/tick', { dryRun: 'true' })).status, 400);
+assert.equal((await invoke('triggers/tick', { dryRun: true })).status, 200);
+assert.equal(triggerCalls.length, 1);
+assert.equal(triggerCalls[0].args.dry_run, true);
+assert.equal(triggerCalls[0].args.creator, id);
+assert.equal(triggerCalls[0].args.daily_limit, 5);
+assert.equal((await invoke('triggers/tick', {})).status, 200);
+assert.deepEqual(triggerCalls.map((call) => call.args.dry_run), [true, true, false]);
+console.log('✓ 관제 자료 tenant 격리·6000자 제한·트리거 활성 플래그·dry-run 읽기 전용 경로 통과');

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createTask, explainError } from './agent-task.mjs';
 import { formatResult } from './agent-result.mjs';
+import { triggerOnce } from './agent-trigger.mjs';
 
 const directory = mkdtempSync(join(tmpdir(), 'agent-env-'));
 try {
@@ -86,6 +87,7 @@ const outputs = {
 let active;
 const fetcher = async (url, options) => {
   const address = String(url);
+  if (address.endsWith('/triggers/tick')) return reply({ started: 0 });
   const body = JSON.parse(options.body);
   assert.equal(options.redirect, 'error');
   if (address === config.hermesUrl) {
@@ -226,3 +228,28 @@ for (const role of ['orchestrator', 'customer-care']) {
   if (role === 'orchestrator') assert.deepEqual(response.nextSteps, [{ role: 'customer-care' }, { role: 'synthesizer' }]);
 }
 console.log('✓ DB 역할 지침·동적 목록·필수 역할·모의 응답·기존 큐/heartbeat 동작 통과');
+
+const tickConfig = { ...mock };
+let ticks = 0;
+let claims = 0;
+const ticking = async (url) => {
+  if (String(url).endsWith('/triggers/tick')) { ticks++; return reply({}, 503); }
+  assert.ok(String(url).endsWith('/steps/claim'));
+  claims++;
+  return reply({ step: null });
+};
+for (const now of [0, 1, 599999, 600000, 600001]) await runCycle(tickConfig, ticking, log, { now: () => now });
+assert.equal(ticks, 2);
+assert.equal(claims, 5);
+assert.ok(logs.some((entry) => entry.event === 'trigger_tick_failed'));
+console.log('✓ 마감 tick 10분 간격·실패 후 단계 처리 계속 통과');
+for (const dryRun of [true, false]) {
+  const result = await triggerOnce(dryRun, { AGENT_APP_URL: 'http://localhost:3000', AGENT_WORKER_SECRET: 'test-secret' }, async (url, options) => {
+    assert.equal(String(url), 'http://localhost:3000/api/internal/agents/triggers/tick');
+    assert.equal(options.headers.Authorization, 'Bearer test-secret');
+    assert.deepEqual(JSON.parse(options.body), { dryRun });
+    return reply({ started: dryRun ? 0 : 1 });
+  });
+  assert.equal(result.started, dryRun ? 0 : 1);
+}
+console.log('✓ 마감 CLI 즉시 실행·dry-run 요청 구분 통과');

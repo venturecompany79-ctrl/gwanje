@@ -159,6 +159,8 @@ export async function generateResult(job, config, fetcher = fetch, signal) {
   };
 }
 
+const lastTriggerTicks = new WeakMap();
+
 export async function runCycle(config, fetcher = fetch, log = (entry) => console.log(JSON.stringify(entry)), options = {}) {
   async function post(path, body = {}) {
     const timeout = AbortSignal.timeout(60_000);
@@ -168,6 +170,12 @@ export async function runCycle(config, fetcher = fetch, log = (entry) => console
     });
     if (!response.ok) throw new Error(`app_http_${response.status}`);
     return response.json();
+  }
+  const now = options.now?.() ?? Date.now();
+  if (!lastTriggerTicks.has(config) || now - lastTriggerTicks.get(config) >= 600_000) {
+    lastTriggerTicks.set(config, now);
+    try { await post('/api/internal/agents/triggers/tick'); }
+    catch { log({ event: 'trigger_tick_failed' }); }
   }
   const job = await post('/api/internal/agents/steps/claim');
   if (!job.step) return false;

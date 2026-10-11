@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_trigger_log: {
+        Row: { id: string; tenant_id: string; source_key: string; trigger: string; agent_task_id: string | null; created_at: string }
+        Insert: { id?: string; tenant_id: string; source_key: string; trigger: string; agent_task_id?: string | null; created_at?: string }
+        Update: { source_key?: string; trigger?: string; agent_task_id?: string | null; created_at?: string }
+        Relationships: []
+      }
+      agent_trigger_exclusion: {
+        Row: { id: string; tenant_id: string; company_id: string | null; source_key: string | null; reason: string | null; created_at: string }
+        Insert: { id?: string; tenant_id: string; company_id?: string | null; source_key?: string | null; reason?: string | null; created_at?: string }
+        Update: { company_id?: string | null; source_key?: string | null; reason?: string | null }
+        Relationships: []
+      }
       agent_role: {
         Row: { id: string; tenant_id: string; company_id: string | null; key: string; name: string; kind: string; mode: string; instructions: string; enabled: boolean; version: number; updated_by: string | null; created_at: string; updated_at: string }
         Insert: { id?: string; tenant_id: string; company_id?: string | null; key: string; name: string; kind: string; mode?: string; instructions: string; enabled?: boolean; updated_by?: string | null }
@@ -2439,6 +2451,7 @@ export type Database = {
       }
     }
     Functions: {
+      agent_trigger_tick: { Args: { creator: string; daily_limit?: number; dry_run?: boolean; contexts?: Json }; Returns: Json }
       agent_enqueue: { Args: { creator: string; task_source: string; task_title: string; task_body: string; task_company: string | null }; Returns: string }
       agent_claim: { Args: { target: string }; Returns: Json }
       agent_claim_next: { Args: Record<PropertyKey, never>; Returns: Json }

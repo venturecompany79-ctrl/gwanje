@@ -44,7 +44,7 @@ chmod 600 .env.agent.local
 
 `.env.agent.local`에서 `AGENT_APP_URL=http://localhost:3000`, `AGENT_CREATOR_ID=<활성 AI 권한 사용자 profile UUID>`, `AGENT_WORKER_MOCK=true`를 입력한다. 실제 모델을 쓰려면 mock을 false로 바꾸고 LLM URL·키·모델을 입력한다. 앱 시크릿을 다시 복사할 필요 없이 `.env.local`의 값을 읽는다.
 
-세 명령 모두 프로세스 환경변수 → 저장소 루트의 `.env.agent.local` → `.env.local` 순서로 값을 채운다. 이미 존재하는 값은 빈 문자열도 덮어쓰지 않는다. `AGENT_WORKER_ENV_FILE`을 지정하면 첫 번째 파일 대신 해당 파일을 읽는다(상대 경로는 저장소 루트 기준). 없는 파일은 건너뛴다. KEY=VALUE, 빈 줄·주석 줄, 앞뒤 따옴표·공백 제거만 지원하며 변수 치환과 인라인 주석은 지원하지 않는다. agent 설정 파일에 다른 사용자 읽기 권한이 있으면 값 없이 경고 로그를 출력한다. systemd EnvironmentFile로 이미 설정한 값은 유지된다.
+워커·태스크·결과·트리거 명령 모두 프로세스 환경변수 → 저장소 루트의 `.env.agent.local` → `.env.local` 순서로 값을 채운다. 이미 존재하는 값은 빈 문자열도 덮어쓰지 않는다. `AGENT_WORKER_ENV_FILE`을 지정하면 첫 번째 파일 대신 해당 파일을 읽는다(상대 경로는 저장소 루트 기준). 없는 파일은 건너뛴다. KEY=VALUE, 빈 줄·주석 줄, 앞뒤 따옴표·공백 제거만 지원하며 변수 치환과 인라인 주석은 지원하지 않는다. agent 설정 파일에 다른 사용자 읽기 권한이 있으면 값 없이 경고 로그를 출력한다. systemd EnvironmentFile로 이미 설정한 값은 유지된다.
 
 ```sh
 npm run dev
@@ -68,6 +68,34 @@ npm run agent:task -- "법인 분석" "검토할 내용" <companyId>
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
 NEXT_PUBLIC_SUPABASE_ANON_KEY=build-validation-only npm run build
 ```
+
+## 관제 자료와 마감 트리거
+
+API 서버의 `.env.local` 또는 Vercel 환경변수에 아래 값을 설정한다. `.env.agent.local`에만 설정하면 Next.js API 서버에는 반영되지 않는다.
+
+| 환경변수 | 값 |
+| --- | --- |
+| `AGENT_TRIGGER_ENABLED` | 정확히 `true`일 때 활성화, 기본 비활성 |
+| `AGENT_TRIGGER_PROFILE_ID` | 활성·AI 권한이 있는 대표님 profile UUID |
+| `AGENT_TRIGGER_DAILY_LIMIT` | KST 하루 자동 시작 한도, 미설정 기본 5, 0~100 |
+
+기존 `AGENT_ORCHESTRATION_ENABLED=true`와 `AGENT_WORKER_SECRET` 인증도 필요하다. 워커는 시작 시와 이후 10분마다 tick을 호출하며, 실패해도 단계 처리를 계속한다. 수동 명령은 이 간격과 관계없이 즉시 호출한다.
+
+```sh
+npm run agent:trigger -- --dry-run
+npm run agent:trigger
+npm run agent:result
+```
+
+dry-run은 DB 변경 없이 후보·기업·항목·남은 일수·시작 예정 여부와 사유를 출력한다. `excluded`는 제외 목록, `already_run`은 같은 source:id·트리거의 실행 기록, `daily_limit`는 오늘 한도 초과다. 실제 실행에서는 원자적 RPC가 후보·제외·기록·한도를 다시 확인하고 `agent_enqueue`와 로그를 함께 저장한다. 여러 워커가 동시에 호출해도 tenant별 잠금과 유니크 제약으로 중복·한도 초과를 막는다. preview 이후 신규 후보나 제외 변경으로 필요한 본문이 달라졌으면 해당 실행 전체가 롤백되며 다음 tick에서 다시 조립한다.
+
+대상은 지정한 profile의 tenant에 속하는 `deadline_item`이다. task·credential·ip_deadline은 D-30(21~30일), D-7(1~7일), 기한초과(-7~-1일)에 해당할 때 처리한다. schedule은 deadline·renewal·expiry 유형의 D-30·D-7만 처리한다. 오늘 마감과 8~20일 구간은 제외한다. 우선순위는 기한초과 → D-7 → D-30이며 같은 등급은 마감 빠른 순이다. 완료 과제·비활성 기업·갱신 과제와 중복되는 자격은 기존 뷰의 필터를 따른다.
+
+제외하려면 `agent_trigger_exclusion`에 tenant_id와 company_id(기업 전체) 또는 source_key(`task:UUID` 등 항목 하나) 중 하나만 지정한다. reason은 운영 메모다. log와 exclusion은 같은 tenant의 owner만 조회·수정할 수 있다. 같은 항목은 트리거별 한 번만 자동 시작하며, 태스크를 삭제해도 로그는 유지된다. 로그를 수동 삭제하면 재시작이 가능해지므로 주의한다. 수동 등록한 일반 태스크는 자동 시작 한도에 포함하지 않는다.
+
+본문에는 트리거별 질문과 `[관제 자료 — 참고용 사실]` 블록을 넣는다. 기업 정보, 대상 항목과 같은 기업의 향후 30일 이내 다른 마감 최대 10건을 포함한다. 없는 값은 미입력으로 표시하고 긴 필드는 줄이며 전체 자료 블록을 6000자 이내로 제한한다. 서비스 키로 읽지만 모든 자료 조회를 tenant_id로 제한한다. 법인 없는 일정은 기업 정보를 미입력으로 표시한다.
+
+새 마이그레이션은 `20261013000000_agent_triggers.sql`이다. 원격 적용은 별도 배포 작업으로 수행한다. 워커·명령어 자체에는 DB 키가 필요 없으며 내부 API가 자료 조회와 시작을 처리한다.
 
 ## VPS 설치 (systemd)
 

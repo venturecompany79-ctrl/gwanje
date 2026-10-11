@@ -1427,6 +1427,80 @@ try {
   try { await db.exec("rollback"); } catch {}
 }
 
+try {
+  await db.exec("begin");
+  const run = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const creator = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  await run("insert into auth.users(id) values ($1)", [creator]);
+  const [tenant] = await run("insert into tenant(name) values ('트리거 검증') returning id");
+  await run("insert into profile(id, tenant_id, name, role) values ($1, $2, '대표', 'owner')", [creator, tenant.id]);
+  const [company] = await run("insert into company(tenant_id, name) values ($1, '트리거 기업') returning id", [tenant.id]);
+  const [excludedCompany] = await run("insert into company(tenant_id, name) values ($1, '제외 기업') returning id", [tenant.id]);
+  const today = "(now() at time zone 'Asia/Seoul')::date";
+  const addTask = async (days, title, companyId = company.id) => (await run(`insert into task(tenant_id, company_id, title, due_date) values ($1, $2, $3, ${today} + $4::int) returning id`, [tenant.id, companyId, title, days]))[0];
+  const oldest = await addTask(-7, '기한 초과 먼저');
+  await addTask(-1, '기한 초과 다음');
+  await addTask(1, '긴급');
+  await addTask(21, '준비');
+  const excludedItem = await addTask(-3, '항목 제외');
+  await addTask(-4, '기업 제외', excludedCompany.id);
+  for (const days of [-8, 0, 8, 20, 31]) await addTask(days, '범위 밖');
+  await run("insert into agent_trigger_exclusion(tenant_id, company_id) values ($1, $2)", [tenant.id, excludedCompany.id]);
+  await run("insert into agent_trigger_exclusion(tenant_id, source_key) values ($1, $2)", [tenant.id, `task:${excludedItem.id}`]);
+  for (const [days, type] of [[-1, 'deadline'], [2, 'meeting'], [3, 'deadline'], [7, 'renewal'], [30, 'expiry']]) {
+    await run(`insert into schedule(tenant_id, company_id, title, date, type) values ($1, $2, $3, ${today} + $4::int, $5::schedule_type)`, [tenant.id, company.id, `${type}:${days}`, days, type]);
+  }
+  await run(`insert into credential(tenant_id, company_id, type, expires_date) values ($1, $2, '확인서', ${today} + 6)`, [tenant.id, company.id]);
+  const [right] = await run("insert into ip_right(tenant_id, company_id, kind, title) values ($1, $2, 'patent', '특허') returning id", [tenant.id, company.id]);
+  await run(`insert into ip_deadline(tenant_id, company_id, ip_right_id, title, due_date) values ($1, $2, $3, '납부', ${today} + 22)`, [tenant.id, company.id, right.id]);
+  const tick = async (limit, dry = true, contexts = {}) => (await run("select agent_trigger_tick($1, $2, $3, $4::jsonb) as result", [creator, limit, dry, JSON.stringify(contexts)]))[0].result;
+  const preview = await tick(3);
+  assert(preview.started === 0 && preview.skipped.excluded === 2 && preview.skipped.daily_limit === 6, "트리거 dry-run 제외·일일 한도 사유 계산");
+  const selected = preview.targets.filter((item) => item.wouldStart);
+  assert(selected.map((item) => item.trigger).join(',') === 'overdue,overdue,d7' && selected[0].sourceId === oldest.id, "트리거 우선순위 overdue → d7 → d30 및 마감 빠른 순");
+  const schedules = preview.targets.filter((item) => item.source === 'schedule');
+  assert(schedules.length === 3 && schedules.every((item) => item.daysLeft > 0), "트리거 일정은 deadline·renewal·expiry 및 미래 구간만 허용");
+  assert(preview.targets.some((item) => item.source === 'credential') && preview.targets.some((item) => item.source === 'ip_deadline'), "트리거 자격·지식재산권 마감 포함");
+  assert(preview.targets.every((item) => item.tenantId === tenant.id), "트리거 대표 profile의 tenant만 조회");
+  const [before] = await run("select (select count(*)::int from agent_task where tenant_id = $1) as tasks, (select count(*)::int from agent_trigger_log where tenant_id = $1) as logs", [tenant.id]);
+  assert(before.tasks === 0 && before.logs === 0, "트리거 dry-run DB 쓰기 없음");
+  await db.exec("savepoint trigger_failure");
+  let rollbackError = false;
+  try { await tick(3, false, { [selected[0].sourceKey]: '첫 본문만 제공' }); } catch (error) { rollbackError = error.code === '22023'; }
+  await db.exec("rollback to savepoint trigger_failure");
+  assert(rollbackError, "트리거 본문 누락 시 부분 시작 없이 트랜잭션 거절");
+  const contexts = Object.fromEntries(preview.targets.map((item) => [item.sourceKey, '[관제 자료 — 참고용 사실]']));
+  const started = await tick(3, false, contexts);
+  assert(started.started === 3, "트리거 태스크·로그 원자적 생성");
+  const repeated = await tick(3, false, contexts);
+  assert(repeated.started === 0 && repeated.skipped.already_run === 3 && repeated.skipped.daily_limit === 6, "트리거 중복 시작 및 하루 누적 한도 차단");
+  const [stored] = await run("select count(*)::int as count from agent_trigger_log log join agent_task task on task.id = log.agent_task_id and task.tenant_id = log.tenant_id where log.tenant_id = $1", [tenant.id]);
+  assert(stored.count === 3, "트리거 로그·태스크 일대일 일치");
+  const [boundary] = await run("select (date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul')::text as start");
+  await run("update agent_trigger_log set created_at = $2::timestamptz - interval '1 second' where tenant_id = $1", [tenant.id, boundary.start]);
+  assert((await tick(1, false, contexts)).started === 1, "트리거 KST 이전 날짜의 시작은 오늘 한도에서 제외");
+  await db.exec("set local role authenticated");
+  await db.exec(`set local "test.uid" = '${USER_A}'`);
+  const [foreign] = await run("select (select count(*)::int from agent_trigger_log) as logs, (select count(*)::int from agent_trigger_exclusion) as exclusions");
+  assert(foreign.logs === 0 && foreign.exclusions === 0, "트리거 테이블 타 tenant owner 격리");
+  await db.exec(`set local "test.uid" = '${creator}'`);
+  const [own] = await run("select count(*)::int as count from agent_trigger_log");
+  assert(own.count === 4, "트리거 동일 tenant owner 조회 허용");
+  await db.exec("reset role");
+  await run("update profile set role = 'member' where id = $1", [creator]);
+  await db.exec("set local role authenticated");
+  const [member] = await run("select count(*)::int as count from agent_trigger_log");
+  assert(member.count === 0, "트리거 일반 팀원 조회 차단");
+  await db.exec("reset role");
+  const [permissions] = await run("select has_function_privilege('authenticated', 'agent_trigger_tick(uuid,integer,boolean,jsonb)', 'execute') as user_rpc, has_function_privilege('service_role', 'agent_trigger_tick(uuid,integer,boolean,jsonb)', 'execute') as worker_rpc");
+  assert(!permissions.user_rpc && permissions.worker_rpc, "트리거 RPC service_role 전용");
+  await db.exec("rollback");
+} catch (error) {
+  failures++;
+  console.error(`✗ Agent 트리거 검증 실패\n${error.message}`);
+  try { await db.exec("rollback"); } catch {}
+}
+
 // ── 결과 ─────────────────────────────────────────────────────────────────
 console.log(`\n${"=".repeat(56)}`);
 if (failures === 0) {
